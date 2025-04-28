@@ -1,0 +1,57 @@
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+from src.models.database.package_entity import PackageEntity
+from src.models.database_access import get_db_session
+from src.services.package_repository import PackageRepository
+from src.utils import config
+
+
+@dataclass
+class PackageInfo:
+    package_entity: PackageEntity
+    package_dir: Path
+    entry_point_path: Path
+    requirements_path: Path
+
+
+class PackageService:
+    @staticmethod
+    def get_package_info(
+        package_name: str,
+        stage: str,
+        version: Optional[str]
+    ) -> Optional[PackageInfo]:
+        db_session = next(get_db_session())
+        package_info = PackageRepository.get_package(db_session, package_name, stage, version)
+        if not package_info:
+            return None
+
+        package_dir = os.path.join(config.STORAGE_ROOT, package_name, package_info.version, stage)
+        if not os.path.exists(package_dir):
+            return None
+
+        entry_file_path = os.path.join(package_dir, "main.py")
+        if os.path.exists(entry_file_path):
+            return PackageInfo(
+                package_entity=package_info,
+                package_dir=Path(package_dir),
+                entry_point_path=Path(entry_file_path),
+                requirements_path=Path(os.path.join(package_dir, "requirements.txt"))
+            )
+
+        return None
+
+    @staticmethod
+    def get_package_path(
+        package_name: str,
+        version: str,
+        stage: str
+    ) -> Optional[str]:
+        package_dir = os.path.join(config.STORAGE_ROOT, package_name, version, stage)
+        if not os.path.exists(package_dir):
+            return None
+
+        return package_dir

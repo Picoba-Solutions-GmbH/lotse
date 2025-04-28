@@ -1,0 +1,37 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python Debugger: FastAPI",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "main:app",
+          "--host",
+          "localhost",
+          "--port",
+          "8000",
+          "--workers",
+          "1",
+          "--loop",
+          "asyncio"
+        ],
+        "jinja": true,
+        "env": {
+          "VSCODE_DEBUG_MODE": "true"
+        }
+      },
+      {
+        "name": "Python: Debug Tests",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "purpose": [
+          "debug-test"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": false
+      }
+    ]
+  }

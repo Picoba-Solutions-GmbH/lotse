@@ -1,0 +1,41 @@
+<p-toast position="bottom-right" />
+<p-confirmdialog />
+<div class="flex flex-col h-full overflow-hidden">
+  <p-menubar [model]="items">
+    <ng-template pTemplate="start">
+      <div class="flex items-center mr-4">
+        <img src="lotse.webp" alt="logo" width="30px" />
+        <span class="ml-2 font-bold text-lg">Lotse</span>
+      </div>
+    </ng-template>
+    <ng-template #item let-item let-root="root">
+      <a pRipple class="flex items-center p-menuitem-link" [href]="item.href ? item.href : item.routerLink"
+        [class]="{'text-(--p-primary-500)': isRouteActive(item), 'dark:text-(--p-primary-200)': isRouteActive(item)}">
+        <span [class]="item.icon"></span>
+        <span class="ml-2">{{ item.label }}</span>
+        @if (item.items) {
+        <i [ngClass]="['pi', root ? 'pi-angle-down ml-2' : 'pi-angle-right ml-auto']"></i>
+        }
+      </a>
+    </ng-template>
+    <ng-template pTemplate="end">
+      <div class="flex items-center mr-1">
+        <div>
+          <p-selectbutton [options]="stateOptions" [(ngModel)]="stageValue" optionLabel="label" optionValue="value"
+            aria-labelledby="basic" size="small" (onChange)="handleStateChange($event)"/>
+        </div>
+        <div>
+          @if (isDarkMode) {
+          <p-button [icon]="PrimeIcons.SUN" rounded (onClick)="themeService.setDarkMode(false)" text severity="warn" />
+          } @else {
+          <p-button [icon]="PrimeIcons.MOON" (onClick)="themeService.setDarkMode(true)" rounded text
+            severity="contrast" />
+          }
+        </div>
+      </div>
+    </ng-template>
+  </p-menubar>
+  <div class="scrollable-content p-4">
+    <router-outlet />
+  </div>
+</div>

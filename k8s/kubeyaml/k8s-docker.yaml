@@ -1,0 +1,181 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: lotse
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17.2
+          ports:
+            - containerPort: 5432
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          env:
+            - name: POSTGRES_USER
+              value: "admin"
+            - name: POSTGRES_PASSWORD
+              value: "admin123"
+            - name: POSTGRES_DB
+              value: "lotse"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: lotse
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: lotse
+  name: lotse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lotse
+  template:
+    metadata:
+      labels:
+        app: lotse
+    spec:
+      containers:
+        - name: lotse
+          image: lotse:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: lotse-volume
+              mountPath: /var/Kubernetes/Lotse
+          env:
+            - name: OPENAPI_PREFIX_PATH
+              value: /lotse
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_USER
+              value: "admin"
+            - name: POSTGRES_PASSWORD
+              value: "admin123"
+            - name: POSTGRES_DB
+              value: "lotse"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: K8S_NAMESPACE
+              value: "lotse"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+      volumes:
+        - name: lotse-volume
+          persistentVolumeClaim:
+            claimName: lotse-volume-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: lotse
+  name: lotse-volume-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1G
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: lotse
+  name: lotse
+spec:
+  selector:
+    app: lotse
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($http_referer ~* ".*proxy.*") {
+          set $should_rewrite 1;
+      }
+
+      if ($uri ~* "^/lotse") {
+          set $should_rewrite 0;
+      }
+
+      if ($should_rewrite = 1) {
+          rewrite ^/(.*)$ /lotse/$1 break;
+      }
+  labels:
+    app.kubernetes.io/name: lotse
+  name: lotse
+  namespace: lotse
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: kubernetes.docker.internal
+      http:
+        paths:
+          - path: /lotse(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: lotse
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: lotse
+                port:
+                  number: 8000

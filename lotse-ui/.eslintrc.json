@@ -1,0 +1,32 @@
+{
+  "root": true,
+  "ignorePatterns": ["projects/**/*"],
+  "overrides": [
+    {
+      "files": ["*.ts"],
+      "plugins": ["promise", "async-protect"],
+      "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:promise/recommended",
+        "plugin:@angular-eslint/recommended",
+        "plugin:@angular-eslint/template/process-inline-templates"
+      ],
+      "rules": {
+        "require-await": "error",
+        "promise/prefer-await-to-then": "error",
+        "async-protect/async-suffix": "error",
+        "async-protect/async-await": "error"
+      }
+    },
+    {
+      "files": ["*.html"],
+      "extends": ["plugin:@angular-eslint/template/recommended"],
+      "plugins": ["@angular-eslint/template"],
+      "rules": {
+        "@angular-eslint/template/prefer-self-closing-tags": "error",
+        "@angular-eslint/template/prefer-control-flow": "error"
+      }
+    }
+  ]
+}

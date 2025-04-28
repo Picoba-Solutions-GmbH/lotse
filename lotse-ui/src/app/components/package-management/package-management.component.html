@@ -1,0 +1,102 @@
+<div class="packages-container">
+    <div class="mb-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-color-muted mb-2">{{ packageName }}</h1>
+            <p class="text-color-muted">Manage and monitor Versions for {{ packageName }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4">
+        <p-card styleClass="bg-blue-50 dark:bg-blue-950">
+            <div class="text-center">
+                <i class="text-2xl text-blue-500 mb-2" [ngClass]="PrimeIcons.BOX"></i>
+                <h3 class="font-bold">Total Versions</h3>
+                <p class="text-2xl">{{ packages.length }}</p>
+            </div>
+        </p-card>
+        <p-card styleClass="bg-green-50 dark:bg-green-900">
+            <div class="text-center">
+                <i class="text-2xl text-green-500 mb-2" [ngClass]="PrimeIcons.CHECK_CIRCLE"></i>
+                <h3 class="font-bold">Running</h3>
+
+                <p class="text-2xl">{{ packages | packageCountByStatePipe:PackageStatus.RUNNING }}</p>
+            </div>
+        </p-card>
+        <p-card styleClass="bg-yellow-50 dark:bg-yellow-900">
+            <div class="text-center">
+                <i class="text-2xl text-yellow-500 mb-2" [ngClass]="PrimeIcons.REFRESH"></i>
+                <h3 class="font-bold">Initializing</h3>
+                <p class="text-2xl">{{ packages | packageCountByStatePipe:PackageStatus.INITIALIZING }}</p>
+            </div>
+        </p-card>
+        <p-card styleClass="bg-gray-50 dark:bg-gray-900">
+            <div class="text-center">
+                <i class="text-2xl text-gray-500 mb-2" [ngClass]="PrimeIcons.CLOCK"></i>
+                <h3 class="font-bold">Idle</h3>
+                <p class="text-2xl">{{ packages | packageCountByStatePipe:PackageStatus.IDLE }}</p>
+            </div>
+        </p-card>
+    </div>
+
+    <p-card styleClass="border border-solid border-gray-200 dark:border-gray-700">
+        <p-table [value]="packages" [scrollable]="true" [sortField]="'name'" [sortOrder]="-1"
+            styleClass="p-datatable-sm" columnResizeMode="fit" [resizableColumns]="true" selectionMode="single"
+            [(selection)]="selectedPackage" dataKey="id" [paginator]="true" [rows]="10" [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} packages">
+
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Version</th>
+                    <th>Status</th>
+                    <th>Instances</th>
+                    <th>Creation Date</th>
+                    <th>Actions</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-package>
+                <tr class="hover:surface-50 cursor-pointer transition-colors duration-200"
+                    (click)="onPackageSelect(package)">
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <i [ngClass]="PrimeIcons.BOX"></i>
+                            {{ package.version }}
+                        </div>
+                    </td>
+                    <td>
+                        <p-tag [severity]="package.status | packageStatusToSeverityPipe"
+                            [value]="package.status | titlecase" />
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <i [ngClass]="PrimeIcons.SERVER"></i>
+                            {{ package.instances }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <i [ngClass]="PrimeIcons.CALENDAR"></i>
+                            {{ package.creation_date | date: "YY.MM.dd HH:mm:ss" }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex gap-2">
+                            <p-button [icon]="PrimeIcons.TRASH"
+                                styleClass="p-button-rounded p-button-danger p-button-sm" pTooltip="Delete"
+                                (onClick)="$event.stopPropagation(); deletePackageVersion(package)" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="5" class="text-center p-8">
+                        <i class="text-5xl text-gray-300 mb-4" [ngClass]="PrimeIcons.INBOX"></i>
+                        <p class="text-gray-500">No packages found</p>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </p-card>
+</div>

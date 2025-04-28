@@ -1,0 +1,58 @@
+@use "primeicons/primeicons.css";
+@import "tailwindcss/preflight.css" layer(tailwind-base);
+@import "tailwindcss/theme.css" layer(tailwind-theme);
+@import "tailwindcss/utilities.css" layer(tailwind-utilities);
+@plugin 'tailwindcss-primeui';
+
+@layer tailwind-base, tailwind-theme, tailwind-utilities, primeng;
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@import "xterm/css/xterm.css";
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.scrollable-content {
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
+}
+
+html:not(.dark) {
+  .custom-scroll {
+    .p-scrollpanel-wrapper {
+      border-right: 9px solid #f4f4f4;
+    }
+
+    .p-scrollpanel-bar {
+      background-color: #1e1e1e;
+      opacity: 0.3;
+
+      &:hover {
+        opacity: 0.5;
+      }
+    }
+  }
+}
+
+.log-container {
+  border-radius: 4px;
+  padding: 1rem;
+
+  .log-line {
+    font-family: monospace;
+    white-space: pre-wrap;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.svgl {
+  width: 14.4px;
+  height: 16px;
+  scale: 1.4;
+}

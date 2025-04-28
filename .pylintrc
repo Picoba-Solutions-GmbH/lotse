@@ -1,0 +1,28 @@
+[FORMAT]
+max-line-length=120
+
+[MAIN]
+ignore-patterns=^samples(/.*)?$,
+init-hook='import sys; sys.path.append(".")'
+disable=
+    ; Explicit exception reraising
+    W0707,
+    ; Lazy formatting
+    W1203,
+    ; Broad Exception
+    W0718,
+    W0719,
+    ; Documentation and Attribute snake casing
+    C0103,
+    C0114,
+    C0115,
+    C0116,
+    ; Too many lines and too many arguments
+    ; R0902,
+    ; R0903,
+    ; R0911,
+    ; R0913,
+    ; R0914,
+    ; R0915
+extension-pkg-whitelist=pydantic
+extension-pkg-allow-list=orjson

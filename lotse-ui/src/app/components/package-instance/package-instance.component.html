@@ -1,0 +1,275 @@
+<div class="flex flex-col h-full">
+    <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div>
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted mb-2">{{ packageName }}
+                ({{packageVersion}})</h1>
+            <p class="text-color-muted text-sm md:text-base">{{ packageInstance.description }}</p>
+        </div>
+        <p-button label="Start New Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartNewInstance()"
+            [loading]="isPackageRunning" />
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4 mb-4">
+        <p-card styleClass="bg-gray-50 dark:bg-gray-900">
+            <div class="text-center">
+                <i class="text-xl md:text-2xl text-gray-500 mb-1 md:mb-2" [ngClass]="PrimeIcons.BOX"></i>
+                <h3 class="font-bold text-sm md:text-base">Total Runs</h3>
+                <p class="text-xl md:text-2xl">{{ packageInstance.tasks.length }}</p>
+            </div>
+        </p-card>
+        <p-card styleClass="bg-green-50 dark:bg-green-950">
+            <div class="text-center">
+                <i class="text-xl md:text-2xl text-green-500 mb-1 md:mb-2" [ngClass]="PrimeIcons.CHECK_CIRCLE"></i>
+                <h3 class="font-bold text-sm md:text-base">Completed</h3>
+                <p class="text-xl md:text-2xl">{{ packageInstance.tasks | taskCountByState:TaskStatus.COMPLETED }}</p>
+            </div>
+        </p-card>
+        <p-card styleClass="bg-blue-50 dark:bg-blue-950">
+            <div class="text-center">
+                <i class="text-xl md:text-2xl text-blue-500 mb-1 md:mb-2" [ngClass]="PrimeIcons.PLAY_CIRCLE"></i>
+                <h3 class="font-bold text-sm md:text-base">Running</h3>
+                <p class="text-xl md:text-2xl">{{ packageInstance.tasks | taskCountByState:TaskStatus.RUNNING }}</p>
+            </div>
+        </p-card>
+        <p-card styleClass="bg-yellow-50 dark:bg-yellow-900">
+            <div class="text-center">
+                <i class="text-xl md:text-2xl text-yellow-500 mb-1 md:mb-2" [ngClass]="PrimeIcons.REFRESH"></i>
+                <h3 class="font-bold text-sm md:text-base">Initializing</h3>
+                <p class="text-xl md:text-2xl">{{ packageInstance.tasks | taskCountByState:TaskStatus.INITIALIZING }}
+                </p>
+            </div>
+        </p-card>
+        <p-card styleClass="bg-red-50 dark:bg-red-900">
+            <div class="text-center">
+                <i class="text-xl md:text-2xl text-red-500 mb-1 md:mb-2" [ngClass]="PrimeIcons.EXCLAMATION_CIRCLE"></i>
+                <h3 class="font-bold text-sm md:text-base">Failed</h3>
+                <p class="text-xl md:text-2xl">{{ packageInstance.tasks | taskCountByState:TaskStatus.FAILED }}</p>
+            </div>
+        </p-card>
+    </div>
+
+    <div class="flex flex-col xl:flex-row gap-4 h-full w-full">
+        <p-card styleClass="border border-solid border-gray-200 dark:border-gray-700 h-full w-full xl:w-7/12">
+            <p-table [value]="packageInstance.tasks" [scrollable]="true" [sortField]="'started_at'" [sortOrder]="-1"
+                styleClass="p-datatable-sm p-datatable-responsive-demo" columnResizeMode="fit" [resizableColumns]="true"
+                selectionMode="single" [(selection)]="selectedTask" dataKey="id" [paginator]="true" [rows]="10"
+                [showCurrentPageReport]="true"
+                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} packages">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th pFrozenColumn>ID</th>
+                        <th class="hidden sm:table-cell">Status</th>
+                        <th class="hidden md:table-cell">Started at</th>
+                        <th class="hidden xl:table-cell">Finished at</th>
+                        <th class="hidden md:table-cell">Duration</th>
+                        <th class="hidden xl:table-cell">CPU</th>
+                        <th class="hidden xl:table-cell">Memory</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-task>
+                    <tr class="cursor-pointer transition-colors duration-200" (click)="onTaskSelect(task)">
+                        <td pFrozenColumn>
+                            <div class="flex items-center gap-2">
+                                <i [ngClass]="PrimeIcons.BOX"></i>
+                                {{ task.task_id }}
+                            </div>
+                        </td>
+                        <td class="hidden sm:table-cell">
+                            <p-tag [severity]="task.status | taskStatusToSeverityPipe"
+                                [value]="task.status | titlecase" />
+                        </td>
+                        <td class="hidden md:table-cell">
+                            <div class="flex items-center gap-2">
+                                <i [ngClass]="PrimeIcons.CALENDAR"></i>
+                                {{ task.started_at | utcToLocal: "yy.MM.dd HH:mm:ss" }}
+                            </div>
+                        </td>
+                        <td class="hidden xl:table-cell">
+                            @if (task.finished_at) {
+                            <div class="flex items-center gap-2">
+                                <i [ngClass]="PrimeIcons.CALENDAR"></i>
+                                {{ task.finished_at | utcToLocal: "yy.MM.dd HH:mm:ss" }}
+                            </div>
+                            }
+                        </td>
+                        <td class="hidden md:table-cell">
+                            <div class="flex items-center gap-2">
+                                <i [ngClass]="PrimeIcons.CLOCK"></i>
+                                {{ task.started_at | duration: task.finished_at }}
+                            </div>
+                        </td>
+                        <td class="hidden xl:table-cell">
+                            <div class="flex items-center gap-2">
+                                <i [ngClass]="PrimeIcons.MICROCHIP"></i>
+                                @if (task.metrics && task.metrics.cpu) {
+                                {{ task.metrics.cpu}}
+                                } @else {
+                                -
+                                }
+                            </div>
+                        </td>
+                        <td class="hidden xl:table-cell">
+                            <div class="flex items-center gap-2">
+                                <i [ngClass]="PrimeIcons.SERVER"></i>
+                                @if (task.metrics && task.metrics.memory) {
+                                {{ task.metrics.memory }}
+                                } @else {
+                                -
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex gap-2">
+                                @if (task.is_ui_app && task.status === TaskStatus.RUNNING) {
+                                <p-button [icon]="PrimeIcons.EXTERNAL_LINK" (click)="openUIApp(task.task_id)"
+                                    pTooltip="Open UI" tooltipPosition="bottom" />
+                                }
+                                @if (task.status === TaskStatus.RUNNING || task.status === TaskStatus.INITIALIZING) {
+                                <p-button [icon]="PrimeIcons.BAN" severity="warn" pTooltip="Cancel"
+                                    (click)="cancelTaskAsync(task.task_id)" tooltipPosition="bottom" />
+                                }
+                                @if (task.status === TaskStatus.RUNNING) {
+                                <p-button [icon]="PrimeIcons.CODE" (click)="openTerminal(task.task_id)"
+                                    severity="secondary" pTooltip="Open Terminal" tooltipPosition="bottom" />
+                                <p-button pTooltip="Open in VSCode" tooltipPosition="bottom" severity="contrast"
+                                    (onClick)="openVSCode(task.task_id)" [loading]="isVsCodeBusy()">
+                                    <svg-VisualStudioCode />
+                                </p-button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="8" class="text-center p-8">
+                            <i class="text-5xl text-gray-300 mb-4" [ngClass]="PrimeIcons.INBOX"></i>
+                            <p class="text-gray-500">No packages found</p>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </p-card>
+
+        <div class="block xl:hidden">
+            <p-accordion [multiple]="true">
+                <p-accordionTab header="Task Details" [selected]="!!selectedTask"
+                    class="rounded-lg border-solid border-1 border-gray-200 dark:border-gray-700">
+                    @if (selectedTask) {
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="font-semibold">Status:</div>
+                        <div><p-tag [severity]="selectedTask.status | taskStatusToSeverityPipe"
+                                [value]="selectedTask.status | titlecase" /></div>
+
+                        <div class="font-semibold">Started:</div>
+                        <div>{{ selectedTask.started_at | utcToLocal: "yy.MM.dd HH:mm:ss" }}</div>
+
+                        <div class="font-semibold">Finished:</div>
+                        <div>{{ selectedTask.finished_at ? (selectedTask.finished_at | utcToLocal: "yy.MM.dd HH:mm:ss")
+                            : "-" }}</div>
+
+                        <div class="font-semibold">Duration:</div>
+                        <div>{{ selectedTask.started_at | duration: selectedTask.finished_at }}</div>
+
+                        <div class="font-semibold">CPU:</div>
+                        <div>{{ selectedTask.metrics?.cpu || "-" }}</div>
+
+                        <div class="font-semibold">Memory:</div>
+                        <div>{{ selectedTask.metrics?.memory || "-" }}</div>
+                    </div>
+                    } @else {
+                    <p class="text-gray-500">Select a task to view details</p>
+                    }
+                </p-accordionTab>
+            </p-accordion>
+        </div>
+
+        <p-card styleClass="border-solid border-1 border-gray-200 dark:border-gray-700 h-full w-full xl:w-5/12"
+            class="w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Tasks Logs</h2>
+                <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadTaskLogsAsync(selectedLogTaskId)"
+                    size="small" />
+            </div>
+            <div
+                class="log-container rounded-xl border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 h-[92%]">
+                <p-scrollPanel [style]="{ width: '100%', height: '600px' }"
+                    styleClass="custom-scroll">
+                    @if (taskLogs.length) {
+                    @for (log of taskLogs; track $index) {
+                    <div class="log-line text-xs font-mono text-black dark:text-white">{{ log }}</div>
+                    }
+                    } @else {
+                    <div class="p-4 text-center text-gray-500">No logs available</div>
+                    }
+                </p-scrollPanel>
+            </div>
+        </p-card>
+    </div>
+
+    <p-dialog [(visible)]="showArgumentsDialog" [style]="{width: '50vw'}" [modal]="true" header="Start New Instance">
+        <div class="field flex flex-col mb-4">
+            <label class="block text-md font-medium text-color mb-2">Arguments</label>
+
+            @if (packageInstance.package_arguments?.length) {
+            <div class="mb-4 p-3 bg-gray-50 dark:bg-black rounded-lg">
+                <p class="text-sm font-medium text-gray-700 mb-3">Predefined Arguments</p>
+                @for (arg of packageInstance.package_arguments; track arg.name) {
+                <div class="p-fluid grid grid-cols-12 gap-3 items-center mb-2">
+                    <div class="col-span-4">
+                        <label [for]="arg.name" class="text-sm">
+                            {{ arg.name }}
+                        </label>
+                    </div>
+                    <div class="col-span-8">
+                        <input [id]="arg.name" type="text" pInputText [(ngModel)]="predefinedArgs[arg.name]"
+                            [placeholder]="arg.default?.toString() || ''" class="w-full" />
+                    </div>
+                </div>
+                }
+            </div>
+            }
+
+            <div class="mb-3 p-3 bg-gray-50 dark:bg-black rounded-lg">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-sm font-medium text-gray-700">Custom Arguments</p>
+                    <p-button label="Add" icon="pi pi-plus" (onClick)="addCustomArgument()" [text]="true"
+                        size="small" />
+                </div>
+
+                @if (customArgs.length) {
+                @for (arg of customArgs; track $index) {
+                <div class="p-fluid grid grid-cols-12 gap-3 items-center mb-2">
+                    <div class="col-span-4">
+                        <input type="text" pInputText [(ngModel)]="arg.name" placeholder="Argument name"
+                            class="w-full" />
+                    </div>
+                    <div class="col-span-7">
+                        <input type="text" pInputText [(ngModel)]="arg.value" placeholder="Value" class="w-full" />
+                    </div>
+                    <div class="col-span-1 flex justify-end">
+                        <p-button icon="pi pi-trash" styleClass="p-button-danger"
+                            (click)="removeCustomArgument($index)" />
+                    </div>
+                </div>
+                }
+                } @else {
+                <p class="text-sm text-gray-500 italic">No custom arguments added</p>
+                }
+            </div>
+        </div>
+
+        <ng-template pTemplate="footer">
+            <p-button label="Cancel" (onClick)="showArgumentsDialog = false" styleClass="p-button-text" />
+            <p-button label="Start" icon="pi pi-play" (onClick)="executePackageAsync()" [loading]="isPackageRunning" />
+        </ng-template>
+    </p-dialog>
+
+    <p-dialog [(visible)]="showTerminal" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+        header="Pod Terminal - {{ selectedTaskId }}">
+        @if (selectedTaskId && showTerminal) {
+        <app-pod-terminal [taskId]="selectedTaskId" (socketClosed)="handleSocketClosed()" />
+        }
+    </p-dialog>
+</div>
