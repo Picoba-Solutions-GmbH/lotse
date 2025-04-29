@@ -17,6 +17,12 @@ class Environment:
 
 
 @dataclass
+class Volume:
+    name: str
+    path: str
+
+
+@dataclass
 class PackageConfig:
     package_name: str
     entrypoint: str
@@ -26,6 +32,7 @@ class PackageConfig:
     description: Optional[str] = None
     args: List[Argument] = field(default_factory=list)
     environment: List[Environment] = field(default_factory=list)
+    volumes: List[Volume] = field(default_factory=list)
 
 
 def parse_config(yaml_content: str) -> PackageConfig:
@@ -33,6 +40,7 @@ def parse_config(yaml_content: str) -> PackageConfig:
 
     args = [Argument(**arg) for arg in data.get('args', [])]
     env = [Environment(**env) for env in data.get('environment', [])]
+    volumes = [Volume(**volume) for volume in data.get('volumes', [])]
 
     return PackageConfig(
         package_name=data.get('package_name', ''),
@@ -43,4 +51,5 @@ def parse_config(yaml_content: str) -> PackageConfig:
         timeout=data.get('timeout'),
         args=args,
         environment=env,
+        volumes=volumes
     )

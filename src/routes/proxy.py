@@ -19,8 +19,8 @@ class ProxyCacheType(Enum):
     VSCODE = "vscode"
 
 
-router = APIRouter(prefix="/proxy")
-vscode_router = APIRouter(prefix="/vscode")
+router = APIRouter(prefix="/proxy", include_in_schema=False)
+vscode_router = APIRouter(prefix="/vscode", include_in_schema=False)
 
 _proxy_task_id_cache = {}
 _vscode_task_id_cache = {}

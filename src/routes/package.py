@@ -15,14 +15,14 @@ from src.misc.package_status import PackageStatus
 from src.misc.task_status import TaskStatus
 from src.models.database.package_entity import PackageEntity
 from src.models.database_access import get_db_session
-from src.models.dtos.package_info import (PackageDetail, PackageInfo,
-                                          PackageInstance)
+from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
 from src.models.yaml_config import parse_config
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.package_repository import PackageRepository
 from src.services.package_service import PackageService
 from src.services.task_manager_service import (TaskManagerService,
                                                map_task_entity_to_task_info)
+from src.services.volume_repository import VolumeRepository
 from src.utils import config
 from src.utils.singleton_meta import get_service
 from src.utils.venv_manager import VenvManager
@@ -57,6 +57,18 @@ async def deploy_package(
             detail=(
                 f"Package {package_config.package_name} version {package_config.version} "
                 f"already exists in {stage} environment"
+            )
+        )
+
+    non_existing_volumes = VolumeRepository.get_non_existing_volumes(
+        package_config.volumes)
+    non_existing_volumes_count = len(non_existing_volumes)
+    if non_existing_volumes_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Volume(s) {', '.join([v for v in non_existing_volumes])} "
+                f"{"does" if non_existing_volumes_count == 1 else "do"} not exist in the system. "
             )
         )
 
