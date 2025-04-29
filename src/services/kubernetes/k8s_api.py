@@ -11,6 +11,7 @@ from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
 from src.misc.task_status import TaskStatus
+from src.models.k8s.volume_map import VolumeMap
 from src.models.sync_execution_response import SyncExecutionResponse
 from src.models.yaml_config import Environment
 from src.services.task_manager_service import TaskManagerService
@@ -61,7 +62,7 @@ def get_pod_metrics(api: client.CustomObjectsApi, namespace: str, pod_name: str)
 
 
 def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_version: str,
-               env_vars: list[Environment], task_logger: Logger):
+               env_vars: list[Environment], task_logger: Logger, volumes: list[VolumeMap]):
     if env_vars is None:
         env_vars = []
 
@@ -75,6 +76,39 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         env_vars.append(Environment("no_proxy", os.environ['no_proxy']))
 
     env_var_list = [{"name": env_var.name, "value": env_var.value} for env_var in env_vars]
+
+    volume_mounts = [
+        {
+            "name": "workdir",
+            "mountPath": "/app"
+        },
+        {
+            "name": "venv",
+            "mountPath": "/venv"
+        }
+    ]
+    volumes_list = [
+        {
+            "name": "workdir",
+            "emptyDir": {}
+        },
+        {
+            "name": "venv",
+                    "emptyDir": {}
+        }
+    ]
+
+    for volume in volumes:
+        volume_mounts.append({
+            "name": volume.name.lower(),
+            "mountPath": volume.path
+        })
+        volumes_list.append({
+            "name": volume.name.lower(),
+            "persistentVolumeClaim": {
+                "claimName": volume.pvc_name
+            }
+        })
 
     pod_manifest = {
         "apiVersion": "v1",
@@ -90,28 +124,10 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
                 "name": "python",
                 "image": f"python:{python_version}-slim",
                 "command": ["sleep", "infinity"],
-                "volumeMounts": [
-                    {
-                        "name": "workdir",
-                        "mountPath": "/app"
-                    },
-                    {
-                        "name": "venv",
-                        "mountPath": "/venv"
-                    }
-                ],
+                "volumeMounts": volume_mounts,
                 "env": env_var_list,
             }],
-            "volumes": [
-                {
-                    "name": "workdir",
-                    "emptyDir": {}
-                },
-                {
-                    "name": "venv",
-                    "emptyDir": {}
-                }
-            ]
+            "volumes": volumes_list
         }
     }
 

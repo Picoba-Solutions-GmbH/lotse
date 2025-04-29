@@ -15,6 +15,7 @@ from src.models.yaml_config import parse_config
 from src.services.kubernetes import k8s_api
 from src.services.package_service import PackageService
 from src.services.task_manager_service import TaskManagerService
+from src.services.volume_repository import VolumeRepository
 from src.utils.name_generator import generate_name
 from src.utils.singleton_meta import SingletonMeta
 from src.utils.task_logger import TaskLogger
@@ -60,7 +61,7 @@ class K8sManagerService(metaclass=SingletonMeta):
             if package_info is None:
                 raise FileNotFoundError(f"Package not found for {package_name} in stage {stage}")
 
-            environment_variables = parse_config(package_info.package_entity.config).environment
+            package_config = parse_config(package_info.package_entity.config)
 
             self.task_manager.update_task_status(
                 task_id,
@@ -79,7 +80,7 @@ class K8sManagerService(metaclass=SingletonMeta):
             tar_file_path = os.path.join(venv_path, "venv.tar.gz")
             if not os.path.exists(tar_file_path):
                 k8s_api.create_pod(self.v1, self.namespace, task_id,
-                                   package_info.package_entity.python_version, [], task_logger)
+                                   package_info.package_entity.python_version, [], task_logger, [])
                 asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
                 k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
                 k8s_api.setup_venv(self.v1, self.namespace, task_id, "/app/requirements.txt", task_logger)
@@ -87,8 +88,10 @@ class K8sManagerService(metaclass=SingletonMeta):
                                            tar_file_path, task_logger)
                 k8s_api.delete_pod(self.v1, self.namespace, task_id, task_logger)
 
+            volume_maps = VolumeRepository.get_volume_maps(package_config.volumes)
             k8s_api.create_pod(self.v1, self.namespace, task_id,
-                               package_info.package_entity.python_version, environment_variables, task_logger)
+                               package_info.package_entity.python_version,
+                               package_config.environment, task_logger, volume_maps)
             asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
             task_logger.info(f"Copying package files to pod {task_id}")
             k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")

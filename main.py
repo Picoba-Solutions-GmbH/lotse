@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 
 import src.utils.service_registry as service_registry
 from src.models.database_access import init_db
-from src.routes import execute, package, proxy, status, task
+from src.routes import execute, package, proxy, status, task, volume
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
@@ -57,6 +57,7 @@ app.include_router(execute.router)
 app.include_router(package.router)
 app.include_router(proxy.router)
 app.include_router(proxy.vscode_router)
+app.include_router(volume.router)
 
 app.add_middleware(
     CORSMiddleware,
