@@ -1,4 +1,4 @@
-import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
@@ -7,6 +7,8 @@ import Aura from '@primeng/themes/aura';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import { routes } from './app.routes';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { DialogService } from 'primeng/dynamicdialog';
 
 const lotseTheme = definePreset(Aura, {
     primitive: {
@@ -686,7 +688,9 @@ export const appConfig: ApplicationConfig = {
                 },
             },
         }),
+        { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         MessageService,
-        ConfirmationService
+        ConfirmationService,
+        DialogService
     ],
 };

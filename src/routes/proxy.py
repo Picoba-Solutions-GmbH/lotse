@@ -8,7 +8,7 @@ import websockets
 from fastapi import APIRouter, BackgroundTasks, Request, WebSocket
 from fastapi.responses import StreamingResponse
 
-from src.models.database.task_entity import TaskEntity
+from src.database.models.task_entity import TaskEntity
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
 from src.utils.singleton_meta import get_service, get_service_instance

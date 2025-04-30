@@ -5,9 +5,9 @@ from typing import List, Optional
 
 import psutil
 
+from src.database.database_access import get_db_session
+from src.database.models.task_entity import TaskEntity
 from src.misc.task_status import TaskStatus
-from src.models.database.task_entity import TaskEntity
-from src.models.database_access import get_db_session
 from src.models.sync_execution_response import SyncExecutionResponse
 from src.models.task_info import TaskInfo
 from src.utils.singleton_meta import SingletonMeta

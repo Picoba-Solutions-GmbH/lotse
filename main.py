@@ -9,8 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 
 import src.utils.service_registry as service_registry
-from src.models.database_access import init_db
-from src.routes import execute, package, proxy, status, task, volume
+from src.database import seed_users
+from src.database.database_access import get_db_session, init_db
+from src.routes import (authentication, execute, package, proxy, status, task,
+                        volume)
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(_: FastAPI):
     logger.info("Initializing database...")
     init_db()
+    seed_users.seed_default_users(next(get_db_session()))
     logger.info("Database initialized")
     service_registry.initialize_registry()
 
@@ -58,6 +61,7 @@ app.include_router(package.router)
 app.include_router(proxy.router)
 app.include_router(proxy.vscode_router)
 app.include_router(volume.router)
+app.include_router(authentication.router)
 
 app.add_middleware(
     CORSMiddleware,

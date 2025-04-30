@@ -3,13 +3,14 @@ import logging
 
 import psutil
 from aiohttp import ClientSession
-from fastapi import (APIRouter, BackgroundTasks, HTTPException, WebSocket,
-                     WebSocketDisconnect)
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
+                     WebSocket, WebSocketDisconnect)
 from fastapi.websockets import WebSocketState
 from kubernetes.stream import stream
 
 from src.misc.task_status import TaskStatus
 from src.models.async_execution_response import AsyncExecutionResponse
+from src.routes import authentication
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.task_manager_service import TaskManagerService
 from src.utils.singleton_meta import get_service
@@ -40,7 +41,8 @@ async def get_task_status(
 @router.delete("/{task_id}")
 async def delete_task(
         task_id: str,
-        task_manager: TaskManagerService = get_service(TaskManagerService)):
+        task_manager: TaskManagerService = get_service(TaskManagerService),
+        _=Depends(authentication.require_operator_or_admin)):
     task = task_manager.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -54,7 +56,8 @@ async def delete_task(
 async def cancel_task(
         task_id: str,
         task_manager: TaskManagerService = get_service(TaskManagerService),
-        k8s_manager_service=get_service(K8sManagerService)):
+        k8s_manager_service=get_service(K8sManagerService),
+        _=Depends(authentication.require_operator_or_admin)):
     try:
         task = task_manager.get_task(task_id)
         if not task:
@@ -181,7 +184,8 @@ async def terminal_websocket(
 @router.post("/{task_id}/install-ssh")
 async def install_ssh_server(
         task_id: str,
-        k8s_service: K8sManagerService = get_service(K8sManagerService)):
+        k8s_service: K8sManagerService = get_service(K8sManagerService),
+        _=Depends(authentication.require_operator_or_admin)):
     tasks = BackgroundTasks()
     tasks.add_task(k8s_service.install_ssh_server, task_id)
     await tasks()
@@ -191,7 +195,8 @@ async def install_ssh_server(
 @router.post("/{task_id}/run-vscode-server")
 async def install_and_run_vscode_server(
         task_id: str,
-        k8s_service: K8sManagerService = get_service(K8sManagerService)):
+        k8s_service: K8sManagerService = get_service(K8sManagerService),
+        _=Depends(authentication.require_operator_or_admin)):
     tasks = BackgroundTasks()
     tasks.add_task(k8s_service.install_and_run_vscode_server, task_id)
     await tasks()

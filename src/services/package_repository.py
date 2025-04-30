@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import and_, update
 from sqlalchemy.orm import Session
 
-from src.models.database.package_entity import PackageEntity
+from src.database.models.package_entity import PackageEntity
 
 
 class PackageRepository:

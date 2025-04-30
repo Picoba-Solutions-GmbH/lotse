@@ -19,11 +19,7 @@
       </a>
     </ng-template>
     <ng-template pTemplate="end">
-      <div class="flex items-center mr-1">
-        <div>
-          <p-selectbutton [options]="stateOptions" [(ngModel)]="stageValue" optionLabel="label" optionValue="value"
-            aria-labelledby="basic" size="small" (onChange)="handleStateChange($event)"/>
-        </div>
+      <div class="flex items-center gap-1">
         <div>
           @if (isDarkMode) {
           <p-button [icon]="PrimeIcons.SUN" rounded (onClick)="themeService.setDarkMode(false)" text severity="warn" />
@@ -32,6 +28,14 @@
             severity="contrast" />
           }
         </div>
+        <div>
+          <p-selectbutton [options]="stateOptions" [(ngModel)]="stageValue" optionLabel="label" optionValue="value"
+            aria-labelledby="basic" size="small" (onChange)="handleStateChange($event)" />
+        </div>
+
+        <p-button class="ml-auto" [outlined]="true" [label]="isLoggedIn ? 'Logout' : 'Login'"
+          (onClick)="isLoggedIn ? logout() : openLoginDialog()" size="small"
+          [icon]="isLoggedIn ? PrimeIcons.SIGN_OUT : PrimeIcons.SIGN_IN" />
       </div>
     </ng-template>
   </p-menubar>
