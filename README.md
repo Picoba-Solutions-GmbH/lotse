@@ -161,6 +161,10 @@ npm i
 npm run start
 ```
 
+## 🔐 Authentication
+
+For demo purposes the authentication is diabled. You can enable it by setting the environment variable `ENABLE_AUTH` to `true`.
+
 ## 📁 Project Structure
 
 ```

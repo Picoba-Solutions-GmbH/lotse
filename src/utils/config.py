@@ -46,6 +46,7 @@ K8S_NAMESPACE = os.getenv("K8S_NAMESPACE", "test")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "secret")
 
 IS_DEBUG = os.getenv("VSCODE_DEBUG_MODE", "false").lower() == "true"
+ENABLE_AUTH = os.getenv("ENABLE_AUTH", "true").lower() == "true"
 
 LDAP_SERVER = os.getenv('LDAP_SERVER')
 LDAP_ROOT_DN = os.getenv('LDAP_ROOT_DN')

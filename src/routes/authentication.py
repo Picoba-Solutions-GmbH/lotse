@@ -93,6 +93,9 @@ async def generate_token_async(user_name: str, role: RoleType):
 
 
 async def require_admin(_: Request, token: str = Depends(oauth2_scheme)):
+    if not config.ENABLE_AUTH:
+        return await generate_token_async("admin", RoleType.ADMIN)
+
     token_data = await validate_token_async(token)
     if not token_data.role:
         raise HTTPException(
@@ -109,6 +112,9 @@ async def require_admin(_: Request, token: str = Depends(oauth2_scheme)):
 
 
 async def require_operator_or_admin(_: Request, token: str = Depends(oauth2_scheme)):
+    if not config.ENABLE_AUTH:
+        return await generate_token_async("admin", RoleType.ADMIN)
+
     token_data = await validate_token_async(token)
     if not token_data.role:
         raise HTTPException(
@@ -150,6 +156,9 @@ async def register_user(
 async def login_for_access_token(
         db: Session = Depends(get_db_session),
         form_data: OAuth2PasswordRequestForm = Depends()):
+    if not config.ENABLE_AUTH:
+        return await generate_token_async(form_data.username, RoleType.ADMIN)
+
     user = UserRepository.login_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -166,6 +175,9 @@ async def login_for_access_token(
 async def login_for_access_token_via_ldap(
         db: Session = Depends(get_db_session),
         form_data: OAuth2PasswordRequestForm = Depends()):
+    if not config.ENABLE_AUTH:
+        return await generate_token_async(form_data.username, RoleType.ADMIN)
+
     login_success = active_directory.login(form_data.username, form_data.password)
     if not login_success:
         raise HTTPException(
