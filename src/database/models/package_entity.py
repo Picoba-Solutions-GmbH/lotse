@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, String
 
-from src.models.database_access import Base
+from src.database.database_access import Base
 
 
 class PackageEntity(Base):

@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from src.models.database.package_entity import PackageEntity
-from src.models.database_access import get_db_session
+from src.database.database_access import get_db_session
+from src.database.models.package_entity import PackageEntity
 from src.services.package_repository import PackageRepository
 from src.utils import config
 

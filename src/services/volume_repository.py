@@ -3,8 +3,8 @@ from typing import List, Optional
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from src.models.database.volume_entity import VolumeEntity
-from src.models.database_access import get_db_session
+from src.database.database_access import get_db_session
+from src.database.models.volume_entity import VolumeEntity
 from src.models.k8s.volume_map import VolumeMap
 from src.models.yaml_config import Volume
 

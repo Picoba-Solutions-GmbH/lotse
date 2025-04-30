@@ -10,13 +10,14 @@ from fastapi.responses import JSONResponse
 from pipe import groupby
 from sqlalchemy.orm import Session
 
+from src.database.database_access import get_db_session
+from src.database.models.package_entity import PackageEntity
 from src.misc import constants
 from src.misc.package_status import PackageStatus
 from src.misc.task_status import TaskStatus
-from src.models.database.package_entity import PackageEntity
-from src.models.database_access import get_db_session
 from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
 from src.models.yaml_config import parse_config
+from src.routes import authentication
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.package_repository import PackageRepository
 from src.services.package_service import PackageService
@@ -38,7 +39,8 @@ async def deploy_package(
     set_as_default: bool = Form(False),
     disable_previous_versions: bool = Form(False),
     db_session: Session = Depends(get_db_session),
-    venv_manager: VenvManager = get_service(VenvManager)
+    venv_manager: VenvManager = get_service(VenvManager),
+    _=Depends(authentication.require_operator_or_admin)
 ):
     config_yaml_bytes = await config_yaml.read()
     config_yaml_content = config_yaml_bytes.decode('utf-8')
@@ -129,7 +131,8 @@ async def set_active_package(
     package_name: str = Form(...),
     version: str = Form(...),
     stage: str = Form(..., regex=constants.stage_regex_pattern),
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_operator_or_admin)
 ):
     success = PackageRepository.set_active_package(db, package_name, version, stage)
     if not success:
@@ -185,7 +188,8 @@ async def delete_package(
     package_name: str,
     stage: str,
     version: str,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_admin)
 ):
     package_dir = os.path.join(config.STORAGE_ROOT, package_name, version, stage)
     if not os.path.exists(package_dir):

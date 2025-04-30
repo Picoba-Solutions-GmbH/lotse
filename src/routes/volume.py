@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from src.models.database_access import get_db_session
+from src.database.database_access import get_db_session
+from src.routes import authentication
 from src.services.volume_repository import VolumeRepository
 
 router = APIRouter(prefix="/volumes", tags=["volumes"])
@@ -33,7 +34,8 @@ class VolumeResponse(BaseModel):
 @router.post("/", response_model=VolumeResponse)
 async def create_volume(
     volume: VolumeCreate,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_admin)
 ):
     volume_id = str(uuid.uuid4())
     return VolumeRepository.create_volume(
@@ -66,7 +68,8 @@ async def get_volume(
 async def update_volume(
     volume_id: str,
     volume: VolumeUpdate,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_admin)
 ):
     updated_volume = VolumeRepository.update_volume(
         db,
@@ -82,7 +85,8 @@ async def update_volume(
 @router.delete("/{volume_id}")
 async def delete_volume(
     volume_id: str,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_admin)
 ):
     success = VolumeRepository.delete_volume(db, volume_id)
     if not success:

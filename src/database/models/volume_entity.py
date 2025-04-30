@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String
 
-from src.models.database_access import Base
+from src.database.database_access import Base
 
 
 class VolumeEntity(Base):

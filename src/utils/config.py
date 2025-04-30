@@ -28,6 +28,7 @@ POSTGRES_HOST = os.getenv("POSTGRES_HOST")
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
+DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:5432/{POSTGRES_DB}"
 
 ACTIVEMQ_ACTIVE = os.getenv("ACTIVEMQ_ACTIVE", "false").lower() == "true"
 ACTIVEMQ_HOST = os.getenv("ACTIVEMQ_HOST", "localhost")
@@ -38,8 +39,14 @@ ACTIVEMQ_QUEUE_NAME = os.getenv("ACTIVEMQ_QUEUE_NAME", "default_queue")
 
 GLOBAL_TASK_TIMEOUT_SECONDS = int(os.getenv("GLOBAL_STASK_TIMEOUT_SECONDS", "3600"))  # 1 hour
 
-DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:5432/{POSTGRES_DB}"
-
 K8S_NAMESPACE = os.getenv("K8S_NAMESPACE", "test")
 
+# to get a string like this run:
+# openssl rand -hex 32
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "secret")
+
 IS_DEBUG = os.getenv("VSCODE_DEBUG_MODE", "false").lower() == "true"
+
+LDAP_SERVER = os.getenv('LDAP_SERVER')
+LDAP_ROOT_DN = os.getenv('LDAP_ROOT_DN')
+LDAP_DOMAIN = os.getenv('LDAP_DOMAIN')

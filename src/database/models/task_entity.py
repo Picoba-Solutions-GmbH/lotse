@@ -2,8 +2,8 @@ from sqlalchemy import (JSON, Boolean, Column, DateTime, ForeignKey, Integer,
                         String)
 from sqlalchemy.orm import relationship
 
-from src.models.database.package_entity import PackageEntity
-from src.models.database_access import Base
+from src.database.database_access import Base
+from src.database.models.package_entity import PackageEntity
 
 
 class TaskEntity(Base):
