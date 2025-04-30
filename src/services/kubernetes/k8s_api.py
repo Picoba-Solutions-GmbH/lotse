@@ -536,3 +536,27 @@ def install_and_run_vscode_server(api: client.CoreV1Api, namespace: str, pod_nam
         task_manager.update_vscode_port(pod_name, vs_code_port)
 
     task_logger.info(f"VSCode server installed and running in pod {pod_name}")
+
+
+def run_command_in_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
+                       command: list[str], task_logger: Logger):
+    with k8s_api_lock:
+        resp = stream(
+            api.connect_get_namespaced_pod_exec,
+            pod_name,
+            namespace,
+            command=command,
+            stderr=True,
+            stdin=True,
+            stdout=True,
+            tty=False,
+            _preload_content=False
+        )
+
+    while resp.is_open():
+        if resp.peek_stdout():
+            task_logger.info(resp.read_stdout())
+        if resp.peek_stderr():
+            task_logger.info(resp.read_stderr())
+
+    resp.close()

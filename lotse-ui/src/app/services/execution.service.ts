@@ -16,4 +16,10 @@ export class ExecutionService {
       this.http.post<SyncPackageResponse | AsyncPackageResponse>(`${environment.url}/execute`, request),
     );
   }
+
+  async startEmptyInstanceAsync(request: PackageRequest): Promise<SyncPackageResponse | AsyncPackageResponse> {
+    return await firstValueFromAsync(
+      this.http.post<SyncPackageResponse | AsyncPackageResponse>(`${environment.url}/execute/empty-instance`, request),
+    );
+  }
 }

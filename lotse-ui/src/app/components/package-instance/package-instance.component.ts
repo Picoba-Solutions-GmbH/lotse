@@ -20,15 +20,15 @@ import { environment } from '../../../environments/environment';
 import { VisualStudioCodeComponent } from "../../icons/svg-VisualStudioCode.component";
 import { TaskStatus } from '../../misc/TaskStatus';
 import { PackageInstance } from '../../models/Package';
+import { TaskInfo } from '../../models/TaskInfo';
 import { DurationPipe } from "../../pipes/duration.pipe";
 import { TaskCountByStatePipe } from "../../pipes/task-count-by-state.pipe";
 import { TaskStatusToSeverityPipe } from "../../pipes/task-status.pipe";
 import { UtcToLocalPipe } from "../../pipes/utcToLocal.pipe";
-import { PackageService } from '../../services/package.service';
 import { ExecutionService } from '../../services/execution.service';
-import { TaskInfo } from '../../models/TaskInfo';
-import { PodTerminalComponent } from '../pod-terminal/pod-terminal.component';
+import { PackageService } from '../../services/package.service';
 import { TaskService } from '../../services/task.service';
+import { PodTerminalComponent } from '../pod-terminal/pod-terminal.component';
 
 @Component({
   selector: 'app-package-instance',
@@ -171,8 +171,12 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
       this.customArgs = [];
       this.showArgumentsDialog = true;
     } else {
-      this.executePackageAsync();
+      this.executePackageAsync(false);
     }
+  }
+
+  onStartEmptyInstance(): void {
+    this.executePackageAsync(true);
   }
 
   addCustomArgument(): void {
@@ -183,19 +187,21 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     this.customArgs.splice(index, 1);
   }
 
-  async executePackageAsync(): Promise<void> {
+  async executePackageAsync(startAsEmptyInstance: boolean): Promise<void> {
     if (this.isPackageRunning) return;
 
     const args = [];
-    for (const [name, value] of Object.entries(this.predefinedArgs)) {
-      if (value !== undefined && value !== null) {
-        args.push({ name, value: value.toString() });
+    if (!startAsEmptyInstance) {
+      for (const [name, value] of Object.entries(this.predefinedArgs)) {
+        if (value !== undefined && value !== null) {
+          args.push({ name, value: value.toString() });
+        }
       }
-    }
 
-    for (const arg of this.customArgs) {
-      if (arg.name && arg.value) {
-        args.push({ name: arg.name, value: arg.value });
+      for (const arg of this.customArgs) {
+        if (arg.name && arg.value) {
+          args.push({ name: arg.name, value: arg.value });
+        }
       }
     }
 
@@ -210,7 +216,10 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
 
     try {
       this.isPackageRunning = true;
-      const response = await this.executionService.executePackageAsync(request);
+      const response = startAsEmptyInstance
+        ? await this.executionService.startEmptyInstanceAsync(request)
+        : await this.executionService.executePackageAsync(request);
+
 
       if ('output' in response) {
         this.showSuccess(`Package executed successfully: ${response.output}`);
