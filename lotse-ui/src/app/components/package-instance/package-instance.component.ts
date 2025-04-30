@@ -246,7 +246,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     this.isVsCodeBusy.set(true);
     await this.taskService.postRunVsCodeServerAsync(taskId)
     this.isVsCodeBusy.set(false);
-    const url = `${environment.url}/vscode/${taskId}`;
+    const url = `${environment.url}/vscode/${taskId}/?folder=/app`;
     window.open(url, '_blank');
   }
 }
