@@ -84,7 +84,7 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         },
         {
             "name": "venv",
-            "mountPath": "/venv"
+            "mountPath": "/app/venv"
         }
     ]
     volumes_list = [
@@ -94,7 +94,7 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         },
         {
             "name": "venv",
-                    "emptyDir": {}
+            "emptyDir": {}
         }
     ]
 
@@ -195,7 +195,7 @@ def setup_venv(api: client.CoreV1Api, namespace: str, pod_name: str,
                requirements_path: str, task_logger: Logger):
     exec_command = [
         'bash', '-c',
-        f'python -m venv /venv && . /venv/bin/activate && pip install -r {requirements_path}'
+        f'python -m venv /app/venv && . /app/venv/bin/activate && pip install -r {requirements_path}'
     ]
 
     with k8s_api_lock:
@@ -287,7 +287,7 @@ def extract_tar_gz(api: client.CoreV1Api, namespace: str, pod_name:
 def start_python_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
                      args: list[str], task_logger: Logger, task_id: str, task_manager) -> Optional[int]:
     exec_command = ['bash', '-c',
-                    f'. /venv/bin/activate && python -u {entry_point} {" ".join(args)}; echo "EXIT_CODE=$?"']
+                    f'. /app/venv/bin/activate && python -u {entry_point} {" ".join(args)}; echo "EXIT_CODE=$?"']
 
     with k8s_api_lock:
         resp = stream(api.connect_get_namespaced_pod_exec,

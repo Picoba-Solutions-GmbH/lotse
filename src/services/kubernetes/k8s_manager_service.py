@@ -84,7 +84,7 @@ class K8sManagerService(metaclass=SingletonMeta):
                 asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
                 k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
                 k8s_api.setup_venv(self.v1, self.namespace, task_id, "/app/requirements.txt", task_logger)
-                k8s_api.copy_file_from_pod(self.v1, self.namespace, task_id, "/venv",
+                k8s_api.copy_file_from_pod(self.v1, self.namespace, task_id, "/app/venv",
                                            tar_file_path, task_logger)
                 k8s_api.delete_pod(self.v1, self.namespace, task_id, task_logger)
 
@@ -98,7 +98,7 @@ class K8sManagerService(metaclass=SingletonMeta):
             task_logger.info(f"Copying venv files to pod {task_id}")
             k8s_api.copy_files_to_pod(self.namespace, task_id, tar_file_path, "/tmp")
             task_logger.info(f"Extracting venv files in pod {task_id}")
-            k8s_api.extract_tar_gz(self.v1, self.namespace, task_id, "/tmp/venv.tar.gz", "/venv", task_logger)
+            k8s_api.extract_tar_gz(self.v1, self.namespace, task_id, "/tmp/venv.tar.gz", "/app/venv", task_logger)
 
             command = []
             for arg in arguments:
