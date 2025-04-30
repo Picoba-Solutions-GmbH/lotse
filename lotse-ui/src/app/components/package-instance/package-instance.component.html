@@ -5,8 +5,12 @@
                 ({{packageVersion}})</h1>
             <p class="text-color-muted text-sm md:text-base">{{ packageInstance.description }}</p>
         </div>
-        <p-button label="Start New Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartNewInstance()"
-            [loading]="isPackageRunning" />
+        <div class="flex gap-2">
+            <p-button label="Start New Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartNewInstance()"
+                [loading]="isPackageRunning" />
+            <p-button label="Create Empty Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartEmptyInstance()"
+                [loading]="isPackageRunning" />
+        </div>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4 mb-4">
@@ -194,8 +198,7 @@
             </div>
             <div
                 class="log-container rounded-xl border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 h-[92%]">
-                <p-scrollPanel [style]="{ width: '100%', height: '600px' }"
-                    styleClass="custom-scroll">
+                <p-scrollPanel [style]="{ width: '100%', height: '600px' }" styleClass="custom-scroll">
                     @if (taskLogs.length) {
                     @for (log of taskLogs; track $index) {
                     <div class="log-line text-xs font-mono text-black dark:text-white">{{ log }}</div>
@@ -262,7 +265,7 @@
 
         <ng-template pTemplate="footer">
             <p-button label="Cancel" (onClick)="showArgumentsDialog = false" styleClass="p-button-text" />
-            <p-button label="Start" icon="pi pi-play" (onClick)="executePackageAsync()" [loading]="isPackageRunning" />
+            <p-button label="Start" icon="pi pi-play" (onClick)="executePackageAsync(false)" [loading]="isPackageRunning" />
         </ng-template>
     </p-dialog>
 

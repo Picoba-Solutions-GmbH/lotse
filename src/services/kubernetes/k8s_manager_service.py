@@ -53,7 +53,8 @@ class K8sManagerService(metaclass=SingletonMeta):
             package_name: str,
             stage: str,
             version: Optional[str],
-            arguments: List[PackageRequestArgument]) -> bool:
+            arguments: List[PackageRequestArgument],
+            empty_instance: bool) -> bool:
         task_logger = self.task_logger.setup_logger(task_id)
 
         try:
@@ -115,10 +116,15 @@ class K8sManagerService(metaclass=SingletonMeta):
                 None
             )
 
-            file_name = os.path.basename(package_info.entry_point_path)
-            package_path = f"/app/{file_name}"
-            result = k8s_api.start_python_app(self.v1, self.namespace, task_id,
-                                              package_path, command, task_logger, task_id, self.task_manager)
+            if empty_instance:
+                command = ["tail", "-f", "/dev/null"]
+                k8s_api.run_command_in_pod(self.v1, self.namespace, task_id, command, task_logger)
+                result = 1
+            else:
+                file_name = os.path.basename(package_info.entry_point_path)
+                package_path = f"/app/{file_name}"
+                result = k8s_api.start_python_app(self.v1, self.namespace, task_id,
+                                                  package_path, command, task_logger, task_id, self.task_manager)
 
             return result is not None and result == 0
         except Exception as e:
@@ -127,7 +133,8 @@ class K8sManagerService(metaclass=SingletonMeta):
             return False
 
     def __internal_run_package(self, timeout: int, task_id: str, package_name: str,
-                               stage: str, version: Optional[str], arguments: List[PackageRequestArgument]):
+                               stage: str, version: Optional[str], arguments: List[PackageRequestArgument],
+                               empty_instance: bool):
         task_logger = self.task_logger.setup_logger(task_id)
         try:
             timer = None
@@ -143,7 +150,7 @@ class K8sManagerService(metaclass=SingletonMeta):
 
             output_lines = []
             error_lines = []
-            success = self.execute_package(task_id, package_name, stage, version, arguments)
+            success = self.execute_package(task_id, package_name, stage, version, arguments, empty_instance)
             if success is False:
                 raise Exception("Failed to start process")
 
@@ -187,7 +194,8 @@ class K8sManagerService(metaclass=SingletonMeta):
                                     package_name: str,
                                     stage: str,
                                     version: Optional[str],
-                                    arguments: List[PackageRequestArgument]) -> str:
+                                    arguments: List[PackageRequestArgument],
+                                    empty_instance: bool) -> str:
 
         package_info = PackageService.get_package_info(package_name, stage, version)
         if package_info is None:
@@ -205,7 +213,7 @@ class K8sManagerService(metaclass=SingletonMeta):
 
         threading.Thread(
             target=self.__internal_run_package,
-            args=(timeout, task_id, package_name, stage, version, arguments),
+            args=(timeout, task_id, package_name, stage, version, arguments, empty_instance),
             daemon=True
         ).start()
 

@@ -45,7 +45,7 @@ class PackageExecutionListenerService(stomp.ConnectionListener):
 
     async def _process_message(self, package_name: str, stage: str, version: Optional[str], arguments: list):
         try:
-            await self.k8s_manager_service.execute_package_async(package_name, stage, version, arguments)
+            await self.k8s_manager_service.execute_package_async(package_name, stage, version, arguments, False)
         except Exception as e:
             logger.error(f"Error executing script: {str(e)}", exc_info=True)
 

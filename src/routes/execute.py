@@ -17,8 +17,9 @@ router = APIRouter(prefix="/execute", tags=["execute"])
 
 async def execute_package(package_name: str, version: Optional[str], stage: str, arguments: list,
                           wait_for_completion: bool, task_manager: TaskManagerService,
-                          k8s_manager_service: K8sManagerService):
-    task_id = await k8s_manager_service.execute_package_async(package_name, stage, version, arguments)
+                          k8s_manager_service: K8sManagerService,
+                          empty_instance: bool) -> Union[SyncExecutionResponse, AsyncExecutionResponse]:
+    task_id = await k8s_manager_service.execute_package_async(package_name, stage, version, arguments, empty_instance)
 
     if wait_for_completion:
         while True:
@@ -64,7 +65,8 @@ async def execute_package_get(
         arguments=arguments,
         wait_for_completion=wait_for_completion,
         task_manager=task_manager,
-        k8s_manager_service=k8s_manager_service
+        k8s_manager_service=k8s_manager_service,
+        empty_instance=False
     )
 
 
@@ -88,7 +90,8 @@ async def execute_versioned_package_get(
         arguments=arguments,
         wait_for_completion=wait_for_completion,
         task_manager=task_manager,
-        k8s_manager_service=k8s_manager_service
+        k8s_manager_service=k8s_manager_service,
+        empty_instance=False
     )
 
 
@@ -104,5 +107,23 @@ async def execute_package_post(
         arguments=request.arguments,
         wait_for_completion=request.wait_for_completion,
         task_manager=task_manager,
-        k8s_manager_service=k8s_manager_service
+        k8s_manager_service=k8s_manager_service,
+        empty_instance=False
+    )
+
+
+@router.post("/empty-instance", response_model=Union[SyncExecutionResponse, AsyncExecutionResponse])
+async def execute_empty_instance(
+        request: ExecutionRequest,
+        k8s_manager_service: K8sManagerService = get_service(K8sManagerService),
+        task_manager: TaskManagerService = get_service(TaskManagerService)):
+    return await execute_package(
+        package_name=request.package_name,
+        version=request.version,
+        stage=request.stage,
+        arguments=request.arguments,
+        wait_for_completion=request.wait_for_completion,
+        task_manager=task_manager,
+        k8s_manager_service=k8s_manager_service,
+        empty_instance=True
     )
