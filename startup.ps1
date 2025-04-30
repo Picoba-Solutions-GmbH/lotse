@@ -45,7 +45,13 @@ try {
 data:
   allow-snippet-annotations: "true"
   annotations-risk-level: Critical'
-  
+
+    Write-Host "Install metrics server..." -ForegroundColor Cyan
+    & kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+    Write-Host "Patching metric server..." -ForegroundColor Cyan
+    & kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+
     Write-Host "Creating Kubernetes namespace..." -ForegroundColor Cyan
     & kubectl create namespace lotse --dry-run=client -o yaml | kubectl apply -f -
 
