@@ -92,6 +92,8 @@ spec:
               value: "1"
             - name: K8S_NAMESPACE
               value: "lotse"
+            - name: ENABLE_AUTH
+              value: "false"
             - name: POD_NAME
               valueFrom:
                 fieldRef:
