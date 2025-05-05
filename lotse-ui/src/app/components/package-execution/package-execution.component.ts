@@ -13,12 +13,13 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { interval, Subscription, takeWhile } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { RepositoryConfig } from '../../models/RepositoryConfig';
-import { TaskStatusToSeverityPipe } from '../../pipes/task-status.pipe';
-import { ExecutionService } from '../../services/execution.service';
-import { PackageRequestArguments } from '../../models/PackageRequestArguments';
 import { PackageRequest } from '../../models/PackageRequest';
+import { PackageRequestArguments } from '../../models/PackageRequestArguments';
+import { RepositoryConfig } from '../../models/RepositoryConfig';
 import { TaskInfo } from '../../models/TaskInfo';
+import { TaskStatusToSeverityPipe } from '../../pipes/task-status.pipe';
+import { AuthService } from '../../services/auth.service';
+import { ExecutionService } from '../../services/execution.service';
 import { PackageService } from '../../services/package.service';
 import { TaskService } from '../../services/task.service';
 
@@ -69,17 +70,20 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
 
   taskPollingSubscription?: Subscription;
   isAlive = true;
+  isAuthenticationEnabled: boolean = false;
 
   constructor(
     private executionService: ExecutionService,
     private packageService: PackageService,
     private messageService: MessageService,
-    private taskService: TaskService
+    private taskService: TaskService,
+    private authService: AuthService
   ) { }
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.loadPackagesAsync(), this.loadTasksAsync()]);
     this.startTaskPolling();
+    this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
   }
 
   ngOnDestroy(): void {

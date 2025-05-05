@@ -6,10 +6,12 @@
             <p class="text-color-muted text-sm md:text-base">{{ packageInstance.description }}</p>
         </div>
         <div class="flex gap-2">
-            <p-button label="Start New Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartNewInstance()"
-                [loading]="isPackageRunning" />
-            <p-button label="Create Empty Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartEmptyInstance()"
-                [loading]="isPackageRunning" />
+            <ng-container *hasRole="[Role.ADMIN, Role.OPERATOR]">
+                <p-button label="Start New Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartNewInstance()"
+                    [loading]="isPackageRunning" />
+                <p-button label="Create Empty Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartEmptyInstance()"
+                    [loading]="isPackageRunning" />
+            </ng-container>
         </div>
     </div>
 
@@ -129,18 +131,24 @@
                                 <p-button [icon]="PrimeIcons.EXTERNAL_LINK" (click)="openUIApp(task.task_id)"
                                     pTooltip="Open UI" tooltipPosition="bottom" />
                                 }
-                                @if (task.status === TaskStatus.RUNNING || task.status === TaskStatus.INITIALIZING) {
-                                <p-button [icon]="PrimeIcons.BAN" severity="warn" pTooltip="Cancel"
-                                    (click)="cancelTaskAsync(task.task_id)" tooltipPosition="bottom" />
-                                }
-                                @if (task.status === TaskStatus.RUNNING) {
-                                <p-button [icon]="PrimeIcons.CODE" (click)="openTerminal(task.task_id)"
-                                    severity="secondary" pTooltip="Open Terminal" tooltipPosition="bottom" />
-                                <p-button pTooltip="Open in VSCode" tooltipPosition="bottom" severity="contrast"
-                                    (onClick)="openVSCode(task.task_id)" [loading]="isVsCodeBusy()">
-                                    <svg-VisualStudioCode />
-                                </p-button>
-                                }
+                                <ng-container *hasRole="[Role.ADMIN, Role.OPERATOR]">
+                                    @if (task.status === TaskStatus.RUNNING || task.status === TaskStatus.INITIALIZING)
+                                    {
+                                    <p-button [icon]="PrimeIcons.BAN" severity="warn" pTooltip="Cancel"
+                                        (click)="cancelTaskAsync(task.task_id)" tooltipPosition="bottom"
+                                        *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+                                    }
+                                    @if (task.status === TaskStatus.RUNNING) {
+                                    <p-button [icon]="PrimeIcons.CODE" (click)="openTerminal(task.task_id)"
+                                        severity="secondary" pTooltip="Open Terminal" tooltipPosition="bottom"
+                                        *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+                                    <p-button pTooltip="Open in VSCode" tooltipPosition="bottom" severity="contrast"
+                                        (onClick)="openVSCode(task.task_id)" [loading]="isVsCodeBusy()"
+                                        *hasRole="[Role.ADMIN, Role.OPERATOR]">
+                                        <svg-VisualStudioCode />
+                                    </p-button>
+                                    }
+                                </ng-container>
                             </div>
                         </td>
                     </tr>
@@ -265,7 +273,8 @@
 
         <ng-template pTemplate="footer">
             <p-button label="Cancel" (onClick)="showArgumentsDialog = false" styleClass="p-button-text" />
-            <p-button label="Start" icon="pi pi-play" (onClick)="executePackageAsync(false)" [loading]="isPackageRunning" />
+            <p-button label="Start" icon="pi pi-play" (onClick)="executePackageAsync(false)"
+                [loading]="isPackageRunning" />
         </ng-template>
     </p-dialog>
 

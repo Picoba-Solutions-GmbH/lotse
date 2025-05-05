@@ -29,6 +29,9 @@ import { ExecutionService } from '../../services/execution.service';
 import { PackageService } from '../../services/package.service';
 import { TaskService } from '../../services/task.service';
 import { PodTerminalComponent } from '../pod-terminal/pod-terminal.component';
+import { AuthService } from '../../services/auth.service';
+import { Role } from '../../misc/Role';
+import { HasRoleDirective } from '../../directives/has-role.directive';
 
 @Component({
   selector: 'app-package-instance',
@@ -53,6 +56,7 @@ import { PodTerminalComponent } from '../pod-terminal/pod-terminal.component';
     VisualStudioCodeComponent,
     UtcToLocalPipe,
     AccordionModule,
+    HasRoleDirective
   ],
   templateUrl: './package-instance.component.html',
   styleUrl: './package-instance.component.scss'
@@ -84,13 +88,16 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   showTerminal = false;
   selectedTaskId: string | null = null;
   isVsCodeBusy = signal(false);
+  isAuthenticationEnabled: boolean = false;
+  Role = Role
 
   constructor(
     private packageService: PackageService,
     private executionService: ExecutionService,
     private route: ActivatedRoute,
     private messageService: MessageService,
-    private taskService: TaskService
+    private taskService: TaskService,
+    private authService: AuthService
   ) { }
 
   async ngOnInit(): Promise<void> {
@@ -98,6 +105,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     this.packageVersion = this.route.snapshot.params['package_version'];
     await this.loadPackageInstanceAsync();
     this.startTaskPolling();
+    this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
   }
 
 

@@ -34,6 +34,7 @@ import './utils/global-functions';
 })
 export class AppComponent implements OnInit {
   isLoggedIn: boolean = false;
+  isAuthEnabled: boolean = false;
 
   title = 'lotse-ui';
   logoOpacity: number = 1;
@@ -82,10 +83,13 @@ export class AppComponent implements OnInit {
 
     this.stageValue = localStorage.getItem('stage') || 'dev';
 
-    const login = localStorage.getItem('login');
-    if (login) {
-      const { username, password } = JSON.parse(login);
-      await this.loginAsync(username, password, true);
+    this.isAuthEnabled = await this.authService.isAuthenticationEnabledAsync();
+    if (this.isAuthEnabled) {
+      const login = this.authService.getLogin();
+      if (login) {
+        const { username, password } = JSON.parse(login);
+        await this.loginAsync(username, password, true);
+      }
     }
   }
 

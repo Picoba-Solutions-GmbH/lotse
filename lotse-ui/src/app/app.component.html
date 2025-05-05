@@ -32,10 +32,11 @@
           <p-selectbutton [options]="stateOptions" [(ngModel)]="stageValue" optionLabel="label" optionValue="value"
             aria-labelledby="basic" size="small" (onChange)="handleStateChange($event)" />
         </div>
-
+        @if (isAuthEnabled) {
         <p-button class="ml-auto" [outlined]="true" [label]="isLoggedIn ? 'Logout' : 'Login'"
           (onClick)="isLoggedIn ? logout() : openLoginDialog()" size="small"
           [icon]="isLoggedIn ? PrimeIcons.SIGN_OUT : PrimeIcons.SIGN_IN" />
+        }
       </div>
     </ng-template>
   </p-menubar>

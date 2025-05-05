@@ -29,4 +29,8 @@ export class LoginDialogComponent {
       this.ref.close({ username: this.username, password: this.password });
     }
   }
+
+  onCancel(): void {
+    this.ref.close(null);
+  }
 }
