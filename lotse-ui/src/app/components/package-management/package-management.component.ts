@@ -12,11 +12,14 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import { HasRoleDirective } from '../../directives/has-role.directive';
 import { PackageStatus } from '../../misc/PackageStatus';
+import { Role } from '../../misc/Role';
 import { PackageDetail } from '../../models/Package';
 import { PackageCountByStatePipe } from "../../pipes/package-count-by-state.pipe";
 import { PackageStatusToSeverityPipe } from "../../pipes/package-status.pipe";
 import { PackageService } from '../../services/package.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-package-management',
@@ -33,7 +36,8 @@ import { PackageService } from '../../services/package.service';
     DialogModule,
     ToastModule,
     PackageStatusToSeverityPipe,
-    PackageCountByStatePipe
+    PackageCountByStatePipe,
+    HasRoleDirective
   ],
   templateUrl: './package-management.component.html',
   styleUrl: './package-management.component.scss'
@@ -45,18 +49,22 @@ export class PackageManagementComponent implements OnInit {
   loading: boolean = true;
   PackageStatus = PackageStatus;
   PrimeIcons = PrimeIcons;
+  Role = Role;
+  isAuthenticationEnabled: boolean = false;
 
   constructor(
     private packageService: PackageService,
     private route: ActivatedRoute,
     private router: Router,
     private messageService: MessageService,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private authService: AuthService
   ) { }
 
   async ngOnInit(): Promise<void> {
     this.packageName = this.route.snapshot.params['package_name'];
     await this.loadPackages();
+    this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
   }
 
   async loadPackages(): Promise<void> {

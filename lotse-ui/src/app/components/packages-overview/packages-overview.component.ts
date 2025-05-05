@@ -11,10 +11,13 @@ import { DialogModule } from 'primeng/dialog';
 import { FileUploadModule } from 'primeng/fileupload';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { HasRoleDirective } from '../../directives/has-role.directive';
 import { PackageStatus } from '../../misc/PackageStatus';
+import { Role } from '../../misc/Role';
 import { PackageInfo } from '../../models/Package';
 import { PackageCountByStatePipe } from "../../pipes/package-count-by-state.pipe";
 import { PackageStatusToSeverityPipe } from "../../pipes/package-status.pipe";
+import { AuthService } from '../../services/auth.service';
 import { PackageService } from '../../services/package.service';
 
 @Component({
@@ -30,7 +33,8 @@ import { PackageService } from '../../services/package.service';
     FileUploadModule,
     PackageStatusToSeverityPipe,
     PackageCountByStatePipe,
-    CheckboxModule
+    CheckboxModule,
+    HasRoleDirective
   ],
   templateUrl: './packages-overview.component.html',
   styleUrl: './packages-overview.component.scss'
@@ -40,21 +44,25 @@ export class PackagesOverviewComponent implements OnInit {
   selectedPackage: PackageInfo | undefined;
   PackageStatus = PackageStatus;
   PrimeIcons = PrimeIcons;
+  Role = Role;
   showDeployDialog = false;
   zipFile: File | null = null;
   configFile: File | null = null;
   setAsDefault: boolean = false;
   disablePreviousVersions: boolean = false;
+  isAuthenticationEnabled: boolean = false;
 
   constructor(
     private packageService: PackageService,
     private router: Router,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private authService: AuthService
   ) { }
 
   async ngOnInit(): Promise<void> {
     const stage = localStorage.getItem('stage') || 'dev';
     this.packages = await this.packageService.getAllPackagesOverviewAsync(stage);
+    this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
   }
 
   onPackageSelect(clickedPackage: PackageInfo): void {

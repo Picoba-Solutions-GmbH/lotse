@@ -14,7 +14,7 @@ from src.services.user_repository import UserRepository
 from src.utils import config
 from src.utils.hasher import get_password_hash, verify_password
 
-router = APIRouter(tags=["Authentication"])
+router = APIRouter(prefix="/authentication", tags=["Authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -128,6 +128,11 @@ async def require_operator_or_admin(_: Request, token: str = Depends(oauth2_sche
             detail="Operator or Admin role required for this operation"
         )
     return token_data
+
+
+@router.get("/is-authentication-enabled")
+async def is_authentication_enabled():
+    return {"authentication_enabled": config.ENABLE_AUTH}
 
 
 @router.post("/register", response_model=schemas.Token)

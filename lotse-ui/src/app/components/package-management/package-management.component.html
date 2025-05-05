@@ -81,9 +81,11 @@
                     </td>
                     <td>
                         <div class="flex gap-2">
-                            <p-button [icon]="PrimeIcons.TRASH"
-                                styleClass="p-button-rounded p-button-danger p-button-sm" pTooltip="Delete"
-                                (onClick)="$event.stopPropagation(); deletePackageVersion(package)" />
+                            <ng-container *hasRole="[Role.ADMIN]">
+                                <p-button [icon]="PrimeIcons.TRASH"
+                                    styleClass="p-button-rounded p-button-danger p-button-sm" pTooltip="Delete"
+                                    (onClick)="$event.stopPropagation(); deletePackageVersion(package)" />
+                            </ng-container>
                         </div>
                     </td>
                 </tr>

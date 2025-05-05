@@ -5,9 +5,10 @@
   </div>
   <div class="flex flex-col">
     <label for="password" class="mb-2">Password</label>
-    <p-password id="password" class="w-full" [(ngModel)]="password" [toggleMask]="true" [feedback]="false" />
+    <input id="password" type="password" class="w-full px-3 py-2 border rounded-md" [(ngModel)]="password" />
   </div>
-  <div>
-    <p-button label="Login" (onClick)="onLogin()" class="w-full" />
+  <div class="flex justify-end gap-4">
+    <p-button label="Cancel" (onClick)="onCancel()" outlined />
+    <p-button label="Login" (onClick)="onLogin()" />
   </div>
 </div>

@@ -4,8 +4,8 @@
             <h1 class="text-3xl font-bold text-color-muted mb-2">Packages</h1>
             <p class="text-color-muted">Manage and monitor your packages</p>
         </div>
-        <p-button label="Deploy Package" [icon]="PrimeIcons.PLUS" (onClick)="showDeployPackageDialog()">
-        </p-button>
+        <p-button label="Deploy Package" [icon]="PrimeIcons.PLUS" (onClick)="showDeployPackageDialog()"
+            *hasRole="[Role.ADMIN, Role.OPERATOR]" />
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4">
@@ -125,8 +125,8 @@
         </div>
 
         <ng-template pTemplate="footer">
-            <p-button label="Cancel" (onClick)="showDeployDialog = false" styleClass="p-button-text"></p-button>
-            <p-button label="Deploy" (onClick)="deployPackage()" [disabled]="!zipFile || !configFile"></p-button>
+            <p-button label="Cancel" (onClick)="showDeployDialog = false" styleClass="p-button-text" />
+            <p-button label="Deploy" (onClick)="deployPackage()" [disabled]="!zipFile || !configFile" />
         </ng-template>
     </p-dialog>
 </div>
