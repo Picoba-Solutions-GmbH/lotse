@@ -5,6 +5,7 @@ from typing import Optional
 
 from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
+from src.models.yaml_config import parse_config
 from src.services.package_repository import PackageRepository
 from src.utils import config
 
@@ -33,7 +34,11 @@ class PackageService:
         if not os.path.exists(package_dir):
             return None
 
-        entry_file_path = os.path.join(package_dir, "main.py")
+        config_content = parse_config(package_info.config)
+        if not config_content:
+            return None
+
+        entry_file_path = os.path.join(package_dir, config_content.entrypoint)
         if os.path.exists(entry_file_path):
             return PackageInfo(
                 package_entity=package_info,
