@@ -8,10 +8,13 @@ def generate_name(text: str) -> str:
     sha256_text = hashlib.sha256(random_guid.encode()).hexdigest()
     short_sha = sha256_text[:7]
     name = f"{text}-{short_sha}"
+
+    return sanitize_name(name)
+
+
+def sanitize_name(name: str) -> str:
     name = name.lower()
-
     sanitized = re.sub(r'[^a-z0-9\.\-]', '-', name)
-
     sanitized = re.sub(r'^[^a-z0-9]+', '', sanitized)
     sanitized = re.sub(r'[^a-z0-9]+$', '', sanitized)
 

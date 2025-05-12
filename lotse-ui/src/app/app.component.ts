@@ -109,7 +109,7 @@ export class AppComponent implements OnInit {
     return urlParts.map((part, index) => {
       currentPath += `/${part}`;
       return {
-        label: part.replace(/_/g, ' '),
+        label: part.replace(/_/g, ' ').replace(/%20/g, '-'),
         icon: PrimeIcons.FOLDER,
         routerLink: currentPath
       };

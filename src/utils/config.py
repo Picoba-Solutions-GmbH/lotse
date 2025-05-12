@@ -18,7 +18,13 @@ elif os.name == "posix":
 else:
     HOME_PATH = Path.home() / company_dir / app_name
 
-STORAGE_ROOT = os.path.join(HOME_PATH, "packages")
+PACKAGES_ROOT = os.path.join(HOME_PATH, "packages")
+if not os.path.exists(PACKAGES_ROOT):
+    os.makedirs(PACKAGES_ROOT)
+
+VENVS_ROOT = os.path.join(HOME_PATH, "venvs")
+if not os.path.exists(VENVS_ROOT):
+    os.makedirs(VENVS_ROOT)
 
 OPENAPI_PREFIX_PATH = os.getenv("OPENAPI_PREFIX_PATH", "/api")
 API_VERSION = os.getenv("API_VERSION", "0.1.0")

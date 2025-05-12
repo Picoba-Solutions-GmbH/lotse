@@ -24,9 +24,8 @@ from src.services.package_service import PackageService
 from src.services.task_manager_service import (TaskManagerService,
                                                map_task_entity_to_task_info)
 from src.services.volume_repository import VolumeRepository
-from src.utils import config
+from src.utils.path_manager import PathManager
 from src.utils.singleton_meta import get_service
-from src.utils.venv_manager import VenvManager
 
 router = APIRouter(prefix="/packages", tags=["packages"])
 
@@ -39,7 +38,6 @@ async def deploy_package(
     set_as_default: bool = Form(False),
     disable_previous_versions: bool = Form(False),
     db_session: Session = Depends(get_db_session),
-    venv_manager: VenvManager = get_service(VenvManager),
     _=Depends(authentication.require_operator_or_admin)
 ):
     config_yaml_bytes = await config_yaml.read()
@@ -74,15 +72,15 @@ async def deploy_package(
             )
         )
 
-    package_dir = os.path.join(config.STORAGE_ROOT, package_config.package_name,
-                               package_config.version, stage)
+    package_dir = PathManager.get_package_path(package_config.package_name,
+                                               package_config.version, stage)
     os.makedirs(package_dir, exist_ok=True)
     file_path = os.path.join(package_dir, f"{package_config.package_name}.7z")
 
     with open(file_path, "wb") as f:
         shutil.copyfileobj(package_file.file, f)
 
-    patoolib.extract_archive(file_path, outdir=package_dir)
+    patoolib.extract_archive(file_path, outdir=str(package_dir))
 
     set_active = set_as_default or disable_previous_versions
     metadata = PackageRepository.create_package(
@@ -95,8 +93,8 @@ async def deploy_package(
         other_versions = PackageRepository.list_other_package_version(
             db_session, package_config.package_name, stage, package_config.version)
         for other_version in other_versions:
-            venv_path = venv_manager.get_venv_path(other_version.package_name,
-                                                   other_version.version, other_version.stage)
+            venv_path = PathManager.get_venv_path(other_version.package_name,
+                                                  other_version.version, other_version.stage)
             shutil.rmtree(venv_path, ignore_errors=True)
             package_path = PackageService.get_package_path(
                 other_version.package_name, other_version.version, other_version.stage)
@@ -189,11 +187,10 @@ async def delete_package(
     stage: str,
     version: str,
     db: Session = Depends(get_db_session),
-    venv_manager: VenvManager = get_service(VenvManager),
     _=Depends(authentication.require_admin)
 ):
-    package_dir = os.path.join(config.STORAGE_ROOT, package_name, version, stage)
-    venv_dir = venv_manager.get_venv_path(package_name, version, stage)
+    package_dir = PathManager.get_package_path(package_name, version, stage)
+    venv_dir = PathManager.get_venv_path(package_name, version, stage)
 
     success = PackageRepository.delete_package(db, package_name, version, stage)
     if success:

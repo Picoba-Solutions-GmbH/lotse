@@ -17,19 +17,17 @@ from src.services.package_service import PackageService
 from src.services.task_manager_service import TaskManagerService
 from src.services.volume_repository import VolumeRepository
 from src.utils.name_generator import generate_name
+from src.utils.path_manager import PathManager
 from src.utils.singleton_meta import SingletonMeta
 from src.utils.task_logger import TaskLogger
-from src.utils.venv_manager import VenvManager
 
 logger = logging.getLogger(__name__)
 
 
 class K8sManagerService(metaclass=SingletonMeta):
     def __init__(self,
-                 venv_manager: VenvManager,
                  task_manager: TaskManagerService):
         self.task_manager = task_manager
-        self.venv_manager = venv_manager
         self.task_logger = TaskLogger()
 
         if framework_config.IS_DEBUG:
@@ -71,7 +69,7 @@ class K8sManagerService(metaclass=SingletonMeta):
             )
             package_dir = package_info.package_dir
 
-            venv_path = self.venv_manager.get_venv_path(
+            venv_path = PathManager.get_venv_path(
                 package_name,
                 package_info.package_entity.version,
                 stage)

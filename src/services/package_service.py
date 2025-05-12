@@ -7,7 +7,7 @@ from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
 from src.models.yaml_config import parse_config
 from src.services.package_repository import PackageRepository
-from src.utils import config
+from src.utils.path_manager import PathManager
 
 
 @dataclass
@@ -30,8 +30,8 @@ class PackageService:
         if not package_info:
             return None
 
-        package_dir = os.path.join(config.STORAGE_ROOT, package_name, package_info.version, stage)
-        if not os.path.exists(package_dir):
+        package_dir = PathManager.get_package_path(package_name, package_info.version, stage)
+        if not package_dir.exists():
             return None
 
         config_content = parse_config(package_info.config)
@@ -55,8 +55,8 @@ class PackageService:
         version: str,
         stage: str
     ) -> Optional[str]:
-        package_dir = os.path.join(config.STORAGE_ROOT, package_name, version, stage)
-        if not os.path.exists(package_dir):
+        package_dir = PathManager.get_package_path(package_name, version, stage)
+        if not package_dir.exists():
             return None
 
-        return package_dir
+        return str(package_dir)
