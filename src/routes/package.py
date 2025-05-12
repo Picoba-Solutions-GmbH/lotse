@@ -189,15 +189,19 @@ async def delete_package(
     stage: str,
     version: str,
     db: Session = Depends(get_db_session),
+    venv_manager: VenvManager = get_service(VenvManager),
     _=Depends(authentication.require_admin)
 ):
     package_dir = os.path.join(config.STORAGE_ROOT, package_name, version, stage)
-    if not os.path.exists(package_dir):
-        raise HTTPException(status_code=404, detail="Package not found")
+    venv_dir = venv_manager.get_venv_path(package_name, version, stage)
 
     success = PackageRepository.delete_package(db, package_name, version, stage)
     if success:
-        shutil.rmtree(package_dir)
+        if os.path.exists(package_dir):
+            shutil.rmtree(package_dir, ignore_errors=True)
+
+        if os.path.exists(venv_dir):
+            shutil.rmtree(venv_dir, ignore_errors=True)
 
     return {"message": "Package deleted successfully"}
 

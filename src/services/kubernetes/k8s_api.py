@@ -67,6 +67,7 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         env_vars = []
 
     env_vars.append(Environment("PYTHONUNBUFFERED", "1"))
+    env_vars.append(Environment("PROXY_PREFIX", f"/proxy/{pod_name}/"))
 
     if os.environ.get('http_proxy'):
         env_vars.append(Environment("http_proxy", os.environ['http_proxy']))
@@ -195,7 +196,8 @@ def setup_venv(api: client.CoreV1Api, namespace: str, pod_name: str,
                requirements_path: str, task_logger: Logger):
     exec_command = [
         'bash', '-c',
-        f'python -m venv /app/venv && . /app/venv/bin/activate && pip install -r {requirements_path}'
+        f'python -m venv /app/venv && . /app/venv/bin/activate && '
+        f'pip install -r {requirements_path}; echo "EXIT_CODE=$?"'
     ]
 
     with k8s_api_lock:
@@ -211,13 +213,27 @@ def setup_venv(api: client.CoreV1Api, namespace: str, pod_name: str,
             _preload_content=False
         )
 
-    while resp.is_open():
-        if resp.peek_stdout():
-            task_logger.info(resp.read_stdout())
-        if resp.peek_stderr():
-            task_logger.info(resp.read_stderr())
+    exit_code = None
+    try:
+        while resp.is_open():
+            if resp.peek_stdout():
+                line = resp.read_stdout()
+                task_logger.info(line)
+                exit_code_match = re.search(r'EXIT_CODE=(\d+)', line)
+                if exit_code_match:
+                    exit_code = int(exit_code_match.group(1))
+                    continue
 
-    resp.close()
+            if resp.peek_stderr():
+                task_logger.info(resp.read_stderr())
+    finally:
+        resp.close()
+
+    if exit_code is not None and exit_code != 0:
+        message = f"Virtual environment setup failed with exit code {exit_code}"
+        task_logger.error(message)
+        raise RuntimeError(message)
+
     task_logger.info("Virtual environment created successfully")
 
 
