@@ -99,7 +99,7 @@
             <div>
                 <label class="block mb-2">Package ZIP File</label>
                 <p-fileUpload mode="basic" chooseLabel="Choose ZIP File" [auto]="true" accept=".zip,.7z"
-                    [maxFileSize]="10000000" (onSelect)="onZipFileSelect($event)" [showUploadButton]="false">
+                    (onSelect)="onZipFileSelect($event)" [showUploadButton]="false">
                 </p-fileUpload>
                 <small *ngIf="zipFile" class="text-green-500">Selected: {{zipFile.name}}</small>
             </div>
@@ -107,7 +107,7 @@
             <div>
                 <label class="block mb-2">Config YAML File</label>
                 <p-fileUpload mode="basic" chooseLabel="Choose YAML File" [auto]="true" accept=".yaml,.yml"
-                    [maxFileSize]="1000000" (onSelect)="onConfigFileSelect($event)" [showUploadButton]="false">
+                    (onSelect)="onConfigFileSelect($event)" [showUploadButton]="false">
                 </p-fileUpload>
                 <small *ngIf="configFile" class="text-green-500">Selected: {{configFile.name}}</small>
             </div>
