@@ -3,9 +3,9 @@ import os
 from enum import Enum
 from typing import Optional, TypeVar
 
-import httpx
+import aiohttp
 import websockets
-from fastapi import APIRouter, BackgroundTasks, Request, WebSocket
+from fastapi import APIRouter, Request, WebSocket
 from fastapi.responses import StreamingResponse
 
 from src.database.models.task_entity import TaskEntity
@@ -24,7 +24,6 @@ vscode_router = APIRouter(prefix="/vscode", include_in_schema=False)
 
 _proxy_task_id_cache = {}
 _vscode_task_id_cache = {}
-
 
 T = TypeVar('T')
 
@@ -69,47 +68,53 @@ async def _handle_proxy_request(request: Request,
                                 task_id: str,
                                 task_manager: TaskManagerService,
                                 proxy_type: ProxyCacheType):
-    task_info = get_task_info(task_id, task_manager, proxy_type)
-    if task_info is None:
-        return StreamingResponse("Task not found", status_code=404)
+    session = None
+    try:
+        task_info = get_task_info(task_id, task_manager, proxy_type)
+        if task_info is None:
+            return StreamingResponse("Task not found", status_code=404)
+        prefix, suffix = generate_prefix_suffix(task_id, request, proxy_type)
+        address = task_info['ip'] if not config.IS_DEBUG else "localhost"
+        port = task_info['port']
 
-    prefix, suffix = generate_prefix_suffix(task_id, request, proxy_type)
+        if not config.IS_DEBUG:
+            ip = address.split(":")[0]
+            no_proxy = os.environ.get("no_proxy", "").split(",")
+            if ip not in no_proxy:
+                no_proxy.append(ip)
+                os.environ["no_proxy"] = ",".join(no_proxy)
 
-    address = task_info['ip'] if not config.IS_DEBUG else "localhost"
-    port = task_info['port']
+        base_url = f"http://{address}:{port}/"
+        url = f"{base_url}{suffix}"
+        if request.url.query:
+            url = f"{url}?{request.url.query}"
 
-    url = httpx.URL(path=suffix, query=request.url.query.encode("utf-8"))
+        headers = dict(request.headers)
+        headers['X-Forwarded-Prefix'] = prefix
 
-    if not config.IS_DEBUG:
-        ip = address.split(":")[0]
-        no_proxy = os.environ.get("no_proxy", "").split(",")
+        session = aiohttp.ClientSession(cookies=request.cookies, timeout=aiohttp.ClientTimeout(total=5))
+        body = await request.body()
 
-        if ip not in no_proxy:
-            no_proxy.append(ip)
-            os.environ["no_proxy"] = ",".join(no_proxy)
+        response = await session.request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            data=body,
+            allow_redirects=True
+        )
 
-    base_url = f"http://{address}:{port}/"
-    HTTP_SERVER = httpx.AsyncClient(base_url=base_url, cookies=request.cookies,
-                                    follow_redirects=True)
-
-    headers = dict(request.headers.raw)
-    headers[b'X-Forwarded-Prefix'] = prefix.encode()
-    reverse_proxy_request = HTTP_SERVER.build_request(
-        request.method, url,
-        headers=headers,
-        content=await request.body()
-    )
-
-    reverse_proxy_response = await HTTP_SERVER.send(reverse_proxy_request, stream=True)
-
-    tasks = BackgroundTasks()
-    tasks.add_task(reverse_proxy_response.aclose)
-
-    return StreamingResponse(
-        reverse_proxy_response.aiter_raw(),
-        status_code=reverse_proxy_response.status_code,
-        headers=reverse_proxy_response.headers,
-        background=tasks)
+        content = await response.read()
+        response.close()
+        return StreamingResponse(
+            content=iter([content]),
+            status_code=response.status,
+            headers=dict(response.headers)
+        )
+    except Exception as e:
+        print(f"Proxy error: {e}")
+        if session and not session.closed:
+            await session.close()
+        return StreamingResponse("Proxy error", status_code=500)
 
 
 @router.api_route("/{task_id}/{path:path}", methods=["GET", "POST"])

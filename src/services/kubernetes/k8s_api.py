@@ -394,42 +394,31 @@ async def port_forward_for_debug(namespace, pod_name, task_logger: Logger,
 
 
 async def port_forward(namespace, pod_name, remote_port):
-    cmd = [
-        "kubectl", "port-forward",
-        f"pod/{pod_name}",
-        f":{remote_port}",
-        "-n", namespace
-    ]
+    cmd = ["kubectl", "port-forward", f"pod/{pod_name}", f":{remote_port}", "-n", namespace]
 
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT
     )
 
     port_pattern = re.compile(r"Forwarding from 127.0.0.1:(\d+)")
-
     local_port = None
-    for _ in range(10):
-        if process.poll() is not None:
-            break
 
-        while True:
-            line = process.stdout.readline()  # type: ignore
+    for _ in range(10):
+        try:
+            line = await asyncio.wait_for(process.stdout.readline(), 0.5)  # type: ignore
             if not line:
                 break
 
-            match = port_pattern.search(line)
+            line_text = line.decode('utf-8')
+            match = port_pattern.search(line_text)
             if match:
                 local_port = int(match.group(1))
                 break
-
-        if local_port:
-            break
-
-        await asyncio.sleep(0.5)
+        except asyncio.TimeoutError:
+            if process.returncode is not None:
+                break
 
     if local_port:
         print(f"Port forwarding active: localhost:{local_port} -> {pod_name}:{remote_port}")
@@ -437,7 +426,7 @@ async def port_forward(namespace, pod_name, remote_port):
         return process, local_port
     else:
         print("Failed to establish port forwarding or detect port")
-        if process.poll() is None:
+        if process.returncode is None:
             process.terminate()
         return None, None
 
