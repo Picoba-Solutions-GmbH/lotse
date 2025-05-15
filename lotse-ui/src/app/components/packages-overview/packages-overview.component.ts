@@ -15,8 +15,8 @@ import { HasRoleDirective } from '../../directives/has-role.directive';
 import { PackageStatus } from '../../misc/PackageStatus';
 import { Role } from '../../misc/Role';
 import { PackageInfo } from '../../models/Package';
-import { PackageCountByStatePipe } from "../../pipes/package-count-by-state.pipe";
-import { PackageStatusToSeverityPipe } from "../../pipes/package-status.pipe";
+import { PackageCountByStatePipe } from '../../pipes/package-count-by-state.pipe';
+import { PackageStatusToSeverityPipe } from '../../pipes/package-status.pipe';
 import { AuthService } from '../../services/auth.service';
 import { PackageService } from '../../services/package.service';
 
@@ -34,10 +34,10 @@ import { PackageService } from '../../services/package.service';
     PackageStatusToSeverityPipe,
     PackageCountByStatePipe,
     CheckboxModule,
-    HasRoleDirective
+    HasRoleDirective,
   ],
   templateUrl: './packages-overview.component.html',
-  styleUrl: './packages-overview.component.scss'
+  styleUrl: './packages-overview.component.scss',
 })
 export class PackagesOverviewComponent implements OnInit {
   packages: PackageInfo[] = [];
@@ -51,13 +51,16 @@ export class PackagesOverviewComponent implements OnInit {
   setAsDefault: boolean = false;
   disablePreviousVersions: boolean = false;
   isAuthenticationEnabled: boolean = false;
+  isDraggingOver: boolean = false;
+  private dragCounter: number = 0;
+  private dragTimer: any = null;
 
   constructor(
     private packageService: PackageService,
     private router: Router,
     private messageService: MessageService,
-    private authService: AuthService
-  ) { }
+    private authService: AuthService,
+  ) {}
 
   async ngOnInit(): Promise<void> {
     const stage = localStorage.getItem('stage') || 'dev';
@@ -86,13 +89,78 @@ export class PackagesOverviewComponent implements OnInit {
       this.configFile = event.files[0];
     }
   }
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.dragTimer) {
+      clearTimeout(this.dragTimer);
+      this.dragTimer = null;
+    }
+
+    if (event.type === 'dragenter') {
+      this.dragCounter++;
+    }
+
+    this.isDraggingOver = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.type === 'dragleave') {
+      this.dragCounter--;
+    }
+
+    if (this.dragCounter <= 0) {
+      this.dragCounter = 0;
+      this.isDraggingOver = false;
+    } else {
+      this.isDraggingOver = true;
+    }
+  }
+
+  onFileDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.dragTimer) {
+      clearTimeout(this.dragTimer);
+      this.dragTimer = null;
+    }
+
+    this.isDraggingOver = false;
+    this.dragCounter = 0;
+
+    if (!event.dataTransfer?.files || event.dataTransfer.files.length === 0) {
+      return;
+    }
+
+    const droppedFiles = Array.from(event.dataTransfer.files);
+
+    const zipFile = droppedFiles.find((file) => file.name.endsWith('.zip') || file.name.endsWith('.7z'));
+    const configFile = droppedFiles.find((file) => file.name.endsWith('.yml') || file.name.endsWith('.yaml'));
+
+    if (zipFile && configFile) {
+      this.showDeployPackageDialog();
+      this.zipFile = zipFile;
+      this.configFile = configFile;
+    } else if (droppedFiles.length > 0) {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'File Drop',
+        detail: 'Please drop both a ZIP/7z package file and a YAML config file to deploy a package.',
+      });
+    }
+  }
 
   async deployPackage(): Promise<void> {
     if (!this.zipFile || !this.configFile) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
-        detail: 'Please provide both ZIP and config files'
+        detail: 'Please provide both ZIP and config files',
       });
       return;
     }
@@ -111,7 +179,7 @@ export class PackagesOverviewComponent implements OnInit {
       this.messageService.add({
         severity: 'success',
         summary: 'Success',
-        detail: 'Package deployed successfully'
+        detail: 'Package deployed successfully',
       });
       this.showDeployDialog = false;
 

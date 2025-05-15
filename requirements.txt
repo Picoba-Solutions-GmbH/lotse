@@ -2,7 +2,7 @@ fastapi[standard]==0.115.12
 uvicorn==0.34.2
 stomp.py==8.2.0
 pydantic==2.10.2
-python-multipart==0.0.17
+python-multipart==0.0.20
 psutil==6.1.0
 SQLAlchemy==2.0.36
 sqlalchemy-stubs==0.4
