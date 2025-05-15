@@ -48,6 +48,21 @@ export class PodTerminalComponent implements AfterViewInit, OnDestroy {
     this.terminal.open(this.terminalElement.nativeElement);
     this.fitAddon.fit();
 
+    this.terminalElement.nativeElement.addEventListener('contextmenu', async (event: MouseEvent) => {
+      event.preventDefault();
+
+      const selection = this.terminal.getSelection();
+      if (selection) {
+        await navigator.clipboard.writeText(selection);
+        this.terminal.clearSelection();
+      } else {
+        const text = await navigator.clipboard.readText();
+        if (text && this.socket) {
+          this.socket.send(text);
+        }
+      }
+    });
+
     setTimeout(() => {
       this.handleFit();
     }, 100);
