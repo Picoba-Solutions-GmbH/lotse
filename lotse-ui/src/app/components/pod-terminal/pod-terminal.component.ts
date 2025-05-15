@@ -49,7 +49,7 @@ export class PodTerminalComponent implements AfterViewInit, OnDestroy {
     this.fitAddon.fit();
 
     setTimeout(() => {
-      this.fitAddon.fit();
+      this.handleFit();
     }, 100);
 
     this.connectWebSocket();
@@ -58,9 +58,19 @@ export class PodTerminalComponent implements AfterViewInit, OnDestroy {
       this.socket?.send(data);
     });
 
-    const resizeHandler = () => this.fitAddon.fit();
+    const resizeHandler = () => this.handleFit();
     window.addEventListener('resize', resizeHandler);
-    this.terminal.onResize(() => this.fitAddon.fit());
+    this.terminal.onResize(() => this.handleFit());
+    this.terminalElement.nativeElement.addEventListener('resize', resizeHandler);
+  }
+
+  public handleFit() {
+    this.fitAddon.fit();
+    this.socket?.send(JSON.stringify({
+      type: 'resize',
+      cols: this.terminal.cols,
+      rows: this.terminal.rows
+    }));
   }
 
   private connectWebSocket() {

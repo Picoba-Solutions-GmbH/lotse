@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AccordionModule } from 'primeng/accordion';
@@ -17,7 +17,9 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { interval, Subscription, takeWhile } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { HasRoleDirective } from '../../directives/has-role.directive';
 import { VisualStudioCodeComponent } from "../../icons/svg-VisualStudioCode.component";
+import { Role } from '../../misc/Role';
 import { TaskStatus } from '../../misc/TaskStatus';
 import { PackageInstance } from '../../models/Package';
 import { TaskInfo } from '../../models/TaskInfo';
@@ -25,13 +27,11 @@ import { DurationPipe } from "../../pipes/duration.pipe";
 import { TaskCountByStatePipe } from "../../pipes/task-count-by-state.pipe";
 import { TaskStatusToSeverityPipe } from "../../pipes/task-status.pipe";
 import { UtcToLocalPipe } from "../../pipes/utcToLocal.pipe";
+import { AuthService } from '../../services/auth.service';
 import { ExecutionService } from '../../services/execution.service';
 import { PackageService } from '../../services/package.service';
 import { TaskService } from '../../services/task.service';
 import { PodTerminalComponent } from '../pod-terminal/pod-terminal.component';
-import { AuthService } from '../../services/auth.service';
-import { Role } from '../../misc/Role';
-import { HasRoleDirective } from '../../directives/has-role.directive';
 
 @Component({
   selector: 'app-package-instance',
@@ -89,7 +89,9 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   selectedTaskId: string | null = null;
   isVsCodeBusy = signal(false);
   isAuthenticationEnabled: boolean = false;
-  Role = Role
+  Role = Role;
+
+  @ViewChild(PodTerminalComponent) podTerminal: PodTerminalComponent | undefined;
 
   constructor(
     private packageService: PackageService,
@@ -265,5 +267,13 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     this.isVsCodeBusy.set(false);
     const url = `${environment.url}/vscode/${taskId}/?folder=/app`;
     window.open(url, '_blank');
+  }
+
+  handleTerminalResize(): void {
+    setTimeout(() => {
+      if (this.podTerminal) {
+        this.podTerminal.handleFit();
+      }
+    }, 100);
   }
 }

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 
 import psutil
@@ -158,6 +159,16 @@ async def terminal_websocket(
 
         while True:
             message = await websocket.receive_text()
+            try:
+                data = json.loads(message)
+                if data.get("type") == "resize":
+                    cols = data.get("cols", 80)
+                    rows = data.get("rows", 24)
+                    resp.write_channel(4, json.dumps({"Width": cols, "Height": rows}).encode())
+                    continue
+            except json.JSONDecodeError:
+                pass
+                
             resp.write_stdin(message)
 
     except WebSocketDisconnect:
