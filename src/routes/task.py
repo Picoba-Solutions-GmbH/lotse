@@ -168,7 +168,7 @@ async def terminal_websocket(
                     continue
             except json.JSONDecodeError:
                 pass
-                
+
             resp.write_stdin(message)
 
     except WebSocketDisconnect:
