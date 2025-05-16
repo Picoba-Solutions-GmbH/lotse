@@ -3,7 +3,6 @@ import os
 from enum import Enum
 from typing import Optional, TypeVar
 
-import aiohttp
 import httpx
 import websockets
 from fastapi import APIRouter, BackgroundTasks, Request, WebSocket

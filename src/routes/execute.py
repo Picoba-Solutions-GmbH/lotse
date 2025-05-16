@@ -11,6 +11,7 @@ from src.models.package_request_argument import PackageRequestArgument
 from src.models.sync_execution_response import SyncExecutionResponse
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.task_manager_service import TaskManagerService
+from src.utils import config
 from src.utils.singleton_meta import get_service
 
 router = APIRouter(prefix="/execute", tags=["execute"])
@@ -54,7 +55,7 @@ async def execute_package(package_name: str, version: Optional[str], stage: str,
             if task_is_running:
                 await asyncio.sleep(1)
                 return RedirectResponse(
-                    f"/proxy/{task_id}",
+                    f"{config.OPENAPI_PREFIX_PATH}/proxy/{task_id}",
                     status_code=303
                 )
 
