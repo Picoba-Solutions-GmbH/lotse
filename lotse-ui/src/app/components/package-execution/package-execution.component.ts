@@ -61,11 +61,6 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
   tasks: TaskInfo[] = [];
   selectedLogTaskId: string | null = null;
   taskLogs: string[] = [];
-  stageOptions = [
-    { label: 'Dev', value: Stage.dev },
-    { label: 'Prod', value: Stage.prod },
-  ];
-  selectedStage: Stage = Stage.dev;
   isPackageRunning = signal(false);
 
   taskPollingSubscription?: Subscription;
@@ -155,9 +150,10 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
       args.push({ name: arg.name, value: arg.value });
     }
 
+    const stage = localStorage.getItem('stage') || 'dev';
     const request: PackageRequest = {
       package_name: this.selectedPackage.package_name,
-      stage: this.selectedStage,
+      stage: stage,
       arguments: args,
       wait_for_completion: this.waitForCompletion,
     };

@@ -149,8 +149,6 @@ class K8sManagerService(metaclass=SingletonMeta):
             output_lines = []
             error_lines = []
             success = self.execute_package(task_id, package_name, stage, version, arguments, empty_instance)
-            if success is False:
-                raise Exception("Failed to start process")
 
             if timer:
                 timer.cancel()

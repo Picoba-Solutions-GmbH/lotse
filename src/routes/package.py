@@ -16,6 +16,7 @@ from src.misc import constants
 from src.misc.package_status import PackageStatus
 from src.misc.task_status import TaskStatus
 from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
+from src.models.task_info import TaskInfo
 from src.models.yaml_config import parse_config
 from src.routes import authentication
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
@@ -280,7 +281,7 @@ async def get_package_by_version(
         raise HTTPException(status_code=404, detail="Package not found")
 
     tasks = task_manager_service.get_tasks_by_deployment_id(package.deployment_id, [])
-    task_infos = []
+    task_infos: list[TaskInfo] = []
     for task in tasks:
         task_info = map_task_entity_to_task_info(task, None)
         if task.status == TaskStatus.RUNNING or task.status == TaskStatus.INITIALIZING:
@@ -289,6 +290,8 @@ async def get_package_by_version(
                 task_info.metrics = metrics
 
         task_infos.append(task_info)
+
+    task_infos.sort(key=lambda x: (x.status == TaskStatus.RUNNING, x.started_at), reverse=True)
 
     config_yaml_content = parse_config(package.config)
     package_arguments = []

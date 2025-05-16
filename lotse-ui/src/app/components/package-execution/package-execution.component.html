@@ -4,12 +4,6 @@
       <h2 class="text-xl font-semibold mb-4">Execute Package</h2>
 
       <div class="mb-4">
-        <label for="stage" class="block text-md font-medium text-color mb-2">Stage</label>
-        <p-selectButton [options]="stageOptions" [(ngModel)]="selectedStage" optionLabel="label" optionValue="value"
-          id="stage" class="w-full" />
-      </div>
-
-      <div class="mb-4">
         <label for="package" class="block text-md font-medium text-color mb-2">Package</label>
         <p-dropdown [options]="repositories" optionLabel="package_name" [(ngModel)]="selectedPackage"
           placeholder="Select a package" [style]="{ width: '100%' }" id="package">

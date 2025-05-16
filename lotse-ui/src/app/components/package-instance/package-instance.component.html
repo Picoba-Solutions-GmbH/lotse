@@ -56,7 +56,7 @@
 
     <div class="flex flex-col xl:flex-row gap-4 h-full w-full">
         <p-card styleClass="border border-solid border-gray-200 dark:border-gray-700 h-full w-full xl:w-7/12">
-            <p-table [value]="packageInstance.tasks" [scrollable]="true" [sortField]="'started_at'" [sortOrder]="-1"
+            <p-table [value]="packageInstance.tasks" [scrollable]="true"
                 styleClass="p-datatable-sm p-datatable-responsive-demo" columnResizeMode="fit" [resizableColumns]="true"
                 selectionMode="single" [(selection)]="selectedTask" dataKey="id" [paginator]="true" [rows]="10"
                 [showCurrentPageReport]="true"
