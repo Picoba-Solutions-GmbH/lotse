@@ -67,7 +67,7 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         env_vars = []
 
     env_vars.append(Environment("PYTHONUNBUFFERED", "1"))
-    env_vars.append(Environment("PROXY_PREFIX", f"/proxy/{pod_name}/"))
+    env_vars.append(Environment("PROXY_PREFIX", f"{config.OPENAPI_PREFIX_PATH}/proxy/{pod_name}/"))
 
     if os.environ.get('http_proxy'):
         env_vars.append(Environment("http_proxy", os.environ['http_proxy']))
