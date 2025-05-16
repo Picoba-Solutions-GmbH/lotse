@@ -36,30 +36,13 @@ Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond tra
 
 ![Details](assets/Details.png)
 
-## 🏗️ Architecture
+## 🔮 Roadmap & Planned Features
 
-```mermaid
-graph TD
-  A[Client] --> B[REST API]
-  B --> C[Kubernetes Service]
-  C --> D[Container]
-  D --> E[Cached venv]
-  D --> F[Project Files]
-  D --> G[VSCode Server]
-  D --> H[Terminal Access]
-  subgraph Kubernetes
-  D
-  E
-  F
-  G
-  H
-  end
-  subgraph Control Plane
-  B
-  C
-  D
-  end
-```
+- 🖼️ **Custom Container**: Specify custom container images via config.yaml
+- 🔧 **Binary Execution**: Support for executing compiled binaries (this would allow any type of runtime to run regardless of programming language)
+- 🌐 **More Languages**: Support other programming languages:
+  - C# / .NET Core
+  - Go
 
 ## 🚀 How It Works
 
@@ -83,7 +66,7 @@ graph TD
 
 3. **Development Features**
 
-- Access running containers through VS Code
+- Access running containers through VS Code server
 
 - Use terminal for direct interaction
 
