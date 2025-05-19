@@ -36,13 +36,6 @@ Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond tra
 
 ![Details](assets/Details.png)
 
-## 🔮 Roadmap & Planned Features
-
-- 🔧 **Binary Execution**: Support for executing compiled binaries (this would allow any type of runtime to run regardless of programming language)
-- 🌐 **More Languages**: Support other programming languages:
-  - C# / .NET Core
-  - Go
-
 ## 🚀 How It Works
 
 1. **Project Deployment**
