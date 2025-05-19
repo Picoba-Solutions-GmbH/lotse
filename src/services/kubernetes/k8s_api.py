@@ -303,7 +303,7 @@ def extract_tar_gz(api: client.CoreV1Api, namespace: str, pod_name:
 def start_python_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
                      args: list[str], task_logger: Logger, task_id: str, task_manager) -> Optional[int]:
     exec_command = ['bash', '-c',
-                    f'. /app/venv/bin/activate && python -u {entry_point} {" ".join(args)}; echo "EXIT_CODE=$?"']
+                    f'cd /app && . venv/bin/activate && python -u {entry_point} {" ".join(args)}; echo "EXIT_CODE=$?"']
 
     with k8s_api_lock:
         resp = stream(api.connect_get_namespaced_pod_exec,
@@ -320,40 +320,37 @@ def start_python_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry
     kill_command_received = False
     try:
         while resp.is_open():
+            line: Optional[str] = None
             if resp.peek_stdout():
                 line = resp.read_stdout()
-                task_logger.info(line.strip())
-
-                exit_code_match = re.search(r'EXIT_CODE=(\d+)', line)
-                if exit_code_match:
-                    exit_code = int(exit_code_match.group(1))
-                    continue
-
-                try:
-                    match = re.search(r'http://[^:]+:(\d+)', line)
-                    if match:
-                        url = match.group(0)
-                        port = match.group(1)
-                        pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
-                        task_logger.info(f"Detected URL: {url}, Port: {port}")
-                        task_manager.update_task_ui_info(
-                            task_id, True, pod.status.pod_ip, int(port))  # type: ignore
-
-                        if config.IS_DEBUG:
-                            asyncio.run(port_forward_for_debug(namespace, pod_name, task_logger,
-                                                               task_id, task_manager, int(port)))
-                except Exception:
-                    pass
-
-                if "CMD: CLOSE APPLICATION" in line:
-                    task_logger.info("Received kill command, deleting pod...")
-                    delete_pod(api, namespace, pod_name, task_logger)
-                    kill_command_received = True
-                    exit_code = 0
-                    break
 
             if resp.peek_stderr():
-                task_logger.info(resp.read_stderr())
+                line = resp.read_stderr()
+
+            if line is None:
+                continue
+
+            task_logger.info(line.strip())
+            exit_code_match = re.search(r'EXIT_CODE=(\d+)', line)
+            if exit_code_match:
+                exit_code = int(exit_code_match.group(1))
+                continue
+
+            try:
+                match = re.search(r'http://[^:]+:(\d+)', line)
+                if match:
+                    url = match.group(0)
+                    port = match.group(1)
+                    pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
+                    task_logger.info(f"Detected URL: {url}, Port: {port}")
+                    task_manager.update_task_ui_info(
+                        task_id, True, pod.status.pod_ip, int(port))  # type: ignore
+
+                    if config.IS_DEBUG:
+                        asyncio.run(port_forward_for_debug(namespace, pod_name, task_logger,
+                                                           task_id, task_manager, int(port)))
+            except Exception:
+                pass
     finally:
         resp.close()
 

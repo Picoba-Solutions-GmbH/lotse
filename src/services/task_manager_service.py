@@ -4,6 +4,7 @@ import socket
 from typing import List, Optional
 
 import psutil
+from sqlalchemy.orm import joinedload
 
 from src.database.database_access import get_db_session
 from src.database.models.task_entity import TaskEntity
@@ -51,7 +52,10 @@ class TaskManagerService(metaclass=SingletonMeta):
     def get_task(self, task_id: str) -> Optional[TaskEntity]:
         db = self._get_db_session()
         try:
-            return db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            return (db.query(TaskEntity)
+                    .options(joinedload(TaskEntity.package))
+                    .filter(TaskEntity.task_id == task_id)
+                    .first())
         finally:
             db.close()
 
@@ -77,7 +81,9 @@ class TaskManagerService(metaclass=SingletonMeta):
     def update_task_pid(self, task_id: str, pid: Optional[int]) -> None:
         db = self._get_db_session()
         try:
-            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            task = (db.query(TaskEntity)
+                    .filter(TaskEntity.task_id == task_id)
+                    .first())
             if task is not None:
                 task.pid = pid  # type: ignore
                 db.commit()
@@ -87,7 +93,10 @@ class TaskManagerService(metaclass=SingletonMeta):
     def update_task_status(self, task_id: str, status: TaskStatus, result: Optional[dict] = None) -> None:
         db = self._get_db_session()
         try:
-            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            task = (db.query(TaskEntity)
+                    .options(joinedload(TaskEntity.package))
+                    .filter(TaskEntity.task_id == task_id)
+                    .first())
             if task:
                 task.status = status  # type: ignore
                 if result is not None:
@@ -107,7 +116,9 @@ class TaskManagerService(metaclass=SingletonMeta):
                             ui_port: Optional[int] = None) -> None:
         db = self._get_db_session()
         try:
-            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            task = (db.query(TaskEntity)
+                    .filter(TaskEntity.task_id == task_id)
+                    .first())
             if task:
                 task.is_ui_app = is_ui_app  # type: ignore
                 if ui_ip_address is not None:
@@ -170,9 +181,10 @@ class TaskManagerService(metaclass=SingletonMeta):
     def list_tasks(self, stage: str) -> List[TaskInfo]:
         db = self._get_db_session()
         try:
-            tasks = db.query(TaskEntity).filter(
-                TaskEntity.stage == stage
-            ).all()
+            tasks = (db.query(TaskEntity)
+                     .options(joinedload(TaskEntity.package))
+                     .filter(TaskEntity.stage == stage)
+                     .all())
 
             return [
                 map_task_entity_to_task_info(
@@ -187,10 +199,13 @@ class TaskManagerService(metaclass=SingletonMeta):
     def get_running_tasks_of_pod(self) -> List[TaskInfo]:
         db = self._get_db_session()
         try:
-            tasks = db.query(TaskEntity).filter(
-                TaskEntity.ip_address == self.ip_address,
-                TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-            ).all()
+            tasks = (db.query(TaskEntity)
+                     .options(joinedload(TaskEntity.package))
+                     .filter(
+                         TaskEntity.ip_address == self.ip_address,
+                         TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
+                     )
+                     .all())
             return [
                 map_task_entity_to_task_info(
                     task,
@@ -204,10 +219,13 @@ class TaskManagerService(metaclass=SingletonMeta):
     def get_running_tasks(self) -> List[TaskInfo]:
         db = self._get_db_session()
         try:
-            tasks = db.query(TaskEntity).filter(
-                TaskEntity.ip_address == self.ip_address,
-                TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-            ).all()
+            tasks = (db.query(TaskEntity)
+                     .options(joinedload(TaskEntity.package))
+                     .filter(
+                         TaskEntity.ip_address == self.ip_address,
+                         TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
+                     )
+                     .all())
             return [
                 map_task_entity_to_task_info(
                     task,
@@ -221,7 +239,9 @@ class TaskManagerService(metaclass=SingletonMeta):
     def delete_task(self, task_id: str) -> None:
         db = self._get_db_session()
         try:
-            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            task = (db.query(TaskEntity)
+                    .filter(TaskEntity.task_id == task_id)
+                    .first())
             if task:
                 db.delete(task)
                 db.commit()
@@ -243,7 +263,9 @@ class TaskManagerService(metaclass=SingletonMeta):
     def get_tasks_by_deployment_id(self, deployment_id: str, status: list[TaskStatus]) -> list[TaskEntity]:
         db = self._get_db_session()
         try:
-            query = db.query(TaskEntity).filter(TaskEntity.deployment_id == deployment_id)
+            query = (db.query(TaskEntity)
+                     .options(joinedload(TaskEntity.package))
+                     .filter(TaskEntity.deployment_id == deployment_id))
 
             if status:
                 query = query.filter(TaskEntity.status.in_(status))
@@ -255,7 +277,9 @@ class TaskManagerService(metaclass=SingletonMeta):
     def update_vscode_port(self, task_id: str, vscode_port: int) -> None:
         db = self._get_db_session()
         try:
-            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            task = (db.query(TaskEntity)
+                    .filter(TaskEntity.task_id == task_id)
+                    .first())
             if task:
                 task.vscode_port = vscode_port  # type: ignore
                 db.commit()
