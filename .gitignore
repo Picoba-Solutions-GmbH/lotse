@@ -165,3 +165,6 @@ scripts/repo_config.json
 
 ui/
 !ui/*/ignore.txt
+samples/dotnet/obj
+samples/dotnet/bin
+samples/dotnet/publish

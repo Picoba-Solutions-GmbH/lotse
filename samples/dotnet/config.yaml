@@ -1,0 +1,6 @@
+package_name: "blazor"
+entrypoint: LotseDemo
+version: 1.0.0
+description: "blazor"
+image: mcr.microsoft.com/dotnet/aspnet:9.0
+runtime: binary
