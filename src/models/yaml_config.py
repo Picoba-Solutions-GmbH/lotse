@@ -3,6 +3,8 @@ from typing import List, Optional
 
 import yaml
 
+from src.misc.runtime_type import RuntimeType
+
 
 @dataclass
 class Argument:
@@ -28,6 +30,7 @@ class PackageConfig:
     entrypoint: str
     version: str
     python_version: str
+    runtime: Optional[RuntimeType] = RuntimeType.PYTHON
     image: Optional[str] = None
     timeout: Optional[int] = None
     description: Optional[str] = None
@@ -53,5 +56,6 @@ def parse_config(yaml_content: str) -> PackageConfig:
         args=args,
         environment=env,
         volumes=volumes,
-        image=data.get('image', None)
+        image=data.get('image', None),
+        runtime=RuntimeType(data.get('runtime', RuntimeType.PYTHON))
     )

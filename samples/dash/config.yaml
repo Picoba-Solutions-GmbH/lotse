@@ -1,5 +1,0 @@
-package_name: "dash"
-entrypoint: main.py
-version: 1.0.8
-description: "dash"
-python_version: 3.13.2

@@ -14,6 +14,7 @@ from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
 from src.misc import constants
 from src.misc.package_status import PackageStatus
+from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
 from src.models.task_info import TaskInfo
@@ -45,10 +46,12 @@ async def deploy_package(
     config_yaml_content = config_yaml_bytes.decode('utf-8')
     package_config = parse_config(config_yaml_content)
 
-    try:
-        semver.parse(package_config.python_version)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid Python version format. Use semver (e.g., 3.8.10)")
+    match package_config.runtime:
+        case RuntimeType.PYTHON:
+            try:
+                semver.parse(package_config.python_version)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid Python version format. Use semver (e.g., 3.8.10)")
 
     existing_package = PackageRepository.get_package(
         db_session, package_config.package_name, stage, package_config.version)

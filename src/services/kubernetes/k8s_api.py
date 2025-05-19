@@ -10,6 +10,7 @@ from kubernetes import client
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
+from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.k8s.volume_map import VolumeMap
 from src.models.sync_execution_response import SyncExecutionResponse
@@ -303,11 +304,19 @@ def extract_tar_gz(api: client.CoreV1Api, namespace: str, pod_name:
     resp.close()
 
 
-def start_python_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
-                     args: list[str], task_logger: Logger, task_id: str, task_manager) -> Optional[int]:
+def start_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
+              args: list[str], task_logger: Logger, task_id: str, task_manager: TaskManagerService,
+              runtime: Optional[RuntimeType] = RuntimeType.PYTHON) -> Optional[int]:
+    pre_start_command = None
+    match runtime:
+        case RuntimeType.PYTHON:
+            pre_start_command = f". venv/bin/activate && python -u {entry_point}"
+        case RuntimeType.BINARY:
+            pre_start_command = f"chmod +x {entry_point} && ./{entry_point}"
+
     shell_to_use = get_available_shell(api, namespace, pod_name)
     exec_command = [shell_to_use, '-c',
-                    f'cd /app && . venv/bin/activate && python -u {entry_point} {" ".join(args)}; echo "EXIT_CODE=$?"']
+                    f'cd /app && {pre_start_command} {" ".join(args)}; echo "EXIT_CODE=$?"']
 
     with k8s_api_lock:
         resp = stream(api.connect_get_namespaced_pod_exec,
@@ -320,6 +329,7 @@ def start_python_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry
                       tty=False,
                       _preload_content=False)
 
+    port_matched = False
     exit_code = None
     kill_command_received = False
     try:
@@ -340,21 +350,24 @@ def start_python_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry
                 exit_code = int(exit_code_match.group(1))
                 continue
 
-            try:
-                match = re.search(r'http://[^:]+:(\d+)', line)
-                if match:
-                    url = match.group(0)
-                    port = match.group(1)
-                    pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
-                    task_logger.info(f"Detected URL: {url}, Port: {port}")
-                    task_manager.update_task_ui_info(
-                        task_id, True, pod.status.pod_ip, int(port))  # type: ignore
+            if not port_matched:
+                try:
+                    match = re.search(
+                        r'((?:\d{1,3}\.){3}\d{1,3}|(?:\[?[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){7}\]?)):(\d+)', line)
+                    if match:
+                        url = match.group(1)
+                        port = match.group(2)
+                        pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
+                        task_logger.info(f"Detected URL: {url}, Port: {port}")
+                        task_manager.update_task_ui_info(
+                            task_id, True, pod.status.pod_ip, int(port))  # type: ignore
 
-                    if config.IS_DEBUG:
-                        asyncio.run(port_forward_for_debug(namespace, pod_name, task_logger,
-                                                           task_id, task_manager, int(port)))
-            except Exception:
-                pass
+                        if config.IS_DEBUG:
+                            asyncio.run(port_forward_for_debug(namespace, pod_name, task_logger,
+                                                               task_id, task_manager, int(port)))
+                        port_matched = True
+                except Exception:
+                    pass
     finally:
         resp.close()
 

@@ -7,17 +7,18 @@ from typing import List, Optional
 from kubernetes import client, config
 
 import src.utils.config as framework_config
+from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.metric import Metric
 from src.models.package_request_argument import PackageRequestArgument
 from src.models.sync_execution_response import SyncExecutionResponse
 from src.models.yaml_config import parse_config
 from src.services.kubernetes import k8s_api
+from src.services.kubernetes.runtimes import k8s_python
 from src.services.package_service import PackageService
 from src.services.task_manager_service import TaskManagerService
 from src.services.volume_repository import VolumeRepository
 from src.utils.name_generator import generate_name
-from src.utils.path_manager import PathManager
 from src.utils.singleton_meta import SingletonMeta
 from src.utils.task_logger import TaskLogger
 
@@ -69,24 +70,18 @@ class K8sManagerService(metaclass=SingletonMeta):
             )
             package_dir = package_info.package_dir
 
-            venv_path = PathManager.get_venv_path(
-                package_name,
-                package_info.package_entity.version,
-                stage)
-            if not os.path.exists(venv_path):
-                os.makedirs(venv_path, exist_ok=True)
-
-            tar_file_path = os.path.join(venv_path, "venv.tar.gz")
-            if not os.path.exists(tar_file_path):
-                k8s_api.create_pod(self.v1, self.namespace, task_id,
-                                   package_info.package_entity.python_version, [], task_logger, [],
-                                   package_config.image)
-                asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
-                k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
-                k8s_api.setup_venv(self.v1, self.namespace, task_id, "/app/requirements.txt", task_logger)
-                k8s_api.copy_file_from_pod(self.v1, self.namespace, task_id, "/app/venv",
-                                           tar_file_path, task_logger)
-                k8s_api.delete_pod(self.v1, self.namespace, task_id, task_logger)
+            match package_config.runtime:
+                case RuntimeType.PYTHON:
+                    k8s_python.prepare_environment(
+                        self.v1,
+                        self.namespace,
+                        task_id,
+                        task_logger,
+                        package_name,
+                        stage,
+                        package_info,
+                        package_config
+                    )
 
             volume_maps = VolumeRepository.get_volume_maps(package_config.volumes)
             k8s_api.create_pod(self.v1, self.namespace, task_id,
@@ -96,10 +91,18 @@ class K8sManagerService(metaclass=SingletonMeta):
             asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
             task_logger.info(f"Copying package files to pod {task_id}")
             k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
-            task_logger.info(f"Copying venv files to pod {task_id}")
-            k8s_api.copy_files_to_pod(self.namespace, task_id, tar_file_path, "/tmp")
-            task_logger.info(f"Extracting venv files in pod {task_id}")
-            k8s_api.extract_tar_gz(self.v1, self.namespace, task_id, "/tmp/venv.tar.gz", "/app/venv", task_logger)
+
+            match package_config.runtime:
+                case RuntimeType.PYTHON:
+                    k8s_python.prepare_runtime(
+                        self.v1,
+                        self.namespace,
+                        task_id,
+                        task_logger,
+                        package_name,
+                        stage,
+                        package_info
+                    )
 
             command = []
             for arg in arguments:
@@ -122,9 +125,11 @@ class K8sManagerService(metaclass=SingletonMeta):
                 result = 1
             else:
                 file_name = os.path.basename(package_info.entry_point_path)
-                package_path = f"/app/{file_name}"
-                result = k8s_api.start_python_app(self.v1, self.namespace, task_id,
-                                                  package_path, command, task_logger, task_id, self.task_manager)
+                result = k8s_api.start_app(
+                    self.v1, self.namespace, task_id,
+                    file_name, command, task_logger, task_id, self.task_manager,
+                    package_config.runtime
+                )
 
             return result is not None and result == 0
         except Exception as e:

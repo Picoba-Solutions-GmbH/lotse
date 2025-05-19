@@ -1,0 +1,6 @@
+package_name: "go rest api"
+entrypoint: web-service-gin
+version: 1.0.0
+description: "go rest api"
+image: debian:latest
+runtime: binary

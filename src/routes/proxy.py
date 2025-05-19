@@ -243,6 +243,7 @@ async def proxy_404_forwarder(
 async def handle_proxy_404_middleware(request: Request, call_next):
     if "referer" not in request.headers:
         return await call_next(request)
+
     referer = request.headers["referer"]
 
     if not any(cache_type.value in referer for cache_type in ProxyCacheType):

@@ -1,6 +1,0 @@
-package_name: "streamlit"
-entrypoint: main.py
-version: "25.06"
-description: "streamlit application for Uber pickups in NYC"
-python_version: 3.13.2
-timeout: 1800

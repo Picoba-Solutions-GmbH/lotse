@@ -1,6 +1,0 @@
-package_name: "nicegui"
-entrypoint: main.py
-version: "25.04"
-description: "nicegui"
-python_version: 3.13.2
-timeout: 1800
