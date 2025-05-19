@@ -115,7 +115,7 @@ async def execute_versioned_package_get(
         redirect_to_ui: bool = False):
     query_params = dict(request.query_params)
     arguments = [PackageRequestArgument(name=key, value=value) for key, value in query_params.items()
-                 if key not in ["wait_for_completion"]]
+                 if key not in ["wait_for_completion", "redirect_to_ui"]]
     return await execute_package(
         package_name=package_name,
         version=version,

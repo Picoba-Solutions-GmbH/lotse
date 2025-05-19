@@ -50,43 +50,55 @@ class TaskManagerService(metaclass=SingletonMeta):
 
     def get_task(self, task_id: str) -> Optional[TaskEntity]:
         db = self._get_db_session()
-        return db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+        try:
+            return db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+        finally:
+            db.close()
 
     def add_task(self, task_id: str, deployment_id: str, stage: str) -> None:
         db = self._get_db_session()
-        task = TaskEntity(
-            task_id=task_id,
-            deployment_id=deployment_id,
-            status=TaskStatus.INITIALIZING,
-            stage=stage,
-            started_at=datetime.datetime.now(datetime.timezone.utc),
-            result=None,
-            pid=None,
-            hostname=self.hostname,
-            ip_address=self.ip_address
-        )
-        db.add(task)
-        db.commit()
+        try:
+            task = TaskEntity(
+                task_id=task_id,
+                deployment_id=deployment_id,
+                status=TaskStatus.INITIALIZING,
+                stage=stage,
+                started_at=datetime.datetime.now(datetime.timezone.utc),
+                result=None,
+                pid=None,
+                hostname=self.hostname,
+                ip_address=self.ip_address
+            )
+            db.add(task)
+            db.commit()
+        finally:
+            db.close()
 
     def update_task_pid(self, task_id: str, pid: Optional[int]) -> None:
         db = self._get_db_session()
-        task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
-        if task is not None:
-            task.pid = pid  # type: ignore
-            db.commit()
+        try:
+            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            if task is not None:
+                task.pid = pid  # type: ignore
+                db.commit()
+        finally:
+            db.close()
 
     def update_task_status(self, task_id: str, status: TaskStatus, result: Optional[dict] = None) -> None:
         db = self._get_db_session()
-        task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
-        if task:
-            task.status = status  # type: ignore
-            if result is not None:
-                task.result = result  # type: ignore
+        try:
+            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            if task:
+                task.status = status  # type: ignore
+                if result is not None:
+                    task.result = result  # type: ignore
 
-            if status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.TIMEOUT]:
-                task.finished_at = datetime.datetime.now(datetime.timezone.utc),  # type: ignore
+                if status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.TIMEOUT]:
+                    task.finished_at = datetime.datetime.now(datetime.timezone.utc),  # type: ignore
 
-            db.commit()
+                db.commit()
+        finally:
+            db.close()
 
     def update_task_ui_info(self,
                             task_id: str,
@@ -157,74 +169,95 @@ class TaskManagerService(metaclass=SingletonMeta):
 
     def list_tasks(self, stage: str) -> List[TaskInfo]:
         db = self._get_db_session()
-        tasks = db.query(TaskEntity).filter(
-            TaskEntity.stage == stage
-        ).all()
+        try:
+            tasks = db.query(TaskEntity).filter(
+                TaskEntity.stage == stage
+            ).all()
 
-        return [
-            map_task_entity_to_task_info(
-                task,
-                "Result available" if task.result else None
-            )
-            for task in tasks
-        ]
+            return [
+                map_task_entity_to_task_info(
+                    task,
+                    "Result available" if task.result else None
+                )
+                for task in tasks
+            ]
+        finally:
+            db.close()
 
     def get_running_tasks_of_pod(self) -> List[TaskInfo]:
         db = self._get_db_session()
-        tasks = db.query(TaskEntity).filter(
-            TaskEntity.ip_address == self.ip_address,
-            TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-        ).all()
-        return [
-            map_task_entity_to_task_info(
-                task,
-                "Result available" if task.result else None
-            )
-            for task in tasks
-        ]
+        try:
+            tasks = db.query(TaskEntity).filter(
+                TaskEntity.ip_address == self.ip_address,
+                TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
+            ).all()
+            return [
+                map_task_entity_to_task_info(
+                    task,
+                    "Result available" if task.result else None
+                )
+                for task in tasks
+            ]
+        finally:
+            db.close()
 
     def get_running_tasks(self) -> List[TaskInfo]:
         db = self._get_db_session()
-        tasks = db.query(TaskEntity).filter(
-            TaskEntity.ip_address == self.ip_address,
-            TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-        ).all()
-        return [
-            map_task_entity_to_task_info(
-                task,
-                "Result available" if task.result else None
-            )
-            for task in tasks
-        ]
+        try:
+            tasks = db.query(TaskEntity).filter(
+                TaskEntity.ip_address == self.ip_address,
+                TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
+            ).all()
+            return [
+                map_task_entity_to_task_info(
+                    task,
+                    "Result available" if task.result else None
+                )
+                for task in tasks
+            ]
+        finally:
+            db.close()
 
     def delete_task(self, task_id: str) -> None:
         db = self._get_db_session()
-        task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
-        if task:
-            db.delete(task)
-            db.commit()
+        try:
+            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            if task:
+                db.delete(task)
+                db.commit()
+        finally:
+            db.close()
 
     def get_tasks_count_by_deployment_id(self, deployment_id: str, status: list[TaskStatus]) -> int:
         db = self._get_db_session()
-        query = db.query(TaskEntity).filter(TaskEntity.deployment_id == deployment_id)
+        try:
+            query = db.query(TaskEntity).filter(TaskEntity.deployment_id == deployment_id)
 
-        if status:
-            query = query.filter(TaskEntity.status.in_(status))
+            if status:
+                query = query.filter(TaskEntity.status.in_(status))
 
-        return query.count()
+            return query.count()
+        finally:
+            db.close()
 
     def get_tasks_by_deployment_id(self, deployment_id: str, status: list[TaskStatus]) -> list[TaskEntity]:
         db = self._get_db_session()
-        query = db.query(TaskEntity).filter(TaskEntity.deployment_id == deployment_id)
+        try:
+            query = db.query(TaskEntity).filter(TaskEntity.deployment_id == deployment_id)
 
-        if status:
-            query = query.filter(TaskEntity.status.in_(status))
+            if status:
+                query = query.filter(TaskEntity.status.in_(status))
 
-        return query.all()
+            return query.all()
+        finally:
+            db.close()
 
     def update_vscode_port(self, task_id: str, vscode_port: int) -> None:
         db = self._get_db_session()
-        task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
-        if task:
-            task.vscode_port = vscode_port  # type: ignore
-            db.commit()
+        try:
+            task = db.query(TaskEntity).filter(TaskEntity.task_id == task_id).first()
+            if task:
+                task.vscode_port = vscode_port  # type: ignore
+                db.commit()
+        finally:
+            db.close()

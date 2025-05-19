@@ -40,27 +40,30 @@ class VolumeRepository:
         volumes: List[Volume]
     ) -> list[VolumeMap]:
         db_session = next(get_db_session())
-        if len(volumes) == 0:
-            return []
+        try:
+            if len(volumes) == 0:
+                return []
 
-        volume_maps = []
+            volume_maps = []
 
-        all_volumes = db_session.query(VolumeEntity).filter(
-            VolumeEntity.name.in_([v.name for v in volumes])
-        ).all()
+            all_volumes = db_session.query(VolumeEntity).filter(
+                VolumeEntity.name.in_([v.name for v in volumes])
+            ).all()
 
-        for volume in volumes:
-            volume_entity = next((v for v in all_volumes if v.name == volume.name), None)
-            if volume_entity:
-                volume_map = VolumeMap(
-                    name=volume_entity.name,
-                    path=volume.path,
-                    pvc_name=volume_entity.pvc_name
-                )
+            for volume in volumes:
+                volume_entity = next((v for v in all_volumes if v.name == volume.name), None)
+                if volume_entity:
+                    volume_map = VolumeMap(
+                        name=volume_entity.name,
+                        path=volume.path,
+                        pvc_name=volume_entity.pvc_name
+                    )
 
-                volume_maps.append(volume_map)
+                    volume_maps.append(volume_map)
 
-        return volume_maps
+            return volume_maps
+        finally:
+            db_session.close()
 
     @staticmethod
     def get_non_existing_volumes(
@@ -68,19 +71,22 @@ class VolumeRepository:
     ) -> list[str]:
         result = []
         db_session = next(get_db_session())
-        if len(volumes) == 0:
-            return []
+        try:
+            if len(volumes) == 0:
+                return []
 
-        all_volumes = db_session.query(VolumeEntity).filter(
-            VolumeEntity.name.in_([v.name for v in volumes])
-        ).all()
+            all_volumes = db_session.query(VolumeEntity).filter(
+                VolumeEntity.name.in_([v.name for v in volumes])
+            ).all()
 
-        for volume in volumes:
-            volume_entity = next((v for v in all_volumes if v.name == volume.name), None)
-            if not volume_entity:
-                result.append(volume.name)
+            for volume in volumes:
+                volume_entity = next((v for v in all_volumes if v.name == volume.name), None)
+                if not volume_entity:
+                    result.append(volume.name)
 
-        return result
+            return result
+        finally:
+            db_session.close()
 
     @staticmethod
     def list_volumes(

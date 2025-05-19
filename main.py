@@ -26,17 +26,22 @@ logger = logging.getLogger(__name__)
 async def lifespan(_: FastAPI):
     logger.info("Initializing database...")
     init_db()
-    seed_users.seed_default_users(next(get_db_session()))
-    logger.info("Database initialized")
-    service_registry.initialize_registry()
+    db_session = next(get_db_session())
+    try:
+        seed_users.seed_default_users(db_session)
+        logger.info("Database initialized")
+        service_registry.initialize_registry()
 
-    k8s_manager_service = get_service_instance(K8sManagerService)
-    await k8s_manager_service.check_and_initialize_pods()
+        k8s_manager_service = get_service_instance(K8sManagerService)
+        await k8s_manager_service.check_and_initialize_pods()
 
-    if config.ACTIVEMQ_ACTIVE:
-        logger.info("Starting ActiveMQ listener...")
-        threading.Thread(target=get_service_instance(ActiveMQService).start_listener, daemon=True).start()
-    yield
+        if config.ACTIVEMQ_ACTIVE:
+            logger.info("Starting ActiveMQ listener...")
+            threading.Thread(target=get_service_instance(ActiveMQService).start_listener, daemon=True).start()
+        yield
+    finally:
+        db_session.close()
+
 
 app = FastAPI(title=config.APP_NAME, root_path=config.OPENAPI_PREFIX_PATH,
               version=config.API_VERSION, lifespan=lifespan)
