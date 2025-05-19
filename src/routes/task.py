@@ -12,6 +12,7 @@ from kubernetes.stream import stream
 from src.misc.task_status import TaskStatus
 from src.models.async_execution_response import AsyncExecutionResponse
 from src.routes import authentication
+from src.services.kubernetes import k8s_api
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.task_manager_service import TaskManagerService
 from src.utils.singleton_meta import get_service
@@ -127,7 +128,8 @@ async def terminal_websocket(
             await websocket.close(code=4003, reason="Task is not running")
             return
 
-        exec_command = ["/bin/bash"]
+        exec_command = k8s_api.get_available_shell(k8s_service.v1, k8s_service.namespace, task_id)
+
         resp = stream(
             k8s_service.v1.connect_get_namespaced_pod_exec,
             task_id,

@@ -62,7 +62,8 @@ def get_pod_metrics(api: client.CustomObjectsApi, namespace: str, pod_name: str)
 
 
 def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_version: str,
-               env_vars: list[Environment], task_logger: Logger, volumes: list[VolumeMap]):
+               env_vars: list[Environment], task_logger: Logger, volumes: list[VolumeMap],
+               image: Optional[str] = None):
     if env_vars is None:
         env_vars = []
 
@@ -111,6 +112,7 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
             }
         })
 
+    image_to_use = image if image else f"python:{python_version}-slim"
     pod_manifest = {
         "apiVersion": "v1",
         "kind": "Pod",
@@ -122,8 +124,8 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         },
         "spec": {
             "containers": [{
-                "name": "python",
-                "image": f"python:{python_version}-slim",
+                "name": pod_name,
+                "image": image_to_use,
                 "command": ["sleep", "infinity"],
                 "volumeMounts": volume_mounts,
                 "env": env_var_list,
@@ -194,8 +196,9 @@ def delete_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
 
 def setup_venv(api: client.CoreV1Api, namespace: str, pod_name: str,
                requirements_path: str, task_logger: Logger):
+    shell_to_use = get_available_shell(api, namespace, pod_name)
     exec_command = [
-        'bash', '-c',
+        shell_to_use, '-c',
         f'python -m venv /app/venv && . /app/venv/bin/activate && '
         f'pip install -r {requirements_path}; echo "EXIT_CODE=$?"'
     ]
@@ -302,7 +305,8 @@ def extract_tar_gz(api: client.CoreV1Api, namespace: str, pod_name:
 
 def start_python_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
                      args: list[str], task_logger: Logger, task_id: str, task_manager) -> Optional[int]:
-    exec_command = ['bash', '-c',
+    shell_to_use = get_available_shell(api, namespace, pod_name)
+    exec_command = [shell_to_use, '-c',
                     f'cd /app && . venv/bin/activate && python -u {entry_point} {" ".join(args)}; echo "EXIT_CODE=$?"']
 
     with k8s_api_lock:
@@ -562,3 +566,26 @@ def run_command_in_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
             task_logger.info(resp.read_stderr())
 
     resp.close()
+
+
+def get_available_shell(api: client.CoreV1Api, namespace: str, pod_name: str) -> str:
+    shells = ["/bin/bash", "/bin/sh"]
+    for shell in shells:
+        try:
+            with k8s_api_lock:
+                check_resp = stream(
+                    api.connect_get_namespaced_pod_exec,
+                    pod_name,
+                    namespace,
+                    command=["ls", shell],
+                    stderr=True,
+                    stdout=True,
+                    _preload_content=False
+                )
+                check_resp.run_forever(timeout=2)
+                if check_resp.returncode == 0:
+                    return shell
+        except Exception:
+            continue
+
+    return "/bin/sh"

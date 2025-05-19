@@ -28,6 +28,7 @@ class PackageConfig:
     entrypoint: str
     version: str
     python_version: str
+    image: Optional[str] = None
     timeout: Optional[int] = None
     description: Optional[str] = None
     args: List[Argument] = field(default_factory=list)
@@ -51,5 +52,6 @@ def parse_config(yaml_content: str) -> PackageConfig:
         timeout=data.get('timeout'),
         args=args,
         environment=env,
-        volumes=volumes
+        volumes=volumes,
+        image=data.get('image', None)
     )

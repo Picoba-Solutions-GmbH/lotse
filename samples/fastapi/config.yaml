@@ -3,3 +3,4 @@ entrypoint: app.py
 version: 1.0.0
 description: "fatapi with jinja"
 python_version: 3.13.2
+image: python:3.13.3-alpine

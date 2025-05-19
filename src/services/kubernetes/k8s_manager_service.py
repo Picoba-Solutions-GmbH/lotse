@@ -79,7 +79,8 @@ class K8sManagerService(metaclass=SingletonMeta):
             tar_file_path = os.path.join(venv_path, "venv.tar.gz")
             if not os.path.exists(tar_file_path):
                 k8s_api.create_pod(self.v1, self.namespace, task_id,
-                                   package_info.package_entity.python_version, [], task_logger, [])
+                                   package_info.package_entity.python_version, [], task_logger, [],
+                                   package_config.image)
                 asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
                 k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
                 k8s_api.setup_venv(self.v1, self.namespace, task_id, "/app/requirements.txt", task_logger)
@@ -90,7 +91,8 @@ class K8sManagerService(metaclass=SingletonMeta):
             volume_maps = VolumeRepository.get_volume_maps(package_config.volumes)
             k8s_api.create_pod(self.v1, self.namespace, task_id,
                                package_info.package_entity.python_version,
-                               package_config.environment, task_logger, volume_maps)
+                               package_config.environment, task_logger, volume_maps,
+                               package_config.image)
             asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
             task_logger.info(f"Copying package files to pod {task_id}")
             k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
