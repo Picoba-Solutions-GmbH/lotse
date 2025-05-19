@@ -168,7 +168,7 @@ async def terminal_websocket(
                     rows = data.get("rows", 24)
                     resp.write_channel(4, json.dumps({"Width": cols, "Height": rows}).encode())
                     continue
-            except json.JSONDecodeError:
+            except Exception:
                 pass
 
             resp.write_stdin(message)
