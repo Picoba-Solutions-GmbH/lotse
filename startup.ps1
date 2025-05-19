@@ -41,10 +41,12 @@ try {
       --timeout=90s
 
     Write-Host "Patching NGINX configmap..." -ForegroundColor Cyan   
-    & kubectl patch configmap ingress-nginx-controller -n ingress-nginx --patch '
-data:
-  allow-snippet-annotations: "true"
-  annotations-risk-level: Critical'
+    & kubectl patch configmap ingress-nginx-controller -n ingress-nginx --patch '{
+      "data": {
+        "allow-snippet-annotations": "true",
+        "annotations-risk-level": "Critical"
+      }
+    }'
 
     Write-Host "Install metrics server..." -ForegroundColor Cyan
     & kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
