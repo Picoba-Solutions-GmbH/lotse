@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { Runtime } from '../misc/Runtime';
 import { PackageDetail, PackageInfo, PackageInstance } from '../models/Package';
 import { RepositoryConfig as PackageConfig } from '../models/RepositoryConfig';
 
@@ -30,8 +31,34 @@ export class PackageService {
   async deployPackageAsync(formData: FormData): Promise<void> {
     await firstValueFrom(this.http.post(`${environment.url}/packages/deploy`, formData));
   }
-
+  
   deletePackageVersionAsync(packageName: string, stage: string, version: string) {
     return firstValueFrom(this.http.delete(`${environment.url}/packages/${packageName}/${stage}/${version}`));
+  }
+
+  async detectRuntimeFromConfigFile(configFile: File): Promise<Runtime> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        if (!content) {
+          resolve(Runtime.PYTHON);
+          return;
+        }
+
+        const runtimeMatch = content.match(/runtime:\s*(\w+)/);
+        if (runtimeMatch && runtimeMatch[1]) {
+          const runtimeValue = runtimeMatch[1].trim().toLowerCase();
+          if (Object.values(Runtime).includes(runtimeValue as Runtime)) {
+            resolve(runtimeValue as Runtime);
+          } else {
+            resolve(Runtime.PYTHON);
+          }
+        } else {
+          resolve(Runtime.PYTHON);
+        }
+      };
+      reader.readAsText(configFile);
+    });
   }
 }

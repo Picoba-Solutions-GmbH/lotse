@@ -64,7 +64,7 @@ def get_pod_metrics(api: client.CustomObjectsApi, namespace: str, pod_name: str)
 
 def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_version: str,
                env_vars: list[Environment], task_logger: Logger, volumes: list[VolumeMap],
-               image: Optional[str] = None):
+               image: Optional[str], runtime: Optional[RuntimeType]):
     if env_vars is None:
         env_vars = []
 
@@ -114,6 +114,17 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         })
 
     image_to_use = image if image else f"python:{python_version}-slim"
+    container = {
+        "name": pod_name,
+        "image": image_to_use,
+        "volumeMounts": volume_mounts,
+        "env": env_var_list,
+        "imagePullPolicy": "IfNotPresent"
+    }
+
+    if runtime != RuntimeType.CONTAINER:
+        container["command"] = ["sleep", "infinity"]
+
     pod_manifest = {
         "apiVersion": "v1",
         "kind": "Pod",
@@ -124,13 +135,7 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
             }
         },
         "spec": {
-            "containers": [{
-                "name": pod_name,
-                "image": image_to_use,
-                "command": ["sleep", "infinity"],
-                "volumeMounts": volume_mounts,
-                "env": env_var_list,
-            }],
+            "containers": [container],
             "volumes": volumes_list
         }
     }
@@ -155,6 +160,21 @@ async def wait_for_pod_running(api: client.CoreV1Api, namespace: str, pod_name: 
 
             task_logger.info(f"Waiting for pod to be running... Current status: {pod.status.phase}")  # type: ignore
         await asyncio.sleep(1)
+
+
+async def check_container_exists(api: client.CoreV1Api, namespace: str, pod_name: str) -> bool:
+    try:
+        with k8s_api_lock:
+            pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
+            return True if pod else False
+    except Exception:
+        return False
+
+
+def get_pod_logs(api: client.CoreV1Api, namespace: str, pod_name: str) -> str:
+    with k8s_api_lock:
+        logs = api.read_namespaced_pod_log(name=pod_name, namespace=namespace)
+        return logs
 
 
 def copy_files_to_pod(namespace: str, pod_name: str, file_to_copy, dest_path="/app"):
@@ -304,6 +324,50 @@ def extract_tar_gz(api: client.CoreV1Api, namespace: str, pod_name:
     resp.close()
 
 
+async def match_port(pod_name: str,
+                     line: str,
+                     api: client.CoreV1Api,
+                     namespace: str,
+                     task_logger: Logger,
+                     task_id: str,
+                     task_manager: TaskManagerService) -> bool:
+    try:
+        match = re.search(
+            r'((?:\d{1,3}\.){3}\d{1,3}|(?:\[?[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){7}\]?)):(\d+)', line)
+        if match:
+            url = match.group(1)
+            port = match.group(2)
+            pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
+            task_logger.info(f"Detected URL: {url}, Port: {port}")
+            task_manager.update_task_ui_info(
+                task_id, True, pod.status.pod_ip, int(port))  # type: ignore
+
+            if config.IS_DEBUG:
+                await port_forward_for_debug(namespace, pod_name, task_logger,
+                                             task_id, task_manager, int(port))
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+async def watch_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
+                    task_logger: Logger, task_id: str, task_manager: TaskManagerService) -> Optional[int]:
+    port_matched = False
+    while True:
+        container_exists = await check_container_exists(api, namespace, pod_name)
+        if container_exists:
+            if not port_matched:
+                logs = get_pod_logs(api, namespace, pod_name)
+                port_matched = await match_port(
+                    pod_name, logs, api, namespace, task_logger, task_id, task_manager)
+
+            await asyncio.sleep(0.1)
+        else:
+            return 0
+
+
 def start_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
               args: list[str], task_logger: Logger, task_id: str, task_manager: TaskManagerService,
               runtime: Optional[RuntimeType] = RuntimeType.PYTHON) -> Optional[int]:
@@ -351,23 +415,8 @@ def start_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point:
                 continue
 
             if not port_matched:
-                try:
-                    match = re.search(
-                        r'((?:\d{1,3}\.){3}\d{1,3}|(?:\[?[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){7}\]?)):(\d+)', line)
-                    if match:
-                        url = match.group(1)
-                        port = match.group(2)
-                        pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
-                        task_logger.info(f"Detected URL: {url}, Port: {port}")
-                        task_manager.update_task_ui_info(
-                            task_id, True, pod.status.pod_ip, int(port))  # type: ignore
-
-                        if config.IS_DEBUG:
-                            asyncio.run(port_forward_for_debug(namespace, pod_name, task_logger,
-                                                               task_id, task_manager, int(port)))
-                        port_matched = True
-                except Exception:
-                    pass
+                port_matched = asyncio.run(match_port(
+                    pod_name, line, api, namespace, task_logger, task_id, task_manager))
     finally:
         resp.close()
 

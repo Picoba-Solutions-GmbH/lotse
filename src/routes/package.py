@@ -76,15 +76,16 @@ async def deploy_package(
             )
         )
 
-    package_dir = PathManager.get_package_path(package_config.package_name,
-                                               package_config.version, stage)
-    os.makedirs(package_dir, exist_ok=True)
-    file_path = os.path.join(package_dir, f"{package_config.package_name}.7z")
+    if package_config.runtime != RuntimeType.CONTAINER:
+        package_dir = PathManager.get_package_path(package_config.package_name,
+                                                   package_config.version, stage)
+        os.makedirs(package_dir, exist_ok=True)
+        file_path = os.path.join(package_dir, f"{package_config.package_name}.7z")
 
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(package_file.file, f)
+        with open(file_path, "wb") as f:
+            shutil.copyfileobj(package_file.file, f)
 
-    patoolib.extract_archive(file_path, outdir=str(package_dir))
+        patoolib.extract_archive(file_path, outdir=str(package_dir))
 
     set_active = set_as_default or disable_previous_versions
     metadata = PackageRepository.create_package(

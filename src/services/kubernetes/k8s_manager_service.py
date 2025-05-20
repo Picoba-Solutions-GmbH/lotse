@@ -87,10 +87,12 @@ class K8sManagerService(metaclass=SingletonMeta):
             k8s_api.create_pod(self.v1, self.namespace, task_id,
                                package_info.package_entity.python_version,
                                package_config.environment, task_logger, volume_maps,
-                               package_config.image)
+                               package_config.image, package_config.runtime)
             asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
-            task_logger.info(f"Copying package files to pod {task_id}")
-            k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
+
+            if package_config.runtime != RuntimeType.CONTAINER:
+                task_logger.info(f"Copying package files to pod {task_id}")
+                k8s_api.copy_files_to_pod(self.namespace, task_id, package_dir, "/app")
 
             match package_config.runtime:
                 case RuntimeType.PYTHON:
@@ -119,17 +121,21 @@ class K8sManagerService(metaclass=SingletonMeta):
                 None
             )
 
-            if empty_instance:
-                command = ["tail", "-f", "/dev/null"]
-                k8s_api.run_command_in_pod(self.v1, self.namespace, task_id, command, task_logger)
-                result = 1
+            if package_config.runtime != RuntimeType.CONTAINER:
+                if empty_instance:
+                    command = ["tail", "-f", "/dev/null"]
+                    k8s_api.run_command_in_pod(self.v1, self.namespace, task_id, command, task_logger)
+                    result = 1
+                else:
+                    file_name = os.path.basename(package_info.entry_point_path)
+                    result = k8s_api.start_app(
+                        self.v1, self.namespace, task_id,
+                        file_name, command, task_logger, task_id, self.task_manager,
+                        package_config.runtime
+                    )
             else:
-                file_name = os.path.basename(package_info.entry_point_path)
-                result = k8s_api.start_app(
-                    self.v1, self.namespace, task_id,
-                    file_name, command, task_logger, task_id, self.task_manager,
-                    package_config.runtime
-                )
+                result = asyncio.run(k8s_api.watch_pod(self.v1, self.namespace,
+                                     task_id, task_logger, task_id, self.task_manager))
 
             return result is not None and result == 0
         except Exception as e:

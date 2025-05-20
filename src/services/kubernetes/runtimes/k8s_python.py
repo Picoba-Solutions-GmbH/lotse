@@ -4,6 +4,7 @@ import os
 
 from kubernetes import client
 
+from src.misc.runtime_type import RuntimeType
 from src.models.yaml_config import PackageConfig
 from src.services.kubernetes import k8s_api
 from src.services.package_service import PackageInfo
@@ -29,7 +30,7 @@ def prepare_environment(v1: client.CoreV1Api,
     if not os.path.exists(tar_file_path):
         k8s_api.create_pod(v1, namespace, task_id,
                            package_info.package_entity.python_version, [], task_logger, [],
-                           package_config.image)
+                           package_config.image, RuntimeType.PYTHON)
         asyncio.run(k8s_api.wait_for_pod_running(v1, namespace, task_id, task_logger))
         k8s_api.copy_files_to_pod(namespace, task_id, package_info.package_dir, "/app")
         k8s_api.setup_venv(v1, namespace, task_id, "/app/requirements.txt", task_logger)

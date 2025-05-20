@@ -1,0 +1,5 @@
+package_name: "docker"
+version: 1.0.0
+description: "docker"
+image: lotsesample:latest
+runtime: container

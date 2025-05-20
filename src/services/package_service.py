@@ -5,6 +5,7 @@ from typing import Optional
 
 from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
+from src.misc.runtime_type import RuntimeType
 from src.models.yaml_config import parse_config
 from src.services.package_repository import PackageRepository
 from src.utils.path_manager import PathManager
@@ -31,12 +32,12 @@ class PackageService:
             if not package_info:
                 return None
 
-            package_dir = PathManager.get_package_path(package_name, package_info.version, stage)
-            if not package_dir.exists():
-                return None
-
             config_content = parse_config(package_info.config)
             if not config_content:
+                return None
+
+            package_dir = PathManager.get_package_path(package_name, package_info.version, stage)
+            if not package_dir.exists() and config_content.runtime != RuntimeType.CONTAINER:
                 return None
 
             entry_file_path = os.path.join(package_dir, config_content.entrypoint)
@@ -46,6 +47,14 @@ class PackageService:
                     package_dir=Path(package_dir),
                     entry_point_path=Path(entry_file_path),
                     requirements_path=Path(os.path.join(package_dir, "requirements.txt"))
+                )
+
+            if config_content.runtime == RuntimeType.CONTAINER:
+                return PackageInfo(
+                    package_entity=package_info,
+                    package_dir=Path(),
+                    entry_point_path=Path(),
+                    requirements_path=Path()
                 )
 
             return None
