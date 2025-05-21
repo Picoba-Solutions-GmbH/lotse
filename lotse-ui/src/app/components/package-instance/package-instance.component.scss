@@ -4,9 +4,17 @@
 
   .p-card-body {
     height: 100%;
-
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    
     .p-card-content {
       height: 100%;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      padding: 0;
     }
   }
 }

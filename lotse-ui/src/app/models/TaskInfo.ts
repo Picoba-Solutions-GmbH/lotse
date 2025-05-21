@@ -1,4 +1,5 @@
 import { TaskMetric } from './TaskMetric';
+import { PackageRequestArguments } from './PackageRequestArguments';
 
 
 export interface TaskInfo {
@@ -12,4 +13,5 @@ export interface TaskInfo {
   finished_at?: string;
   is_ui_app: boolean;
   metrics?: TaskMetric;
+  arguments?: PackageRequestArguments[];
 }

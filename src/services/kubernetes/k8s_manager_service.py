@@ -212,7 +212,7 @@ class K8sManagerService(metaclass=SingletonMeta):
 
         task_id = generate_name(package_name)
 
-        self.task_manager.add_task(task_id, package_info.package_entity.deployment_id, stage)
+        self.task_manager.add_task(task_id, package_info.package_entity.deployment_id, stage, arguments)
         parsed_config = parse_config(package_info.package_entity.config)
         if parsed_config is None:
             raise FileNotFoundError(f"Package {package_name} ({version}) not found in stage {stage}")

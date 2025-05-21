@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from src.misc.task_status import TaskStatus
 from src.models.metric import Metric
+from src.models.package_request_argument import PackageRequestArgument
 
 
 class TaskInfo(BaseModel):
@@ -23,3 +24,4 @@ class TaskInfo(BaseModel):
     original_ui_port: Optional[int] = None
     vscode_port: Optional[int] = None
     metrics: Optional[Metric] = None
+    arguments: list[PackageRequestArgument] = []

@@ -35,7 +35,7 @@ class PackageRepository:
 
         if set_as_active:
             db_session.execute(
-                update(PackageEntity).where(
+                update(PackageEntity).where(  # type: ignore
                     and_(
                         PackageEntity.package_name == package_name,
                         PackageEntity.stage == stage,
@@ -91,7 +91,7 @@ class PackageRepository:
             return False
 
         db_session.execute(
-            update(PackageEntity).where(
+            update(PackageEntity).where(  # type: ignore
                 and_(
                     PackageEntity.package_name == package_name,
                     PackageEntity.stage == stage,
@@ -137,7 +137,7 @@ class PackageRepository:
             return False
 
         db_session.execute(
-            update(PackageEntity).where(
+            update(PackageEntity).where(  # type: ignore
                 and_(
                     PackageEntity.package_name == package_name,
                     PackageEntity.version == version,
@@ -173,7 +173,7 @@ class PackageRepository:
         version: str
     ) -> bool:
         db_session.execute(
-            update(PackageEntity).where(
+            update(PackageEntity).where(  # type: ignore
                 and_(
                     PackageEntity.package_name == package_name,
                     PackageEntity.stage == stage,

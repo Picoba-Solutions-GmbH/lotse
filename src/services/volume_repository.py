@@ -114,7 +114,7 @@ class VolumeRepository:
 
             if update_dict:
                 db_session.execute(
-                    update(VolumeEntity)
+                    update(VolumeEntity)  # type: ignore
                     .where(VolumeEntity.id == volume_id)
                     .values(**update_dict)
                 )

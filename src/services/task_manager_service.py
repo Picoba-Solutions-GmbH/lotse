@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import socket
 from typing import List, Optional
@@ -9,12 +10,17 @@ from sqlalchemy.orm import joinedload
 from src.database.database_access import get_db_session
 from src.database.models.task_entity import TaskEntity
 from src.misc.task_status import TaskStatus
+from src.models.package_request_argument import PackageRequestArgument
 from src.models.sync_execution_response import SyncExecutionResponse
 from src.models.task_info import TaskInfo
 from src.utils.singleton_meta import SingletonMeta
 
 
 def map_task_entity_to_task_info(task: TaskEntity, message: Optional[str]) -> TaskInfo:
+    arguments: list[PackageRequestArgument] = []
+    if task.arguments:
+        arguments = [PackageRequestArgument(**arg) for arg in json.loads(task.arguments)]  # type: ignore
+
     return TaskInfo(
         task_id=task.task_id,
         package_name=task.package.package_name,
@@ -31,7 +37,8 @@ def map_task_entity_to_task_info(task: TaskEntity, message: Optional[str]) -> Ta
         ui_port=task.ui_port,
         vscode_port=task.vscode_port,
         original_ui_port=task.original_ui_port,
-        metrics=None
+        metrics=None,
+        arguments=arguments
     )
 
 
@@ -59,7 +66,7 @@ class TaskManagerService(metaclass=SingletonMeta):
         finally:
             db.close()
 
-    def add_task(self, task_id: str, deployment_id: str, stage: str) -> None:
+    def add_task(self, task_id: str, deployment_id: str, stage: str, arguments: list[PackageRequestArgument]) -> None:
         db = self._get_db_session()
         try:
             task = TaskEntity(
@@ -70,6 +77,7 @@ class TaskManagerService(metaclass=SingletonMeta):
                 started_at=datetime.datetime.now(datetime.timezone.utc),
                 result=None,
                 pid=None,
+                arguments=[arg.model_dump() for arg in arguments],
                 hostname=self.hostname,
                 ip_address=self.ip_address
             )
@@ -204,8 +212,8 @@ class TaskManagerService(metaclass=SingletonMeta):
                      .filter(
                          TaskEntity.ip_address == self.ip_address,
                          TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-                     )
-                     .all())
+            )
+                .all())
             return [
                 map_task_entity_to_task_info(
                     task,
@@ -224,8 +232,8 @@ class TaskManagerService(metaclass=SingletonMeta):
                      .filter(
                          TaskEntity.ip_address == self.ip_address,
                          TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-                     )
-                     .all())
+            )
+                .all())
             return [
                 map_task_entity_to_task_info(
                     task,

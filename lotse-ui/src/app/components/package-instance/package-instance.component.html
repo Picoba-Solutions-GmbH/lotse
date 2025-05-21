@@ -1,4 +1,4 @@
-<div class="flex flex-col h-full">
+<div class="flex flex-col xl:overflow-hidden relative w-full min-h-full h-full">
     <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
             <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted mb-2">{{ packageName }}
@@ -54,7 +54,7 @@
         </p-card>
     </div>
 
-    <div class="flex flex-col xl:flex-row gap-4 h-full w-full">
+    <div class="flex flex-col xl:flex-row gap-2 h-full w-full xl:overflow-hidden">
         <p-card styleClass="border border-solid border-gray-200 dark:border-gray-700 h-full w-full xl:w-7/12">
             <p-table [value]="packageInstance.tasks" [scrollable]="true"
                 styleClass="p-datatable-sm p-datatable-responsive-demo" columnResizeMode="fit" [resizableColumns]="true"
@@ -168,8 +168,7 @@
             <p-accordion [multiple]="true">
                 <p-accordionTab header="Task Details" [selected]="!!selectedTask"
                     class="rounded-lg border-solid border-1 border-gray-200 dark:border-gray-700">
-                    @if (selectedTask) {
-                    <div class="grid grid-cols-2 gap-2">
+                    @if (selectedTask) { <div class="grid grid-cols-2 gap-2">
                         <div class="font-semibold">Status:</div>
                         <div><p-tag [severity]="selectedTask.status | taskStatusToSeverityPipe"
                                 [value]="selectedTask.status | titlecase" /></div>
@@ -189,6 +188,21 @@
 
                         <div class="font-semibold">Memory:</div>
                         <div>{{ selectedTask.metrics?.memory || "-" }}</div>
+                        @if (selectedTask.arguments?.length) {
+                        <div class="font-semibold">Arguments:</div>
+                        <div class="w-full col-span-2 mt-2">
+                            <div class="flex flex-wrap gap-2 max-h-[180px] overflow-y-auto pr-1">
+                                @for (arg of selectedTask.arguments; track arg.name) {
+                                <div
+                                    class="inline-flex items-start bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded-lg px-2 py-1 mb-1 max-w-full">
+                                    <span
+                                        class="font-mono font-medium text-xs mr-1 whitespace-nowrap">{{arg.name}}:</span>
+                                    <span class="font-mono text-xs break-all">{{arg.value}}</span>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
                     </div>
                     } @else {
                     <p class="text-gray-500">Select a task to view details</p>
@@ -196,27 +210,51 @@
                 </p-accordionTab>
             </p-accordion>
         </div>
-
-        <p-card styleClass="border-solid border-1 border-gray-200 dark:border-gray-700 h-full w-full xl:w-5/12"
-            class="w-full">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">Tasks Logs</h2>
-                <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadTaskLogsAsync(selectedLogTaskId)"
-                    size="small" />
-            </div>
-            <div
-                class="log-container rounded-xl border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 h-[92%]">
-                <p-scrollPanel [style]="{ width: '100%', height: '600px' }" styleClass="custom-scroll">
+        <div class="flex flex-col gap-2 h-full w-full">
+            @if (selectedTask && selectedTask.arguments?.length) {
+            <p-card styleClass="border-solid border-1 border-gray-200 dark:border-gray-700 h-full w-full xl:w-5/12"
+                class="w-full flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center">
+                        <i [ngClass]="PrimeIcons.CODE" class="mr-2 text-blue-500"></i>
+                        <h2 class="text-xl font-semibold">Task Arguments</h2>
+                    </div>
+                    <p-tag severity="info" [value]="selectedTask.arguments?.length + ' arguments'"></p-tag>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-2 max-h-[180px] overflow-y-auto pr-1">
+                    @for (arg of selectedTask.arguments; track arg.name) {
+                    <div
+                        class="inline-flex items-start bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded-lg px-2 py-1.5 shadow-sm max-w-full">
+                        <span class="font-mono font-medium text-xs mr-2 whitespace-nowrap">{{arg.name}}:</span>
+                        <span class="font-mono text-xs break-all">{{arg.value}}</span>
+                    </div>
+                    }
+                </div>
+            </p-card>
+            }
+            <p-card styleClass="border-solid border-1 border-gray-200 dark:border-gray-700 h-full w-full xl:w-5/12"
+                class="w-full flex flex-col max-h-full h-full overflow-hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center">
+                        <i [ngClass]="PrimeIcons.LIST" class="mr-2 text-blue-500"></i>
+                        <h2 class="text-xl font-semibold">Task Logs</h2>
+                    </div>
+                    <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadTaskLogsAsync(selectedLogTaskId)"
+                        size="small" />
+                </div>
+                <div id="task-scroll-container"
+                    class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-2">
                     @if (taskLogs.length) {
                     @for (log of taskLogs; track $index) {
-                    <div class="log-line text-xs font-mono text-black dark:text-white">{{ log }}</div>
+                    <div class="m-1 text-xs font-mono text-black dark:text-white break-words">{{ log }}
+                    </div>
                     }
                     } @else {
                     <div class="p-4 text-center text-gray-500">No logs available</div>
                     }
-                </p-scrollPanel>
-            </div>
-        </p-card>
+                </div>
+            </p-card>
+        </div>
     </div>
 
     <p-dialog [(visible)]="showArgumentsDialog" [style]="{width: '50vw'}" [modal]="true" header="Start New Instance">

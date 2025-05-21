@@ -75,7 +75,7 @@ class UserRepository:
 
         if update_values:
             db_session.execute(
-                update(UserEntity)
+                update(UserEntity)  # type: ignore
                 .where(UserEntity.id == user_id)
                 .values(**update_values)
             )

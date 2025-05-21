@@ -103,27 +103,35 @@
   <p-dialog header="Deploy Package" [(visible)]="showDeployDialog" [modal]="true" [style]="{ width: '450px' }"
     class="p-fluid">
     <div class="flex flex-col gap-4">
-      <div *ngIf="configFile">
+      @if (configFile) {
+      <div>
         <label class="block mb-2">Detected Runtime</label>
         <p-tag [severity]="detectedRuntime === Runtime.CONTAINER ? 'info' : 'success'"
           [value]="detectedRuntime | titlecase"></p-tag>
         <small class="block mt-1 text-gray-500">Runtime automatically detected from YAML configuration</small>
       </div>
+      }
 
-      <div *ngIf="detectedRuntime !== Runtime.CONTAINER">
+      @if (detectedRuntime !== Runtime.CONTAINER) {
+      <div>
         <label class="block mb-2">Package ZIP File</label>
         <p-fileUpload mode="basic" chooseLabel="Choose ZIP File" [auto]="true" accept=".zip,.7z"
           (onSelect)="onZipFileSelect($event)" [showUploadButton]="false">
         </p-fileUpload>
-        <small *ngIf="zipFile" class="text-green-500">Selected: {{ zipFile.name }}</small>
+        @if (zipFile) {
+        <small class="text-green-500">Selected: {{ zipFile.name }}</small>
+        }
       </div>
+      }
 
       <div>
         <label class="block mb-2">Config YAML File</label>
         <p-fileUpload mode="basic" chooseLabel="Choose YAML File" [auto]="true" accept=".yaml,.yml"
           (onSelect)="onConfigFileSelect($event)" [showUploadButton]="false">
         </p-fileUpload>
-        <small *ngIf="configFile" class="text-green-500">Selected: {{ configFile.name }}</small>
+        @if (configFile) {
+        <small class="text-green-500">Selected: {{ configFile.name }}</small>
+        }
       </div>
 
       <div class="field">
