@@ -18,8 +18,8 @@ import { Role } from '../../misc/Role';
 import { PackageDetail } from '../../models/Package';
 import { PackageCountByStatePipe } from "../../pipes/package-count-by-state.pipe";
 import { PackageStatusToSeverityPipe } from "../../pipes/package-status.pipe";
-import { PackageService } from '../../services/package.service';
 import { AuthService } from '../../services/auth.service';
+import { PackageService } from '../../services/package.service';
 import { PackageDeployComponent } from '../package-deploy/package-deploy.component';
 
 @Component({
@@ -47,6 +47,7 @@ import { PackageDeployComponent } from '../package-deploy/package-deploy.compone
 })
 export class PackageManagementComponent implements OnInit {
   packages: PackageDetail[] = [];
+  availablePackageVersions: string[] = [];
   selectedPackage: PackageDetail | undefined;
   packageName: string = '';
   loading: boolean = true;
@@ -77,6 +78,7 @@ export class PackageManagementComponent implements OnInit {
       this.loading = true;
       const stage = localStorage.getItem('stage') || 'dev';
       this.packages = await this.packageService.getPackageOverviewAsync(stage, this.packageName);
+      this.availablePackageVersions = this.packages.map(pkg => pkg.version);
     } catch (error) {
       this.messageService.add({
         severity: 'error',
@@ -101,6 +103,15 @@ export class PackageManagementComponent implements OnInit {
   }
 
   deletePackageVersion(clickedPackage: PackageDetail): void {
+    if (clickedPackage.is_default && this.packages.length > 1) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Warning',
+        detail: `Cannot delete the default version of ${this.packageName}.`
+      });
+      return;
+    }
+
     this.confirmationService.confirm({
       message: `Are you sure you want to delete ${this.packageName} version ${clickedPackage.version}?`,
       header: 'Delete Confirmation',

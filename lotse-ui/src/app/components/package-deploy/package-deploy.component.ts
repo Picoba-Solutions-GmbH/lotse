@@ -8,13 +8,14 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { FileUploadModule } from 'primeng/fileupload';
 import { TagModule } from 'primeng/tag';
-import { parse } from 'yaml';
+import YAML from 'yaml';
 import { Runtime } from '../../misc/Runtime';
 import { PackageService } from '../../services/package.service';
 
 interface PackageConfig {
     package_name: string;
     runtime: Runtime;
+    version: string;
 }
 
 @Component({
@@ -32,20 +33,25 @@ interface PackageConfig {
     styleUrl: './package-deploy.component.scss',
 })
 export class PackageDeployComponent {
-    @Input() packageName: string | null = null;
-    @Output() packageDeployed = new EventEmitter<void>();
-
     PrimeIcons = PrimeIcons;
     Runtime = Runtime;
+
+    @Input() packageName: string | null = null;
+    @Input() availablePackageVersions: string[] = [];
+    @Input() setAsDefault: boolean = false;
+    @Output() packageDeployed = new EventEmitter<void>();
+
+    detectedRuntime: Runtime | null = null;
+    detectedName: string | null = null;
+    detectedVersion: string | null = null;
+    sameVersionError: boolean = false;
+    notSameNameError: boolean = false;
+
     showDeployDialog = false;
     zipFile: File | null = null;
     configFile: File | null = null;
-    setAsDefault: boolean = false;
     disablePreviousVersions: boolean = false;
     isDraggingOver: boolean = false;
-    detectedRuntime: Runtime = Runtime.PYTHON;
-    configPackageName: string | null = null;
-    nameValidationError: string | null = null;
     private dragCounter: number = 0;
     private dragTimer: any = null;
 
@@ -58,9 +64,13 @@ export class PackageDeployComponent {
         this.showDeployDialog = true;
         this.zipFile = null;
         this.configFile = null;
-        this.configPackageName = null;
-        this.nameValidationError = null;
-        this.detectedRuntime = Runtime.PYTHON;
+        this.notSameNameError = false;
+        this.detectedName = null;
+        this.detectedVersion = null;
+        this.detectedRuntime = null;
+        this.setAsDefault = false;
+        this.disablePreviousVersions = false;
+        this.sameVersionError = false;
     }
 
     onZipFileSelect(event: any): void {
@@ -73,15 +83,11 @@ export class PackageDeployComponent {
         if (event.files && event.files.length > 0) {
             this.configFile = event.files[0];
             if (this.configFile) {
-                const config = await this.parseConfigFile(this.configFile);
-                if (config) {
-                    this.detectedRuntime = config.runtime || Runtime.PYTHON;
-                    this.configPackageName = config.package_name || null;
-                    this.validatePackageName();
-                }
+                await this.parseConfigFile(this.configFile);
             }
         }
     }
+
     onDragOver(event: DragEvent): void {
         event.preventDefault();
         event.stopPropagation();
@@ -96,6 +102,7 @@ export class PackageDeployComponent {
 
         this.isDraggingOver = true;
     }
+
     onDragLeave(event: DragEvent): void {
         event.preventDefault();
         event.stopPropagation();
@@ -132,12 +139,7 @@ export class PackageDeployComponent {
             this.showDeployPackageDialog();
             this.configFile = configFile;
 
-            const config = await this.parseConfigFile(configFile);
-            if (config) {
-                this.detectedRuntime = config.runtime || Runtime.PYTHON;
-                this.configPackageName = config.package_name || null;
-                this.validatePackageName();
-            }
+            await this.parseConfigFile(configFile);
 
             if (zipFile) {
                 this.zipFile = zipFile;
@@ -151,25 +153,46 @@ export class PackageDeployComponent {
         }
     }
 
-    private validatePackageName(): void {
-        this.nameValidationError = null;
-        if (this.packageName && this.configPackageName && this.packageName !== this.configPackageName) {
-            this.nameValidationError = `Package name in YAML (${this.configPackageName}) does not match the current package (${this.packageName})`;
+    private validatePackageName(packageConfig: PackageConfig): void {
+        this.notSameNameError = false;
+        if (packageConfig.package_name && this.packageName !== packageConfig.package_name) {
+            this.notSameNameError = true;
         }
     }
 
-    private async parseConfigFile(configFile: File): Promise<PackageConfig | null> {
+    private validateAnyPackageWithSameVersion(packageConfig: PackageConfig): void {
+        this.sameVersionError = false;
+        if (packageConfig.version && this.availablePackageVersions.includes(packageConfig.version)) {
+            this.sameVersionError = true;
+        }
+    }
+
+    private async parseConfigFile(configFile: File): Promise<void> {
         try {
             const content = await this.readFileAsync(configFile);
             if (!content) {
-                return null;
+                return;
             }
 
-            const config = parse(content) as PackageConfig;
-            return config;
+            const packageConfig = YAML.parse(content) as PackageConfig;
+            if (packageConfig.package_name) {
+                this.detectedName = packageConfig.package_name;
+            }
+
+            if (packageConfig.version) {
+                this.detectedVersion = packageConfig.version;
+            }
+
+            if (packageConfig.runtime) {
+                this.detectedRuntime = packageConfig.runtime;
+            } else {
+                this.detectedRuntime = Runtime.PYTHON;
+            }
+
+            this.validatePackageName(packageConfig);
+            this.validateAnyPackageWithSameVersion(packageConfig);
         } catch (error) {
             console.error('Error parsing YAML:', error);
-            return null;
         }
     }
 
@@ -201,11 +224,11 @@ export class PackageDeployComponent {
             return;
         }
 
-        if (this.nameValidationError) {
+        if (this.notSameNameError) {
             this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: this.nameValidationError,
+                detail: 'Package name in YAML does not match the current package'
             });
             return;
         }

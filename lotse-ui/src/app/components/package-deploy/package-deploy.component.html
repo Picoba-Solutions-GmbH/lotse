@@ -1,7 +1,7 @@
 <p-dialog header="Deploy Package" [(visible)]="showDeployDialog" [modal]="true" [style]="{ width: '450px' }"
     class="p-fluid">
     <div class="flex flex-col gap-4">
-        @if (configFile) {
+        @if (detectedRuntime) {
         <div>
             <label class="block mb-2">Detected Runtime</label>
             <p-tag [severity]="detectedRuntime === Runtime.CONTAINER ? 'info' : 'success'"
@@ -10,11 +10,21 @@
         </div>
         }
 
-        @if (configPackageName && packageName && packageName !== configPackageName) {
+        @if (notSameNameError) {
         <div>
             <p-tag severity="danger" value="Package Name Mismatch"></p-tag>
             <small class="block mt-1 text-red-500">
-                Package name in YAML ({{ configPackageName }}) does not match the current package ({{ packageName }})
+                Package name in YAML ({{ detectedName }}) does not match the current package ({{
+                packageName }})
+            </small>
+        </div>
+        }
+
+        @if (sameVersionError) {
+        <div>
+            <p-tag severity="danger" value="Version Already Exists"></p-tag>
+            <small class="block mt-1 text-red-500">
+                Version {{ detectedVersion }} already exists for this package
             </small>
         </div>
         }
@@ -56,6 +66,6 @@
     <ng-template pTemplate="footer">
         <p-button label="Cancel" (onClick)="showDeployDialog = false" styleClass="p-button-text" />
         <p-button label="Deploy" (onClick)="deployPackage()"
-            [disabled]="!configFile || (detectedRuntime !== Runtime.CONTAINER && !zipFile) || nameValidationError" />
+            [disabled]="!configFile || (detectedRuntime !== Runtime.CONTAINER && !zipFile) || notSameNameError || sameVersionError" />
     </ng-template>
 </p-dialog>
