@@ -5,6 +5,7 @@ import threading
 from typing import List, Optional
 
 from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 import src.utils.config as framework_config
 from src.misc.runtime_type import RuntimeType
@@ -39,6 +40,14 @@ class K8sManagerService(metaclass=SingletonMeta):
         self.v1 = client.CoreV1Api()
         self.custom_api = client.CustomObjectsApi()
         self.namespace = framework_config.K8S_NAMESPACE
+
+    def get_logs(self, task_id: str) -> str:
+        try:
+            logs = k8s_api.get_pod_logs(self.v1, self.namespace, task_id)
+            return logs
+        except Exception as e:
+            logger.error(f"Error getting logs for task {task_id}: {str(e)}")
+            return ""
 
     def cancel_task(self, task_id: str) -> bool:
         task_logger = self.task_logger.setup_logger(task_id)
@@ -87,7 +96,8 @@ class K8sManagerService(metaclass=SingletonMeta):
             k8s_api.create_pod(self.v1, self.namespace, task_id,
                                package_info.package_entity.python_version,
                                package_config.environment, task_logger, volume_maps,
-                               package_config.image, package_config.runtime)
+                               package_config.image, package_config.runtime,
+                               empty_instance)
             asyncio.run(k8s_api.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
 
             if package_config.runtime != RuntimeType.CONTAINER:

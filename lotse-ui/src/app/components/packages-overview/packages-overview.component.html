@@ -15,8 +15,12 @@
       <h1 class="text-3xl font-bold text-color-muted mb-2">Packages</h1>
       <p class="text-color-muted">Manage and monitor your packages</p>
     </div>
-    <p-button label="Deploy Package" [icon]="PrimeIcons.PLUS" (onClick)="showDeployPackageDialog()"
-      *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+    <div class="flex gap-2">
+      <p-button label="Deploy Package" [icon]="PrimeIcons.PLUS" (onClick)="showDeployPackageDialog()"
+        *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+      <p-button label="Deploy Container" [icon]="PrimeIcons.PLUS" (onClick)="showDeployContainerDialog()"
+        *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+    </div>
   </div>
 
   <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4">
@@ -101,6 +105,6 @@
       </ng-template>
     </p-table>
   </p-card>
-  
-  <app-package-deploy #packageDeploy (packageDeployed)="onPackageDeployed()"/>
+
+  <app-package-deploy #packageDeploy (packageDeployed)="onPackageDeployed()" />
 </div>

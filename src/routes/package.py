@@ -308,7 +308,7 @@ async def get_package_by_version(
 
     package_instance = PackageInstance(
         name=package_name,
-        description=package.description,
+        description=package.description or "",
         tasks=task_infos,
         package_arguments=package_arguments,
         is_default=package.active,

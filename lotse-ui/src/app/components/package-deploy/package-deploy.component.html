@@ -69,3 +69,42 @@
             [disabled]="!configFile || (detectedRuntime !== Runtime.CONTAINER && !zipFile) || notSameNameError || sameVersionError" />
     </ng-template>
 </p-dialog>
+
+<p-dialog header="Deploy Container" [(visible)]="showContainerDialog" [modal]="true" [style]="{ width: '450px' }"
+    class="p-fluid">
+    <div class="flex flex-col gap-4">
+        <div>
+            <label class="block mb-2">Container Image Name</label>
+            <input type="text" pInputText [(ngModel)]="containerImageName" placeholder="e.g., nginx:latest" />
+            <small class="block mt-1 text-gray-500">Full image name including tag if applicable</small>
+        </div>
+
+        <div>
+            <label class="block mb-2">Package Name</label>
+            <input type="text" pInputText [(ngModel)]="containerPackageName" placeholder="e.g., my-web-app" />
+            <small class="block mt-1 text-gray-500">A unique identifier for this package</small>
+        </div>
+
+        <div>
+            <label class="block mb-2">Version</label>
+            <input type="text" pInputText [(ngModel)]="containerVersion" placeholder="e.g., 1.0.0" />
+            <small class="block mt-1 text-gray-500">Version identifier for this deployment</small>
+        </div>
+
+        <div class="field">
+            <p-checkbox [(ngModel)]="setAsDefault" [binary]="true" label="Set as default" inputId="containerSetAsDefault" />
+            <label for="containerSetAsDefault" class="ml-2 text-sm">Set as default</label>
+        </div>
+
+        <div class="field">
+            <p-checkbox [(ngModel)]="deletePreviousVersions" [binary]="true" label="Delete previous versions"
+                inputId="containerDeletePreviousVersions" />
+            <label for="containerDeletePreviousVersions" class="ml-2 text-sm">Delete previous versions</label>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" (onClick)="showContainerDialog = false" styleClass="p-button-text" />
+        <p-button label="Deploy" (onClick)="deployContainer()" [disabled]="!containerImageName || !containerPackageName" />
+    </ng-template>
+</p-dialog>

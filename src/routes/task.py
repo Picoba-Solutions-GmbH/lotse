@@ -9,8 +9,10 @@ from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
 from fastapi.websockets import WebSocketState
 from kubernetes.stream import stream
 
+from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.async_execution_response import AsyncExecutionResponse
+from src.models.yaml_config import parse_config
 from src.routes import authentication
 from src.services.kubernetes import k8s_api
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
@@ -99,9 +101,21 @@ async def list_tasks(stage: str, task_manager: TaskManagerService = get_service(
 
 @router.get("/{task_id}/logs")
 async def get_task_logs(
-    task_id: str
+    task_id: str,
+    task_manager: TaskManagerService = get_service(TaskManagerService),
+    k8s_service: K8sManagerService = get_service(K8sManagerService)
 ):
+    task = task_manager.get_task(task_id)
+    config_yaml_content = parse_config(task.package.config)  # type: ignore
+    is_container_runtime = config_yaml_content.runtime == RuntimeType.CONTAINER
+
     logs = task_logger.get_logs(task_id)
+
+    if is_container_runtime:
+        pod_logs = k8s_service.get_logs(task_id)
+        if pod_logs:
+            logs.append(pod_logs)
+
     logs.reverse()
 
     return {"logs": logs}

@@ -68,6 +68,10 @@ export class PackagesOverviewComponent implements OnInit {
     this.packageDeploy.showDeployPackageDialog();
   }
 
+  showDeployContainerDialog(): void {
+    this.packageDeploy.showDeployContainerDialog();
+  }
+
   async onPackageDeployed(): Promise<void> {
     await this.loadPackages();
   }

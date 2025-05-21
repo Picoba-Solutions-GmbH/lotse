@@ -7,6 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { FileUploadModule } from 'primeng/fileupload';
+import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import YAML from 'yaml';
 import { Runtime } from '../../misc/Runtime';
@@ -26,7 +27,8 @@ interface PackageConfig {
         DialogModule,
         FileUploadModule,
         CheckboxModule,
-        TagModule
+        TagModule,
+        InputTextModule
     ],
     selector: 'app-package-deploy',
     templateUrl: './package-deploy.component.html',
@@ -54,6 +56,11 @@ export class PackageDeployComponent {
     isDraggingOver: boolean = false;
     private dragCounter: number = 0;
     private dragTimer: any = null;
+
+    showContainerDialog = false;
+    containerImageName: string = '';
+    containerPackageName: string = '';
+    containerVersion: string = '1.0.0';
 
     constructor(
         private packageService: PackageService,
@@ -270,6 +277,81 @@ export class PackageDeployComponent {
                 severity: 'error',
                 summary: 'Error',
                 detail: `Failed to deploy package: ${message}`,
+                life: 5000,
+            });
+        }
+    }
+
+    showDeployContainerDialog(): void {
+        this.showContainerDialog = true;
+        this.containerImageName = '';
+        this.containerPackageName = '';
+        this.containerVersion = '1.0.0';
+        this.setAsDefault = true;
+        this.deletePreviousVersions = false;
+    }
+
+    async deployContainer(): Promise<void> {
+        if (!this.containerImageName) {
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Please provide a container image name',
+            });
+            return;
+        }
+
+        if (!this.containerPackageName) {
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Please provide a package name',
+            });
+            return;
+        }
+
+        try {
+            const stage = localStorage.getItem('stage') || 'dev';
+            const containerConfig = {
+                package_name: this.containerPackageName,
+                runtime: Runtime.CONTAINER,
+                version: this.containerVersion,
+                image: this.containerImageName
+            };
+
+            const yamlContent = YAML.stringify(containerConfig);
+            const yamlBlob = new Blob([yamlContent], { type: 'application/x-yaml' });
+            const configFile = new File([yamlBlob], `${this.containerPackageName}.yaml`, { type: 'application/x-yaml' });
+
+            const formData = new FormData();
+            formData.append('stage', stage);
+            formData.append('package_file', new Blob());
+            formData.append('config_yaml', configFile);
+            formData.append('set_as_default', this.setAsDefault ? 'true' : 'false');
+            formData.append('delete_previous_versions', this.deletePreviousVersions ? 'true' : 'false');
+
+            await this.packageService.deployPackageAsync(formData);
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Container deployed successfully',
+            });
+
+            this.showContainerDialog = false;
+            this.packageDeployed.emit();
+        } catch (error) {
+            let message = 'Unknown error';
+
+            if (error instanceof HttpErrorResponse) {
+                message = error.error?.detail || 'Unknown error';
+            } else if (error instanceof Error) {
+                message = error.message || 'Unknown error';
+            }
+
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: `Failed to deploy container: ${message}`,
                 life: 5000,
             });
         }

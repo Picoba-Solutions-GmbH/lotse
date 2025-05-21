@@ -64,7 +64,7 @@ def get_pod_metrics(api: client.CustomObjectsApi, namespace: str, pod_name: str)
 
 def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_version: str,
                env_vars: list[Environment], task_logger: Logger, volumes: list[VolumeMap],
-               image: Optional[str], runtime: Optional[RuntimeType]):
+               image: Optional[str], runtime: Optional[RuntimeType], empty_instance: bool):
     if env_vars is None:
         env_vars = []
 
@@ -122,7 +122,7 @@ def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_vers
         "imagePullPolicy": "IfNotPresent"
     }
 
-    if runtime != RuntimeType.CONTAINER:
+    if runtime != RuntimeType.CONTAINER or empty_instance:
         container["command"] = ["sleep", "infinity"]
 
     pod_manifest = {
@@ -167,14 +167,21 @@ async def check_container_exists(api: client.CoreV1Api, namespace: str, pod_name
         with k8s_api_lock:
             pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
             return True if pod else False
+    except ApiException as e:
+        if e.status == 0:
+            return True
+        return False
     except Exception:
         return False
 
 
 def get_pod_logs(api: client.CoreV1Api, namespace: str, pod_name: str) -> str:
-    with k8s_api_lock:
-        logs = api.read_namespaced_pod_log(name=pod_name, namespace=namespace)
-        return logs
+    try:
+        with k8s_api_lock:
+            logs = api.read_namespaced_pod_log(name=pod_name, namespace=namespace)
+            return logs
+    except Exception:
+        return ""
 
 
 def copy_files_to_pod(namespace: str, pod_name: str, file_to_copy, dest_path="/app"):
