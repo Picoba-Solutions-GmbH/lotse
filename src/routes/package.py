@@ -22,7 +22,6 @@ from src.models.yaml_config import Environment, parse_config
 from src.routes import authentication
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.package_repository import PackageRepository
-from src.services.package_service import PackageService
 from src.services.task_manager_service import (TaskManagerService,
                                                map_task_entity_to_task_info)
 from src.services.volume_repository import VolumeRepository
@@ -38,7 +37,7 @@ async def deploy_package(
     config_yaml: UploadFile = File(...),
     stage=Form(..., regex=constants.stage_regex_pattern),
     set_as_default: bool = Form(False),
-    disable_previous_versions: bool = Form(False),
+    delete_previous_versions: bool = Form(False),
     db_session: Session = Depends(get_db_session),
     _=Depends(authentication.require_operator_or_admin)
 ):
@@ -87,24 +86,25 @@ async def deploy_package(
 
         patoolib.extract_archive(file_path, outdir=str(package_dir))
 
-    set_active = set_as_default or disable_previous_versions
+    set_active = set_as_default or delete_previous_versions
     metadata = PackageRepository.create_package(
         db_session, package_config.package_name, package_config.version,
         package_config.python_version, stage,
         config_yaml_content, package_config.description, set_active
     )
 
-    if disable_previous_versions:
+    if delete_previous_versions:
         other_versions = PackageRepository.list_other_package_version(
             db_session, package_config.package_name, stage, package_config.version)
         for other_version in other_versions:
-            venv_path = PathManager.get_venv_path(other_version.package_name,
-                                                  other_version.version, other_version.stage)
-            shutil.rmtree(venv_path, ignore_errors=True)
-            package_path = PackageService.get_package_path(
+            package_dir = PathManager.get_package_path(
                 other_version.package_name, other_version.version, other_version.stage)
-            if package_path:
-                shutil.rmtree(package_path, ignore_errors=True)
+            venv_dir = PathManager.get_venv_path(other_version.package_name, other_version.version, other_version.stage)
+            if os.path.exists(package_dir):
+                shutil.rmtree(package_dir, ignore_errors=True)
+
+            if os.path.exists(venv_dir):
+                shutil.rmtree(venv_dir, ignore_errors=True)
 
         PackageRepository.delete_other_package_versions(
             db_session, package_config.package_name, stage, package_config.version)

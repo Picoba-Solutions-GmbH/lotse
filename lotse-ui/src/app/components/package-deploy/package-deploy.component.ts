@@ -50,7 +50,7 @@ export class PackageDeployComponent {
     showDeployDialog = false;
     zipFile: File | null = null;
     configFile: File | null = null;
-    disablePreviousVersions: boolean = false;
+    deletePreviousVersions: boolean = false;
     isDraggingOver: boolean = false;
     private dragCounter: number = 0;
     private dragTimer: any = null;
@@ -69,7 +69,7 @@ export class PackageDeployComponent {
         this.detectedVersion = null;
         this.detectedRuntime = null;
         this.setAsDefault = false;
-        this.disablePreviousVersions = false;
+        this.deletePreviousVersions = false;
         this.sameVersionError = false;
     }
 
@@ -246,7 +246,7 @@ export class PackageDeployComponent {
 
             formData.append('config_yaml', this.configFile);
             formData.append('set_as_default', this.setAsDefault ? 'true' : 'false');
-            formData.append('disable_previous_versions', this.disablePreviousVersions ? 'true' : 'false');
+            formData.append('delete_previous_versions', this.deletePreviousVersions ? 'true' : 'false');
 
             await this.packageService.deployPackageAsync(formData);
             this.messageService.add({
