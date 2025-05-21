@@ -5,7 +5,6 @@ import threading
 from typing import List, Optional
 
 from kubernetes import client, config
-from kubernetes.client.rest import ApiException
 
 import src.utils.config as framework_config
 from src.misc.runtime_type import RuntimeType

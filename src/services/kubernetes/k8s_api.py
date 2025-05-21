@@ -166,10 +166,18 @@ async def check_container_exists(api: client.CoreV1Api, namespace: str, pod_name
     try:
         with k8s_api_lock:
             pod = api.read_namespaced_pod(name=pod_name, namespace=namespace)
-            return True if pod else False
+            if pod.status.container_statuses:  # type: ignore
+                all_ready = all(container.ready for container in pod.status.container_statuses)  # type: ignore
+                return all_ready
+
+            return False
     except ApiException as e:
+        if e.status == 404:  # Pod not found
+            return False
+
         if e.status == 0:
             return True
+
         return False
     except Exception:
         return False
@@ -372,6 +380,7 @@ async def watch_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
 
             await asyncio.sleep(0.1)
         else:
+            delete_pod(api, namespace, pod_name, task_logger)
             return 0
 
 
