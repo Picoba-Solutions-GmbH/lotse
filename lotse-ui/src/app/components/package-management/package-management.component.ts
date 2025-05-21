@@ -112,4 +112,30 @@ export class PackageManagementComponent implements OnInit {
       }
     });
   }
+
+  setAsDefaultVersion(clickedPackage: PackageDetail): void {
+    this.confirmationService.confirm({
+      message: `Are you sure you want to set ${this.packageName} version ${clickedPackage.version} as default?`,
+      header: 'Set Default Confirmation',
+      icon: PrimeIcons.QUESTION_CIRCLE,
+      accept: async () => {
+        try {
+          const stage = localStorage.getItem('stage') || 'dev';
+          await this.packageService.setAsDefaultVersionAsync(this.packageName, stage, clickedPackage.version);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: `${this.packageName} version ${clickedPackage.version} set as default successfully.`
+          });
+          await this.loadPackages();
+        } catch (error) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: `Failed to set package version ${clickedPackage.version} as default.`
+          });
+        }
+      }
+    });
+  }
 }

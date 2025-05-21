@@ -37,6 +37,10 @@ export class PackageService {
     return firstValueFrom(this.http.delete(`${environment.url}/packages/${packageName}/${stage}/${version}`));
   }
 
+  async setAsDefaultVersionAsync(packageName: string, stage: string, version: string) {
+    return firstValueFrom(this.http.post(`${environment.url}/packages/${packageName}/${stage}/${version}/default`, {}));
+  }
+
   async getPackageEnvironmentAsync(stage: string, packageName: string, version: string): Promise<PackageEnvironment[]> {
     return await firstValueFrom(this.http.get<PackageEnvironment[]>(`${environment.url}/packages/${packageName}/${stage}/${version}/environment`));
   }

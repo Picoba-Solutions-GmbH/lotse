@@ -335,3 +335,20 @@ async def get_package_environment(
         environment.append(Environment(name=env.name, value=env.value))
 
     return environment
+
+
+@router.post("/{package_name}/{stage}/{version}/default")
+async def set_default_package(
+    package_name: str,
+    stage: str,
+    version: str,
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_admin)
+):
+    package = PackageRepository.get_package(db, package_name, stage, version)
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+
+    PackageRepository.set_active_package(db, package_name, version, stage)
+
+    return {"message": "Package set as default successfully"}

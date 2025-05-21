@@ -91,9 +91,16 @@
                     </td>
                     <td>
                         <div class="flex gap-2">
+                            @if (!package.is_default) {
+                            <ng-container *hasRole="[Role.ADMIN, Role.OPERATOR]">
+                                <p-button [icon]="PrimeIcons.STAR_FILL" size="small" rounded severity="info"
+                                    pTooltip="Set as Default"
+                                    (onClick)="$event.stopPropagation(); setAsDefaultVersion(package)" />
+                            </ng-container>
+                            }
                             <ng-container *hasRole="[Role.ADMIN]">
-                                <p-button [icon]="PrimeIcons.TRASH"
-                                    styleClass="p-button-rounded p-button-danger p-button-sm" pTooltip="Delete"
+                                <p-button [icon]="PrimeIcons.TRASH" size="small" rounded severity="danger"
+                                    pTooltip="Delete"
                                     (onClick)="$event.stopPropagation(); deletePackageVersion(package)" />
                             </ng-container>
                         </div>
