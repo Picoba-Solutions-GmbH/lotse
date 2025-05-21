@@ -162,14 +162,14 @@ export class PackageDeployComponent {
 
     private validatePackageName(packageConfig: PackageConfig): void {
         this.notSameNameError = false;
-        if (packageConfig.package_name && this.packageName !== packageConfig.package_name) {
+        if (this.packageName && packageConfig.package_name && this.packageName !== packageConfig.package_name) {
             this.notSameNameError = true;
         }
     }
 
     private validateAnyPackageWithSameVersion(packageConfig: PackageConfig): void {
         this.sameVersionError = false;
-        if (packageConfig.version && this.availablePackageVersions.includes(packageConfig.version)) {
+        if (this.packageName && packageConfig.version && this.availablePackageVersions.includes(packageConfig.version)) {
             this.sameVersionError = true;
         }
     }
