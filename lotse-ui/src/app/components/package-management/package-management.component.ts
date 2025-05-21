@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService, MessageService, PrimeIcons } from 'primeng/api';
@@ -20,9 +20,11 @@ import { PackageCountByStatePipe } from "../../pipes/package-count-by-state.pipe
 import { PackageStatusToSeverityPipe } from "../../pipes/package-status.pipe";
 import { PackageService } from '../../services/package.service';
 import { AuthService } from '../../services/auth.service';
+import { PackageDeployComponent } from '../package-deploy/package-deploy.component';
 
 @Component({
   selector: 'app-package-management',
+  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -37,7 +39,8 @@ import { AuthService } from '../../services/auth.service';
     ToastModule,
     PackageStatusToSeverityPipe,
     PackageCountByStatePipe,
-    HasRoleDirective
+    HasRoleDirective,
+    PackageDeployComponent
   ],
   templateUrl: './package-management.component.html',
   styleUrl: './package-management.component.scss'
@@ -51,6 +54,8 @@ export class PackageManagementComponent implements OnInit {
   PrimeIcons = PrimeIcons;
   Role = Role;
   isAuthenticationEnabled: boolean = false;
+
+  @ViewChild(PackageDeployComponent) packageDeploy!: PackageDeployComponent;
 
   constructor(
     private packageService: PackageService,
@@ -85,6 +90,14 @@ export class PackageManagementComponent implements OnInit {
 
   onPackageSelect(clickedPackage: PackageDetail): void {
     this.router.navigate(['/packages', this.packageName, clickedPackage.version]);
+  }
+
+  showDeployPackageDialog(): void {
+    this.packageDeploy.showDeployPackageDialog();
+  }
+
+  async onPackageDeployed(): Promise<void> {
+    await this.loadPackages();
   }
 
   deletePackageVersion(clickedPackage: PackageDetail): void {

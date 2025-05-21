@@ -1,9 +1,22 @@
-<div class="packages-container">
+<div class="relative w-full min-h-full" (dragenter)="packageDeploy.onDragOver($event)"
+    (dragover)="packageDeploy.onDragOver($event)" (dragleave)="packageDeploy.onDragLeave($event)"
+    (drop)="packageDeploy.onFileDrop($event)">
+    @if (packageDeploy.isDraggingOver) {
+    <div class="drop-overlay">
+        <div class="flex flex-col p-6 rounded-xl items-center justify-center gap-3 bg-(--p-content-background)">
+            <i [ngClass]="PrimeIcons.UPLOAD" class="text-4xl text-(--p-primary-color) shadow-2xl"></i>
+            <h3>Drop YAML file to deploy (ZIP needed for runtimes or binaries)</h3>
+        </div>
+    </div>
+    }
+
     <div class="mb-4 flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-bold text-color-muted mb-2">{{ packageName }}</h1>
             <p class="text-color-muted">Manage and monitor Versions for {{ packageName }}</p>
         </div>
+        <p-button label="Deploy New Version" [icon]="PrimeIcons.PLUS" (onClick)="showDeployPackageDialog()"
+            *hasRole="[Role.ADMIN, Role.OPERATOR]" />
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4">
@@ -39,7 +52,7 @@
     </div>
 
     <p-card styleClass="border border-solid border-gray-200 dark:border-gray-700">
-        <p-table [value]="packages" [scrollable]="true" [sortField]="'name'" [sortOrder]="-1"
+        <p-table [value]="packages" [scrollable]="true" [sortField]="'version'" [sortOrder]="1"
             styleClass="p-datatable-sm" columnResizeMode="fit" [resizableColumns]="true" selectionMode="single"
             [(selection)]="selectedPackage" dataKey="id" [paginator]="true" [rows]="10" [showCurrentPageReport]="true"
             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} packages">
@@ -118,4 +131,6 @@
             </ng-template>
         </p-table>
     </p-card>
+
+    <app-package-deploy #packageDeploy [packageName]="packageName" (packageDeployed)="onPackageDeployed()" />
 </div>

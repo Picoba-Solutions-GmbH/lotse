@@ -44,30 +44,4 @@ export class PackageService {
   async getPackageEnvironmentAsync(stage: string, packageName: string, version: string): Promise<PackageEnvironment[]> {
     return await firstValueFrom(this.http.get<PackageEnvironment[]>(`${environment.url}/packages/${packageName}/${stage}/${version}/environment`));
   }
-
-  async detectRuntimeFromConfigFile(configFile: File): Promise<Runtime> {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        if (!content) {
-          resolve(Runtime.PYTHON);
-          return;
-        }
-
-        const runtimeMatch = content.match(/runtime:\s*(\w+)/);
-        if (runtimeMatch && runtimeMatch[1]) {
-          const runtimeValue = runtimeMatch[1].trim().toLowerCase();
-          if (Object.values(Runtime).includes(runtimeValue as Runtime)) {
-            resolve(runtimeValue as Runtime);
-          } else {
-            resolve(Runtime.PYTHON);
-          }
-        } else {
-          resolve(Runtime.PYTHON);
-        }
-      };
-      reader.readAsText(configFile);
-    });
-  }
 }

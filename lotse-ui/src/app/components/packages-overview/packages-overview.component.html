@@ -1,6 +1,8 @@
-<div class="relative w-full min-h-full" (dragenter)="onDragOver($event)" (dragover)="onDragOver($event)"
-  (dragleave)="onDragLeave($event)" (drop)="onFileDrop($event)">
-  @if (isDraggingOver) { <div class="drop-overlay">
+<div class="relative w-full min-h-full" (dragenter)="packageDeploy.onDragOver($event)"
+  (dragover)="packageDeploy.onDragOver($event)" (dragleave)="packageDeploy.onDragLeave($event)"
+  (drop)="packageDeploy.onFileDrop($event)">
+  @if (packageDeploy.isDraggingOver) {
+  <div class="drop-overlay">
     <div class="flex flex-col p-6 rounded-xl items-center justify-center gap-3 bg-(--p-content-background)">
       <i [ngClass]="PrimeIcons.UPLOAD" class="text-4xl text-(--p-primary-color) shadow-2xl"></i>
       <h3>Drop YAML file to deploy (ZIP needed for runtimes or binaries)</h3>
@@ -99,57 +101,6 @@
       </ng-template>
     </p-table>
   </p-card>
-
-  <p-dialog header="Deploy Package" [(visible)]="showDeployDialog" [modal]="true" [style]="{ width: '450px' }"
-    class="p-fluid">
-    <div class="flex flex-col gap-4">
-      @if (configFile) {
-      <div>
-        <label class="block mb-2">Detected Runtime</label>
-        <p-tag [severity]="detectedRuntime === Runtime.CONTAINER ? 'info' : 'success'"
-          [value]="detectedRuntime | titlecase"></p-tag>
-        <small class="block mt-1 text-gray-500">Runtime automatically detected from YAML configuration</small>
-      </div>
-      }
-
-      @if (detectedRuntime !== Runtime.CONTAINER) {
-      <div>
-        <label class="block mb-2">Package ZIP File</label>
-        <p-fileUpload mode="basic" chooseLabel="Choose ZIP File" [auto]="true" accept=".zip,.7z"
-          (onSelect)="onZipFileSelect($event)" [showUploadButton]="false">
-        </p-fileUpload>
-        @if (zipFile) {
-        <small class="text-green-500">Selected: {{ zipFile.name }}</small>
-        }
-      </div>
-      }
-
-      <div>
-        <label class="block mb-2">Config YAML File</label>
-        <p-fileUpload mode="basic" chooseLabel="Choose YAML File" [auto]="true" accept=".yaml,.yml"
-          (onSelect)="onConfigFileSelect($event)" [showUploadButton]="false">
-        </p-fileUpload>
-        @if (configFile) {
-        <small class="text-green-500">Selected: {{ configFile.name }}</small>
-        }
-      </div>
-
-      <div class="field">
-        <p-checkbox [(ngModel)]="setAsDefault" [binary]="true" label="Set as default" inputId="setAsDefault" />
-        <label for="setAsDefault" class="ml-2 text-sm">Set as default</label>
-      </div>
-
-      <div class="field">
-        <p-checkbox [(ngModel)]="disablePreviousVersions" [binary]="true" label="Disable previous versions"
-          inputId="disablePreviousVersions" />
-        <label for="disablePreviousVersions" class="ml-2 text-sm">Disable previous versions</label>
-      </div>
-    </div>
-
-    <ng-template #footer>
-      <p-button label="Cancel" (onClick)="showDeployDialog = false" styleClass="p-button-text" />
-      <p-button label="Deploy" (onClick)="deployPackage()"
-        [disabled]="!configFile || (detectedRuntime !== Runtime.CONTAINER && !zipFile)" />
-    </ng-template>
-  </p-dialog>
+  
+  <app-package-deploy #packageDeploy (packageDeployed)="onPackageDeployed()" />
 </div>

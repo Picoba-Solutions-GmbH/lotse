@@ -56,3 +56,19 @@ html:not(.dark) {
   height: 16px;
   scale: 1.4;
 }
+
+.drop-overlay {
+  position: absolute;
+  top: -0.5rem;
+  left: -0.5rem;
+  right: -0.5rem;
+  bottom: -0.5rem;
+  backdrop-filter: blur(0.25rem);
+  border-radius: 0.75rem;
+  border: 0.125rem dashed var(--p-primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+}
