@@ -10,6 +10,7 @@ export type PackageInfo = {
 
 export type PackageDetail = PackageInfo & {
     version: string;
+    is_default: boolean;
 }
 
 export type PackageInstance = {
@@ -17,4 +18,5 @@ export type PackageInstance = {
     description: string;
     tasks: TaskInfo[];
     package_arguments?: PackageArgument[];
+    is_default: boolean;
 }

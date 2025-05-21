@@ -50,6 +50,7 @@
                     <th>Status</th>
                     <th>Instances</th>
                     <th>Creation Date</th>
+                    <th>Default</th>
                     <th>Actions</th>
                 </tr>
             </ng-template>
@@ -80,6 +81,15 @@
                         </div>
                     </td>
                     <td>
+                        <div class="flex items-center justify-content-center">
+                            @if (package.is_default) {
+                            <i [ngClass]="PrimeIcons.CHECK_CIRCLE" class="text-green-500"></i>
+                            } @else {
+                            <span class="text-gray-400">—</span>
+                            }
+                        </div>
+                    </td>
+                    <td>
                         <div class="flex gap-2">
                             <ng-container *hasRole="[Role.ADMIN]">
                                 <p-button [icon]="PrimeIcons.TRASH"
@@ -93,7 +103,7 @@
 
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="5" class="text-center p-8">
+                    <td colspan="6" class="text-center p-8">
                         <i class="text-5xl text-gray-300 mb-4" [ngClass]="PrimeIcons.INBOX"></i>
                         <p class="text-gray-500">No packages found</p>
                     </td>

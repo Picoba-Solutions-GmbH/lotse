@@ -264,7 +264,8 @@ async def get_package_by_stage(
             status=package_status,
             instances=tasks_count,
             creation_date=datetime.now(),
-            version=package.version
+            version=package.version,
+            is_default=package.active
         )
         package_details.append(package_info)
 
@@ -310,6 +311,7 @@ async def get_package_by_version(
         description=package.description,
         tasks=task_infos,
         package_arguments=package_arguments,
+        is_default=package.active,
     )
 
     return package_instance

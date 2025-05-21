@@ -1,8 +1,13 @@
 <div class="flex flex-col xl:overflow-hidden relative w-full min-h-full h-full">
     <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
-            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted mb-2">{{ packageName }}
-                ({{packageVersion}})</h1>
+            <div class="flex items-center gap-2 mb-2">
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted">{{ packageName }}
+                    ({{packageVersion}})</h1>
+                @if (packageInstance.is_default) {
+                <p-tag severity="success" value="Default" class="align-middle" />
+                }
+            </div>
             <p class="text-color-muted text-sm md:text-base">{{ packageInstance.description }}</p>
         </div>
         <div class="flex gap-2">

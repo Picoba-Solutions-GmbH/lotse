@@ -15,6 +15,7 @@ class PackageInfo(BaseModel):
 
 class PackageDetail(PackageInfo):
     version: str
+    is_default: bool = False
 
 
 class PackageInstance(BaseModel):
@@ -22,3 +23,4 @@ class PackageInstance(BaseModel):
     description: str
     tasks: list[TaskInfo]
     package_arguments: list[dict] = []
+    is_default: bool = False

@@ -66,7 +66,8 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   packageInstance: PackageInstance = {
     name: '',
     description: '',
-    tasks: []
+    tasks: [],
+    is_default: false,
   };
 
   selectedTask: TaskInfo | undefined;
