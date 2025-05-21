@@ -7,10 +7,14 @@
         </div>
         <div class="flex gap-2">
             <ng-container *hasRole="[Role.ADMIN, Role.OPERATOR]">
-                <p-button label="Start New Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartNewInstance()"
-                    [loading]="isPackageRunning" />
-                <p-button label="Create Empty Instance" [icon]="PrimeIcons.PLAY" (onClick)="onStartEmptyInstance()"
-                    [loading]="isPackageRunning" />
+                <p-button [icon]="PrimeIcons.PLAY" (onClick)="onStartNewInstance()" [loading]="isPackageRunning"
+                    pTooltip="Start New Instance" tooltipPosition="left" />
+                <p-button [icon]="PrimeIcons.PLAY_CIRCLE" (onClick)="onStartEmptyInstance()"
+                    [loading]="isPackageRunning" pTooltip="Create Empty Instance" tooltipPosition="left" />
+                <ng-container *hasRole="[Role.ADMIN]">
+                    <p-button [icon]="PrimeIcons.SERVER" (onClick)="showEnvironmentVariables()"
+                        pTooltip="Environment Variables" tooltipPosition="left" />
+                </ng-container>
             </ng-container>
         </div>
     </div>
@@ -314,12 +318,51 @@
             <p-button label="Start" icon="pi pi-play" (onClick)="executePackageAsync(false)"
                 [loading]="isPackageRunning" />
         </ng-template>
-    </p-dialog>
-
-    <p-dialog [(visible)]="showTerminal" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+    </p-dialog> <p-dialog [(visible)]="showTerminal" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
         header="Pod Terminal - {{ selectedTaskId }}" maximizable="true" (onMaximize)="handleTerminalResize()">
         @if (selectedTaskId && showTerminal) {
         <app-pod-terminal [taskId]="selectedTaskId" (socketClosed)="handleSocketClosed()" />
+        }
+    </p-dialog>
+
+    <p-dialog [(visible)]="showEnvironmentDialog" [modal]="true" [style]="{width: '40vw'}"
+        header="Environment Variables - {{ packageName }} ({{ packageVersion }})">
+        @if (packageEnvironmentVariables) {
+        <div class="p-fluid">
+            <div class="mb-4">
+                <p class="text-lg font-semibold">Package Environment Variables</p>
+                <p class="text-sm text-gray-500 mb-3">These environment variables are configured for this package.</p>
+
+                <div class="overflow-auto max-h-[60vh]">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-gray-800">
+                                <th class="p-2 text-left border-b border-gray-200 dark:border-gray-700">Name</th>
+                                <th class="p-2 text-left border-b border-gray-200 dark:border-gray-700">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (environment of packageEnvironmentVariables; track environment) {
+                            <tr
+                                class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900">
+                                <td class="p-2 font-mono">{{ environment.name }}</td>
+                                <td class="p-2 font-mono break-all">{{ environment.value }}</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <ng-template pTemplate="footer">
+            <p-button label="Close" (onClick)="showEnvironmentDialog = false" />
+        </ng-template>
+        } @else {
+        <div class="p-4 text-center">
+            <i class="pi pi-spin pi-spinner text-3xl mb-3"></i>
+            <p>Loading environment variables...</p>
+        </div>
         }
     </p-dialog>
 </div>

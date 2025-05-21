@@ -18,7 +18,7 @@ from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
 from src.models.task_info import TaskInfo
-from src.models.yaml_config import parse_config
+from src.models.yaml_config import Environment, parse_config
 from src.routes import authentication
 from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.package_repository import PackageRepository
@@ -313,3 +313,23 @@ async def get_package_by_version(
     )
 
     return package_instance
+
+
+@router.get("/{package_name}/{stage}/{version}/environment")
+async def get_package_environment(
+    package_name: str,
+    stage: str,
+    version: str,
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_admin)
+):
+    package = PackageRepository.get_package(db, package_name, stage, version)
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+
+    config_yaml_content = parse_config(package.config)
+    environment: list[Environment] = []
+    for env in config_yaml_content.environment:
+        environment.append(Environment(name=env.name, value=env.value))
+
+    return environment

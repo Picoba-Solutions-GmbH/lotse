@@ -22,6 +22,7 @@ import { VisualStudioCodeComponent } from "../../icons/svg-VisualStudioCode.comp
 import { Role } from '../../misc/Role';
 import { TaskStatus } from '../../misc/TaskStatus';
 import { PackageInstance } from '../../models/Package';
+import { PackageEnvironment } from '../../models/PackageEnvironment';
 import { TaskInfo } from '../../models/TaskInfo';
 import { DurationPipe } from "../../pipes/duration.pipe";
 import { TaskCountByStatePipe } from "../../pipes/task-count-by-state.pipe";
@@ -84,12 +85,14 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
 
   taskPollingSubscription?: Subscription;
   isAlive = true;
-
   showTerminal = false;
   selectedTaskId: string | null = null;
   isVsCodeBusy = signal(false);
   isAuthenticationEnabled: boolean = false;
   Role = Role;
+
+  showEnvironmentDialog = false;
+  packageEnvironmentVariables: PackageEnvironment[] = [];
 
   @ViewChild(PodTerminalComponent) podTerminal: PodTerminalComponent | undefined;
 
@@ -275,5 +278,15 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
         this.podTerminal.handleFit();
       }
     }, 100);
+  }
+
+  async showEnvironmentVariables(): Promise<void> {
+    try {
+      const stage = localStorage.getItem('stage') || 'dev';
+      this.packageEnvironmentVariables = await this.packageService.getPackageEnvironmentAsync(stage, this.packageName, this.packageVersion);
+      this.showEnvironmentDialog = true;
+    } catch (error) {
+      this.showError('Failed to load environment variables');
+    }
   }
 }

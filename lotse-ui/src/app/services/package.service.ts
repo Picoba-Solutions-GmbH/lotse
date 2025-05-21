@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Runtime } from '../misc/Runtime';
 import { PackageDetail, PackageInfo, PackageInstance } from '../models/Package';
+import { PackageEnvironment } from '../models/PackageEnvironment';
 import { RepositoryConfig as PackageConfig } from '../models/RepositoryConfig';
 
 @Injectable({
@@ -31,9 +32,13 @@ export class PackageService {
   async deployPackageAsync(formData: FormData): Promise<void> {
     await firstValueFrom(this.http.post(`${environment.url}/packages/deploy`, formData));
   }
-  
-  deletePackageVersionAsync(packageName: string, stage: string, version: string) {
+
+  async deletePackageVersionAsync(packageName: string, stage: string, version: string) {
     return firstValueFrom(this.http.delete(`${environment.url}/packages/${packageName}/${stage}/${version}`));
+  }
+
+  async getPackageEnvironmentAsync(stage: string, packageName: string, version: string): Promise<PackageEnvironment[]> {
+    return await firstValueFrom(this.http.get<PackageEnvironment[]>(`${environment.url}/packages/${packageName}/${stage}/${version}/environment`));
   }
 
   async detectRuntimeFromConfigFile(configFile: File): Promise<Runtime> {
