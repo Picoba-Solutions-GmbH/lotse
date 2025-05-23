@@ -12,8 +12,9 @@ import { MenubarModule } from 'primeng/menubar';
 import { SelectButtonChangeEvent, SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { filter } from 'rxjs';
+import { filter, firstValueFrom as firstValueFromAsync } from 'rxjs';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
+import { Role } from './misc/Role';
 import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
 import './utils/global-functions';
@@ -100,10 +101,21 @@ export class AppComponent implements OnInit {
         await this.loginAsync(username, password, true);
       }
     }
+
+    this.authService.authStateChanged.subscribe(() => {
+      this.updateMenuItems();
+    });
   }
 
   private updateMenuItems(): void {
-    this.items = [...this.original_items];
+    const isAdmin = this.authService.getRole() === Role.ADMIN;
+    this.items = this.original_items.filter(item => {
+      if (item.routerLink === 'cluster') {
+        return isAdmin;
+      }
+      
+      return true;
+    });
 
     const urlParts = this.currentRoute.split('/').filter(part => part);
     if (urlParts[0] === 'packages' && urlParts.length > 1) {
