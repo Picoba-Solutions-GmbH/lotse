@@ -14,21 +14,21 @@ Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond tra
 
 ## ✨ Key Features
 
-- 📦 **Full Project Deployment**: Deploy complete Python projects via REST endpoints
+- 📦 **Multi-Language Support**: Deploy Python, all sort of binaries (Go, .NET etc.), and custom containers via REST endpoints or Lotse UI
 
-- 🔄 **Dynamic Container Management**: Automatic Kubernetes container provisioning and lifecycle management
+- 🔄 **Advanced Container Management**: Kubernetes container provisioning with improved status monitoring and lifecycle management
 
-- ⚡ **Virtual Environment Caching**: Optimized performance through venv caching mechanism
+- 🔧 **Cluster Management**: Complete Kubernetes cluster administration capabilities
+
+- ⚡ **Virtual Environment Caching**: Optimized performance through venv caching mechanism for python runtime
 
 - 💻 **IDE Integration**: On-demand VS Code server deployment for remote development
 
 - 🖥️ **Interactive Terminal Access**: Direct terminal access to running containers
 
-- 🔀 **Multi-Stage Support**: Separate development and production environments
+- 🔀 **Version Management**: Deploy packages in user specified versioning
 
-- 📊 **UI Dashboard**: Angular-based management interface for easy project management
-
-- 🔌 **Proxy Support**: Automatic proxy configuration for web applications
+- 🔌 **Proxy Support**: Automatic proxy configuration
 
 ## 📸 Screenshots
 
@@ -40,21 +40,21 @@ Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond tra
 
 1. **Project Deployment**
 
-- Package Python project with requirements.txt
+- Package your project (Python, Go, .NET, or custom container)
 
-- Use the REST API to deploy the project
+- Use the REST API or UI drag-and-drop to deploy the project
 
 - Lotse stores information in PostgreSQL and on disk
 
 2. **Execution**
 
-- Request project execution via REST endpoint
+- Request project execution via REST endpoint or UI
 
-- Lotse spins up a Kubernetes container
+- Lotse spins up a Kubernetes container with improved status monitoring
 
 - Dependencies are installed or retrieved from cache
 
-- Project is executed with specified entry point
+- Project is executed with specified entry point and runtime arguments
 
 3. **Development Features**
 
@@ -77,22 +77,6 @@ Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond tra
 - 📨 **Message Queue**: ActiveMQ (for async operations)
 
 - 🧰 **Development Tools**: VS Code
-
-## ⚙️ Configuration
-
-The system supports various configuration options through environment variables and yaml files:
-
-- Kubernetes namespace configuration
-
-- Python version selection
-
-- Resource limits
-
-- Timeout settings
-
-- Proxy configurations
-
-- Development mode settings
 
 ## 🏁 Getting Started
 
@@ -164,6 +148,14 @@ The framework includes several example projects demonstrating different use case
 - 🎨 NiceGUI
 
 - 🐍 Hello world script
+
+- 🌐 FastAPI web application
+
+- ☕ Go binary with Gin framework
+
+- 🎯 .NET Blazor binary
+
+- 🐳 Custom container with entrypoint
 
 ## 👥 Contributing
 
