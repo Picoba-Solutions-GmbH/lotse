@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from src.authentication.roles_type import RoleType
-from src.services.user_repository import UserRepository
+from src.database.repositories.user_repository import UserRepository
 from src.utils.hasher import get_password_hash
 
 

@@ -11,11 +11,11 @@ from fastapi.responses import FileResponse, PlainTextResponse
 import src.utils.service_registry as service_registry
 from src.database import seed_users
 from src.database.database_access import get_db_session, init_db
-from src.routes import (authentication, execute, package, proxy, status, task,
-                        volume)
+from src.routes import (authentication, cluster, execute, package,
+                        pod_terminal, proxy, status, task, volume, websocket)
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
-from src.services.kubernetes.k8s_manager_service import K8sManagerService
+from src.services.task_manager_service import TaskManagerService
 from src.utils import config
 from src.utils.singleton_meta import get_service_instance
 
@@ -32,7 +32,7 @@ async def lifespan(_: FastAPI):
         logger.info("Database initialized")
         service_registry.initialize_registry()
 
-        k8s_manager_service = get_service_instance(K8sManagerService)
+        k8s_manager_service = get_service_instance(TaskManagerService)
         await k8s_manager_service.check_and_initialize_pods()
 
         if config.ACTIVEMQ_ACTIVE:
@@ -48,6 +48,25 @@ app = FastAPI(title=config.APP_NAME, root_path=config.OPENAPI_PREFIX_PATH,
 
 app.middleware('http')(handle_proxy_404_middleware)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(authentication.router)
+app.include_router(cluster.router)
+app.include_router(execute.router)
+app.include_router(package.router)
+app.include_router(pod_terminal.router)
+app.include_router(proxy.router)
+app.include_router(status.router)
+app.include_router(task.router)
+app.include_router(volume.router)
+app.include_router(websocket.router)
+
 
 @app.get("/ui", include_in_schema=False)
 @app.get("/ui{full_path:path}", include_in_schema=False)
@@ -57,24 +76,6 @@ async def serve_angular(full_path: str):
         return FileResponse(file_path)
 
     return FileResponse("ui/index.html")
-
-
-app.include_router(status.router)
-app.include_router(task.router)
-app.include_router(execute.router)
-app.include_router(package.router)
-app.include_router(proxy.router)
-app.include_router(proxy.vscode_router)
-app.include_router(volume.router)
-app.include_router(authentication.router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 async def tracking_middleware(request: Request, call_next):

@@ -15,24 +15,25 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { interval, Subscription, takeWhile } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { HasRoleDirective } from '../../directives/has-role.directive';
-import { VisualStudioCodeComponent } from "../../icons/svg-VisualStudioCode.component";
-import { Role } from '../../misc/Role';
-import { TaskStatus } from '../../misc/TaskStatus';
-import { PackageInstance } from '../../models/Package';
-import { PackageEnvironment } from '../../models/PackageEnvironment';
-import { TaskInfo } from '../../models/TaskInfo';
-import { DurationPipe } from "../../pipes/duration.pipe";
-import { TaskCountByStatePipe } from "../../pipes/task-count-by-state.pipe";
-import { TaskStatusToSeverityPipe } from "../../pipes/task-status.pipe";
-import { UtcToLocalPipe } from "../../pipes/utcToLocal.pipe";
-import { AuthService } from '../../services/auth.service';
-import { ExecutionService } from '../../services/execution.service';
-import { PackageService } from '../../services/package.service';
-import { TaskService } from '../../services/task.service';
-import { PodTerminalComponent } from '../pod-terminal/pod-terminal.component';
+import { Subscription } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+import { HasRoleDirective } from '../../../directives/has-role.directive';
+import { VisualStudioCodeComponent } from "../../../icons/svg-VisualStudioCode.component";
+import { Role } from '../../../misc/Role';
+import { TaskStatus } from '../../../misc/TaskStatus';
+import { PackageInstance } from '../../../models/Package';
+import { PackageEnvironment } from '../../../models/PackageEnvironment';
+import { TaskInfo } from '../../../models/TaskInfo';
+import { DurationPipe } from "../../../pipes/duration.pipe";
+import { TaskCountByStatePipe } from "../../../pipes/task-count-by-state.pipe";
+import { TaskStatusToSeverityPipe } from "../../../pipes/task-status.pipe";
+import { UtcToLocalPipe } from "../../../pipes/utcToLocal.pipe";
+import { AuthService } from '../../../services/auth.service';
+import { ExecutionService } from '../../../services/execution.service';
+import { PackageService } from '../../../services/package.service';
+import { TaskService } from '../../../services/task.service';
+import { WebSocketService } from '../../../services/websocket.service';
+import { PodTerminalComponent } from '../../pod-terminal/pod-terminal.component';
 
 @Component({
   selector: 'app-package-instance',
@@ -63,6 +64,10 @@ import { PodTerminalComponent } from '../pod-terminal/pod-terminal.component';
   styleUrl: './package-instance.component.scss'
 })
 export class PackageInstanceComponent implements OnInit, OnDestroy {
+  TaskStatus = TaskStatus;
+  PrimeIcons = PrimeIcons;
+  Role = Role;
+
   packageInstance: PackageInstance = {
     name: '',
     description: '',
@@ -74,8 +79,6 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   packageName: string = '';
   packageVersion: string = '';
   loading: boolean = true;
-  TaskStatus = TaskStatus;
-  PrimeIcons = PrimeIcons;
   taskLogs: string[] = [];
   selectedLogTaskId: string | null = null;
 
@@ -84,18 +87,18 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   customArgs: { name: string; value: string }[] = [];
   isPackageRunning = false;
 
-  taskPollingSubscription?: Subscription;
-  isAlive = true;
   showTerminal = false;
   selectedTaskId: string | null = null;
   isVsCodeBusy = signal(false);
   isAuthenticationEnabled: boolean = false;
-  Role = Role;
 
   showEnvironmentDialog = false;
   packageEnvironmentVariables: PackageEnvironment[] = [];
 
   @ViewChild(PodTerminalComponent) podTerminal: PodTerminalComponent | undefined;
+
+  private wsSubscriptionForTasks: Subscription | null = null;
+  private wsSubscriptionForTaskLogs: Subscription | null = null;
 
   constructor(
     private packageService: PackageService,
@@ -103,31 +106,29 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private messageService: MessageService,
     private taskService: TaskService,
-    private authService: AuthService
+    private authService: AuthService,
+    private webSocketService: WebSocketService
   ) { }
 
   async ngOnInit(): Promise<void> {
     this.packageName = this.route.snapshot.params['package_name'];
     this.packageVersion = this.route.snapshot.params['package_version'];
+    this.setupWebSocketForTasks();
     await this.loadPackageInstanceAsync();
-    this.startTaskPolling();
     this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
   }
 
-
   ngOnDestroy(): void {
-    this.isAlive = false;
-    if (this.taskPollingSubscription) {
-      this.taskPollingSubscription.unsubscribe();
+    if (this.wsSubscriptionForTaskLogs) {
+      this.wsSubscriptionForTaskLogs.unsubscribe();
     }
-  }
 
-  private startTaskPolling(): void {
-    this.taskPollingSubscription = interval(5000)
-      .pipe(takeWhile(() => this.isAlive))
-      .subscribe(() => {
-        this.loadPackageInstanceAsync();
-      });
+    if (this.wsSubscriptionForTasks) {
+      this.wsSubscriptionForTasks.unsubscribe();
+    }
+
+    this.webSocketService.closeTasksConnection();
+    this.webSocketService.closeTaskLogsConnection();
   }
 
   async loadPackageInstanceAsync(): Promise<void> {
@@ -135,16 +136,66 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     this.packageInstance = await this.packageService.getPackageInstanceAsync(stage, this.packageName, this.packageVersion);
   }
 
-  async onTaskSelect(task: TaskInfo): Promise<void> {
-    this.selectedTask = task;
-    await this.loadTaskLogsAsync(task.task_id);
+  private async setupWebSocketForTasks(): Promise<void> {
+    if (this.wsSubscriptionForTasks) {
+      this.wsSubscriptionForTasks.unsubscribe();
+    }
+
+    const stage = localStorage.getItem('stage') || 'dev';
+    this.wsSubscriptionForTasks = this.webSocketService.connectToTasks(this.packageName, stage, this.packageVersion).subscribe({
+      next: (data: { tasks: TaskInfo[] }) => {
+        if (data.tasks) {
+          for (const task of data.tasks) {
+            const existingTask = this.packageInstance.tasks.find(t => t.task_id === task.task_id);
+            if (existingTask) {
+              task.duration = new DurationPipe().transform(task.started_at, task.finished_at);
+              Object.assign(existingTask, task);
+            } else {
+              this.packageInstance.tasks.push(task);
+            }
+          }
+        }
+      },
+      error: (error: Error) => {
+        console.error('WebSocket error:', error);
+        this.messageService.add({ severity: 'error', summary: 'Connection Error', detail: 'Lost connection to server. Retrying...' });
+      }
+    });
   }
 
-  async loadTaskLogsAsync(id: string | null): Promise<void> {
-    if (!id) return;
-    this.selectedLogTaskId = id;
-    const response = await this.taskService.getTaskLogsAsync(id);
-    this.taskLogs = response.logs;
+  private async setupWebSocketForTaskLogs(taskId: string): Promise<void> {
+    this.taskLogs = [];
+    if (this.selectedTask) {
+      this.wsSubscriptionForTaskLogs = this.webSocketService.connectToTaskLogs(taskId).subscribe({
+        next: (data: { logs: string[] }) => {
+          if (data.logs && this.taskLogs.length !== data.logs.length) {
+            this.taskLogs = data.logs;
+          }
+        },
+        error: (error: Error) => {
+          console.error('WebSocket error:', error);
+          this.messageService.add({ severity: 'error', summary: 'Connection Error', detail: 'Lost connection to server. Retrying...' });
+        }
+      });
+    }
+  }
+
+  async onTaskSelect(task: TaskInfo): Promise<void> {
+    if (this.wsSubscriptionForTaskLogs) {
+      this.wsSubscriptionForTaskLogs.unsubscribe();
+      this.webSocketService.closeTaskLogsConnection();
+    }
+
+    this.selectedTask = task;
+    this.selectedLogTaskId = task.task_id;
+    this.taskLogs = [];
+
+    if (task.status === TaskStatus.RUNNING || task.status === TaskStatus.INITIALIZING) {
+      await this.setupWebSocketForTaskLogs(task.task_id);
+    } else {
+      const taskLogs = await this.taskService.getTaskLogsAsync(task.task_id);
+      this.taskLogs = taskLogs.logs;
+    }
   }
 
   async cancelTaskAsync(taskId: string): Promise<void> {
@@ -237,12 +288,18 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
 
       if ('output' in response) {
         this.showSuccess(`Package executed successfully: ${response.output}`);
-        await this.loadTaskLogsAsync(response.task_id);
       } else {
         this.showSuccess('Package execution started');
       }
 
       await this.loadPackageInstanceAsync();
+      if (this.packageInstance.tasks.length > 0) {
+        const latestTask = this.packageInstance.tasks.find(x => x.task_id === response.task_id);
+        if (latestTask) {
+          await this.onTaskSelect(latestTask);
+        }
+      }
+
       this.showArgumentsDialog = false;
     } catch (error) {
       this.showError('Failed to execute package');

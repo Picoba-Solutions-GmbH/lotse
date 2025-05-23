@@ -8,7 +8,7 @@ from typing import Optional
 import stomp
 
 from src.models.execution_request import ExecutionRequest
-from src.services.kubernetes.k8s_manager_service import K8sManagerService
+from src.services.task_manager_service import TaskManagerService
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def get_event_loop():
 
 
 class PackageExecutionListenerService(stomp.ConnectionListener):
-    def __init__(self, k8s_manager_service: K8sManagerService, max_workers=10):
+    def __init__(self, k8s_manager_service: TaskManagerService, max_workers=10):
         self.k8s_manager_service = k8s_manager_service
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
 

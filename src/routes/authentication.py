@@ -10,7 +10,7 @@ from src.authentication import active_directory
 from src.authentication import schemas_authentication as schemas
 from src.authentication.roles_type import RoleType
 from src.database.database_access import get_db_session
-from src.services.user_repository import UserRepository
+from src.database.repositories.user_repository import UserRepository
 from src.utils import config
 from src.utils.hasher import get_password_hash, verify_password
 

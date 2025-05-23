@@ -3,9 +3,9 @@ import threading
 
 import stomp
 
-from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.package_execution_listener_service import \
     PackageExecutionListenerService
+from src.services.task_manager_service import TaskManagerService
 from src.utils.singleton_meta import SingletonMeta
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class ActiveMQService(metaclass=SingletonMeta):
     def __init__(self, host: str, port: int, user: str,
-                 password: str, queue_name: str, k8s_manager_service: K8sManagerService):
+                 password: str, queue_name: str, k8s_manager_service: TaskManagerService):
         self.host = host
         self.port = port
         self.user = user

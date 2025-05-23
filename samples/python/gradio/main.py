@@ -1,13 +1,14 @@
+import os
+import sys
 import threading
 import time
-import sys
+
 import gradio as gr
 
 
 def stop_after_delay(demo, delay_seconds):
     time.sleep(delay_seconds)
-    print("CMD: CLOSE APPLICATION")
-    # Force exit the program
+    os._exit(0)
 
 
 def greet(name, intensity):

@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { svglKubernetes } from '@ng-icons/svgl';
 import { MenuItem, MessageService, PrimeIcons } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -30,7 +32,9 @@ import './utils/global-functions';
     ToggleSwitchModule,
     SelectButtonModule,
     ConfirmDialogModule,
+    NgIcon
   ],
+  providers: [provideIcons({ svglKubernetes })],
 })
 export class AppComponent implements OnInit {
   isLoggedIn: boolean = false;
@@ -58,6 +62,11 @@ export class AppComponent implements OnInit {
       label: 'Packages',
       icon: PrimeIcons.BOX,
       routerLink: 'packages'
+    },
+    {
+      label: 'Cluster',
+      icon: svglKubernetes,
+      routerLink: 'cluster'
     }
   ];
 
@@ -94,12 +103,14 @@ export class AppComponent implements OnInit {
   }
 
   private updateMenuItems(): void {
+    this.items = [...this.original_items];
+
     const urlParts = this.currentRoute.split('/').filter(part => part);
     if (urlParts[0] === 'packages' && urlParts.length > 1) {
-      const packagesMenuItem = this.items.find(item => item.routerLink === 'packages');
-      if (packagesMenuItem) {
-        const new_items = [...this.original_items, ...this.buildSubMenuItems(urlParts.slice(1))];
-        this.items = new_items;
+      const packagesIndex = this.items.findIndex(item => item.routerLink === 'packages');
+      if (packagesIndex !== -1) {
+        const subMenuItems = this.buildSubMenuItems(urlParts.slice(1));
+        this.items.splice(packagesIndex + 1, 0, ...subMenuItems);
       }
     }
   }

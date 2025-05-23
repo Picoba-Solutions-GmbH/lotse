@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
+import { MessageService, PrimeIcons } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -12,16 +12,16 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { interval, Subscription, takeWhile } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { PackageRequest } from '../../models/PackageRequest';
-import { PackageRequestArguments } from '../../models/PackageRequestArguments';
-import { RepositoryConfig } from '../../models/RepositoryConfig';
-import { TaskInfo } from '../../models/TaskInfo';
-import { TaskStatusToSeverityPipe } from '../../pipes/task-status.pipe';
-import { AuthService } from '../../services/auth.service';
-import { ExecutionService } from '../../services/execution.service';
-import { PackageService } from '../../services/package.service';
-import { TaskService } from '../../services/task.service';
+import { environment } from '../../../../environments/environment';
+import { PackageRequest } from '../../../models/PackageRequest';
+import { PackageRequestArguments } from '../../../models/PackageRequestArguments';
+import { RepositoryConfig } from '../../../models/RepositoryConfig';
+import { TaskInfo } from '../../../models/TaskInfo';
+import { TaskStatusToSeverityPipe } from '../../../pipes/task-status.pipe';
+import { AuthService } from '../../../services/auth.service';
+import { ExecutionService } from '../../../services/execution.service';
+import { PackageService } from '../../../services/package.service';
+import { TaskService } from '../../../services/task.service';
 
 interface CustomArgument {
   name: string;
@@ -53,6 +53,8 @@ enum Stage {
   ]
 })
 export class PackageExecutionComponent implements OnInit, OnDestroy {
+  PrimeIcons = PrimeIcons;
+
   repositories: RepositoryConfig[] = [];
   selectedPackage: RepositoryConfig | null = null;
   predefinedArgs: Record<string, unknown> = {};

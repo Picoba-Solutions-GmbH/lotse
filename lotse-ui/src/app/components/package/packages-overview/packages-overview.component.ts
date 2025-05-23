@@ -7,19 +7,18 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { HasRoleDirective } from '../../directives/has-role.directive';
-import { PackageStatus } from '../../misc/PackageStatus';
-import { Role } from '../../misc/Role';
-import { PackageInfo } from '../../models/Package';
-import { PackageCountByStatePipe } from '../../pipes/package-count-by-state.pipe';
-import { PackageStatusToSeverityPipe } from '../../pipes/package-status.pipe';
-import { AuthService } from '../../services/auth.service';
-import { PackageService } from '../../services/package.service';
+import { HasRoleDirective } from '../../../directives/has-role.directive';
+import { PackageStatus } from '../../../misc/PackageStatus';
+import { Role } from '../../../misc/Role';
+import { PackageInfo } from '../../../models/Package';
+import { PackageCountByStatePipe } from '../../../pipes/package-count-by-state.pipe';
+import { PackageStatusToSeverityPipe } from '../../../pipes/package-status.pipe';
+import { AuthService } from '../../../services/auth.service';
+import { PackageService } from '../../../services/package.service';
 import { PackageDeployComponent } from '../package-deploy/package-deploy.component';
 
 @Component({
   selector: 'app-packages-overview',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,

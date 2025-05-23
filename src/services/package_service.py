@@ -5,9 +5,9 @@ from typing import Optional
 
 from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
+from src.database.repositories.package_repository import PackageRepository
 from src.misc.runtime_type import RuntimeType
 from src.models.yaml_config import parse_config
-from src.services.package_repository import PackageRepository
 from src.utils.path_manager import PathManager
 
 

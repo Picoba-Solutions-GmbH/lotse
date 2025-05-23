@@ -4,12 +4,12 @@ from typing import Optional, Union
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from src.database.repositories.task_repository import TaskRepository
 from src.misc.task_status import TaskStatus
 from src.models.async_execution_response import AsyncExecutionResponse
 from src.models.execution_request import ExecutionRequest
 from src.models.package_request_argument import PackageRequestArgument
 from src.models.sync_execution_response import SyncExecutionResponse
-from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
 from src.utils.singleton_meta import get_service
@@ -20,8 +20,8 @@ router = APIRouter(prefix="/execute", tags=["execute"])
 async def execute_package(package_name: str, version: Optional[str], stage: str, arguments: list,
                           wait_for_completion: bool,
                           redirect_to_ui: bool,
-                          task_manager: TaskManagerService,
-                          k8s_manager_service: K8sManagerService,
+                          task_manager: TaskRepository,
+                          k8s_manager_service: TaskManagerService,
                           empty_instance: bool
                           ) -> Union[SyncExecutionResponse, AsyncExecutionResponse, RedirectResponse]:
     task_id = await k8s_manager_service.execute_package_async(package_name, stage, version, arguments, empty_instance)
@@ -82,8 +82,8 @@ async def execute_package_get(
         package_name: str,
         stage: str,
         request: Request,
-        task_manager: TaskManagerService = get_service(TaskManagerService),
-        k8s_manager_service: K8sManagerService = get_service(K8sManagerService),
+        task_manager: TaskRepository = get_service(TaskRepository),
+        k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
         wait_for_completion: bool = False,
         redirect_to_ui: bool = False):
     query_params = dict(request.query_params)
@@ -109,8 +109,8 @@ async def execute_versioned_package_get(
         version: str,
         stage: str,
         request: Request,
-        task_manager: TaskManagerService = get_service(TaskManagerService),
-        k8s_manager_service: K8sManagerService = get_service(K8sManagerService),
+        task_manager: TaskRepository = get_service(TaskRepository),
+        k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
         wait_for_completion: bool = False,
         redirect_to_ui: bool = False):
     query_params = dict(request.query_params)
@@ -132,8 +132,8 @@ async def execute_versioned_package_get(
 @router.post("/", response_model=Union[SyncExecutionResponse, AsyncExecutionResponse])
 async def execute_package_post(
         request: ExecutionRequest,
-        k8s_manager_service: K8sManagerService = get_service(K8sManagerService),
-        task_manager: TaskManagerService = get_service(TaskManagerService)):
+        k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
+        task_manager: TaskRepository = get_service(TaskRepository)):
     return await execute_package(
         package_name=request.package_name,
         version=request.version,
@@ -150,8 +150,8 @@ async def execute_package_post(
 @router.post("/empty-instance", response_model=Union[SyncExecutionResponse, AsyncExecutionResponse])
 async def execute_empty_instance(
         request: ExecutionRequest,
-        k8s_manager_service: K8sManagerService = get_service(K8sManagerService),
-        task_manager: TaskManagerService = get_service(TaskManagerService)):
+        k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
+        task_manager: TaskRepository = get_service(TaskRepository)):
     return await execute_package(
         package_name=request.package_name,
         version=request.version,

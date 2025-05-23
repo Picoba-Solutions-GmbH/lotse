@@ -12,6 +12,10 @@ from sqlalchemy.orm import Session
 
 from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
+from src.database.repositories.package_repository import PackageRepository
+from src.database.repositories.task_repository import (
+    TaskRepository, map_task_entity_to_task_info)
+from src.database.repositories.volume_repository import VolumeRepository
 from src.misc import constants
 from src.misc.package_status import PackageStatus
 from src.misc.runtime_type import RuntimeType
@@ -20,11 +24,7 @@ from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
 from src.models.task_info import TaskInfo
 from src.models.yaml_config import Environment, parse_config
 from src.routes import authentication
-from src.services.kubernetes.k8s_manager_service import K8sManagerService
-from src.services.package_repository import PackageRepository
-from src.services.task_manager_service import (TaskManagerService,
-                                               map_task_entity_to_task_info)
-from src.services.volume_repository import VolumeRepository
+from src.services.task_manager_service import TaskManagerService
 from src.utils.path_manager import PathManager
 from src.utils.singleton_meta import get_service
 
@@ -212,7 +212,7 @@ async def delete_package(
 async def get_packages_by_stage(
     stage: str,
     db: Session = Depends(get_db_session),
-    task_manager_service: TaskManagerService = get_service(TaskManagerService)
+    task_manager_service: TaskRepository = get_service(TaskRepository)
 ):
     package_infos: list[PackageInfo] = []
     packages = PackageRepository.list_packages(db, None, stage)
@@ -249,7 +249,7 @@ async def get_package_by_stage(
     package_name: str,
     stage: str,
     db: Session = Depends(get_db_session),
-    task_manager_service: TaskManagerService = get_service(TaskManagerService)
+    task_manager_service: TaskRepository = get_service(TaskRepository)
 ):
     package_details: list[PackageDetail] = []
     packages = PackageRepository.list_packages(db, package_name, stage)
@@ -278,19 +278,19 @@ async def get_package_by_version(
     stage: str,
     version: str,
     db: Session = Depends(get_db_session),
-    task_manager_service: TaskManagerService = get_service(TaskManagerService),
-    k8s_manager_service: K8sManagerService = get_service(K8sManagerService)
+    task_repository: TaskRepository = get_service(TaskRepository),
+    task_manager_service: TaskManagerService = get_service(TaskManagerService)
 ):
     package = PackageRepository.get_package(db, package_name, stage, version)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
 
-    tasks = task_manager_service.get_tasks_by_deployment_id(package.deployment_id, [])
+    tasks = task_repository.get_tasks_by_deployment_id(package.deployment_id, [])
     task_infos: list[TaskInfo] = []
     for task in tasks:
         task_info = map_task_entity_to_task_info(task, None)
         if task.status == TaskStatus.RUNNING or task.status == TaskStatus.INITIALIZING:
-            metrics = k8s_manager_service.get_task_metrics(task.task_id)
+            metrics = task_manager_service.get_task_metrics(task.task_id)
             if metrics:
                 task_info.metrics = metrics
 

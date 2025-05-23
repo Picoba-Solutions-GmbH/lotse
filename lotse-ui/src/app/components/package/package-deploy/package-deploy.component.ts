@@ -10,8 +10,8 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import YAML from 'yaml';
-import { Runtime } from '../../misc/Runtime';
-import { PackageService } from '../../services/package.service';
+import { Runtime } from '../../../misc/Runtime';
+import { PackageService } from '../../../services/package.service';
 
 interface PackageConfig {
     package_name: string;

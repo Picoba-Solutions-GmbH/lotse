@@ -14,4 +14,5 @@ export interface TaskInfo {
   is_ui_app: boolean;
   metrics?: TaskMetric;
   arguments?: PackageRequestArguments[];
+  duration?: string;
 }

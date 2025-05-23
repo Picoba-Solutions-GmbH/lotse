@@ -7,14 +7,14 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-pod-terminal',
-  standalone: true,
   imports: [CommonModule],
   template: '<div #terminal class="terminal-container"></div>',
   styleUrl: './pod-terminal.component.scss'
 })
 export class PodTerminalComponent implements AfterViewInit, OnDestroy {
   @ViewChild('terminal') terminalElement!: ElementRef;
-  @Input() taskId!: string;
+  @Input() namespace: string = '';
+  @Input() podName: string = '';
   @Output() socketClosed = new EventEmitter<void>();
 
   private terminal!: Terminal;
@@ -87,12 +87,11 @@ export class PodTerminalComponent implements AfterViewInit, OnDestroy {
       rows: this.terminal.rows
     }));
   }
-
   private connectWebSocket() {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = environment.url;
     const urlWithoutProtocol = url.substring(url.indexOf('://') + 3);
-    const wsUrl = `${wsProtocol}//${urlWithoutProtocol}/task/${this.taskId}/terminal`;
+    const wsUrl = `${wsProtocol}//${urlWithoutProtocol}/pod-terminal/${this.namespace}/${this.podName}`;
 
     this.socket = new WebSocket(wsUrl);
 

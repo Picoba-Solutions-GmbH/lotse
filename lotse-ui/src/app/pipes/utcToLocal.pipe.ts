@@ -3,8 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { toZonedTime, } from 'date-fns-tz';
 
 @Pipe({
-  name: 'utcToLocal',
-  standalone: true
+  name: 'utcToLocal'
 })
 export class UtcToLocalPipe implements PipeTransform {
   transform(utcDate: string, formatString: string = 'yy.MM.dd HH:mm:ss'): string {

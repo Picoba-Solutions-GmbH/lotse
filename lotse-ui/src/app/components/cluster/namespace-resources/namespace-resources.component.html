@@ -1,0 +1,559 @@
+<ng-container *hasRole="[Role.ADMIN]">
+    <div class="flex flex-col xl:overflow-hidden relative w-full min-h-full h-full">
+        <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div>
+                <div class="flex items-center mb-2 items-start">
+                    <p-button [icon]="PrimeIcons.ARROW_LEFT" rounded text size="small" styleClass="mr-2"
+                        (click)="navigateBack()" pTooltip="Back to Namespaces" />
+                    <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted">
+                        Namespace: {{ namespace }}
+                    </h1>
+                </div>
+                <p class="text-color-muted text-sm md:text-base">
+                    Viewing and managing resources in the {{ namespace }} namespace
+                </p>
+            </div>
+            <div>
+                <p-button [icon]="PrimeIcons.REFRESH" label="Refresh" (onClick)="loadResources()" size="small" />
+            </div>
+        </div>
+
+        <p-selectButton [options]="resourceTypes" [(ngModel)]="selectedResourceType" (onChange)="onResourceTypeChange()"
+            optionValue="value" optionLabel="label" styleClass="mb-3"></p-selectButton>
+
+        <p-card styleClass="mb-4">
+            <div class="card">
+                @if (selectedResourceType === 'pods') {
+                <p-table [value]="pods" [loading]="loading" [paginator]="true" [rows]="10" styleClass="p-datatable-sm"
+                    responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Ready</th>
+                            <th>Status</th>
+                            <th>Restarts</th>
+                            <th>CPU</th>
+                            <th>Memory</th>
+                            <th>IP</th>
+                            <th>Node</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-pod>
+                        <tr>
+                            <td>
+                                <span class="font-semibold">{{ pod.name }}</span>
+                            </td>
+                            <td>
+                                <div class="flex items-center">
+                                    {{ getReadyContainersCount(pod) }}/{{ pod.containerStatuses.length }}
+                                </div>
+                            </td>
+                            <td>
+                                <p-tag [severity]="getPodStatusSeverity(pod.phase)" [value]="pod.phase"></p-tag>
+                            </td>
+                            <td>{{ getTotalRestarts(pod) }}</td>
+                            <td>{{ pod.podMetrics?.cpu }}</td>
+                            <td>{{ pod.podMetrics?.memory }}</td>
+                            <td>
+                                <div class="text-sm">
+                                    <div>Pod: {{ pod.podIP || 'N/A' }}</div>
+                                    <div>Host: {{ pod.hostIP || 'N/A' }}</div>
+                                </div>
+                            </td>
+                            <td>{{ pod.node || 'N/A' }}</td>
+                            <td>{{ pod.duration }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
+                                        tooltipPosition="bottom" (click)="deletePod(pod)" />
+                                    <p-button [icon]="PrimeIcons.BAN" severity="warn" pTooltip="Kill"
+                                        tooltipPosition="bottom" (click)="killPod(pod)" />
+                                    <p-button [icon]="PrimeIcons.LIST" pTooltip="View Logs" tooltipPosition="bottom"
+                                        (click)="viewPodLogs(pod)" />
+                                    <p-button [icon]="PrimeIcons.DESKTOP" pTooltip="Terminal" tooltipPosition="bottom"
+                                        (click)="openTerminal(pod)" />
+                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
+                                        (click)="viewResourceYAML(pod, 'pods')" />
+                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
+                                        tooltipPosition="bottom" (click)="describeResource(pod, 'pods')" />
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="10" class="text-center p-4">
+                                @if (loading) {
+                                <div class="flex flex-col items-center">
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                                    <span>Loading pods...</span>
+                                </div>
+                                } @else {
+                                <div>
+                                    <span>No pods found in this namespace</span>
+                                </div>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+
+                @if (selectedResourceType === 'services') {
+                <p-table [value]="services" [loading]="loading" [paginator]="true" [rows]="10"
+                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Cluster IP</th>
+                            <th>External IP</th>
+                            <th>Ports</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-service>
+                        <tr>
+                            <td>{{ service.name }}</td>
+                            <td>{{ service.type }}</td>
+                            <td>{{ service.clusterIP || 'N/A' }}</td>
+                            <td>{{ service.externalIP || 'N/A' }}</td>
+                            <td>
+                                @for (port of service.ports; track port.port) {
+                                <div>{{ port.port }}:{{ port.targetPort }}/{{ port.protocol }}</div>
+                                }
+                            </td>
+                            <td>{{ service.duration }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
+                                        tooltipPosition="bottom" (click)="deleteService(service)" />
+                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
+                                        (click)="viewResourceYAML(service, 'services')" />
+                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
+                                        tooltipPosition="bottom" (click)="describeResource(service, 'services')" />
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="7" class="text-center p-4">
+                                @if (loading) {
+                                <div class="flex flex-col items-center">
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                                    <span>Loading services...</span>
+                                </div>
+                                } @else {
+                                <div>
+                                    <span>No services found in this namespace</span>
+                                </div>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+
+                @if (selectedResourceType === 'deployments') {
+                <p-table [value]="deployments" [loading]="loading" [paginator]="true" [rows]="10"
+                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Ready</th>
+                            <th>Up-to-date</th>
+                            <th>Available</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-deployment>
+                        <tr>
+                            <td>{{ deployment.name }}</td>
+                            <td>{{ deployment.readyReplicas }}/{{ deployment.replicas }}</td>
+                            <td>{{ deployment.updatedReplicas }}</td>
+                            <td>{{ deployment.availableReplicas }}</td>
+                            <td>{{ deployment.duration }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
+                                        tooltipPosition="bottom" (click)="deleteDeployment(deployment)" />
+                                    <p-button [icon]="PrimeIcons.REFRESH" pTooltip="Restart" tooltipPosition="bottom"
+                                        (click)="restartDeployment(deployment)" />
+                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
+                                        (click)="viewResourceYAML(deployment, 'deployments')" />
+                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
+                                        tooltipPosition="bottom"
+                                        (click)="describeResource(deployment, 'deployments')" />
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center p-4">
+                                @if (loading) {
+                                <div class="flex flex-col items-center">
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                                    <span>Loading deployments...</span>
+                                </div>
+                                } @else {
+                                <div>
+                                    <span>No deployments found in this namespace</span>
+                                </div>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+
+                @if (selectedResourceType === 'statefulsets') {
+                <p-table [value]="statefulSets" [loading]="loading" [paginator]="true" [rows]="10"
+                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Ready</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-statefulSet>
+                        <tr>
+                            <td>{{ statefulSet.name }}</td>
+                            <td>{{ statefulSet.readyReplicas }}/{{ statefulSet.replicas }}</td>
+                            <td>{{ statefulSet.duration }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
+                                        tooltipPosition="bottom" (click)="deleteStatefulSet(statefulSet)" />
+                                    <p-button [icon]="PrimeIcons.REFRESH" pTooltip="Restart" tooltipPosition="bottom"
+                                        (click)="restartStatefulSet(statefulSet)" />
+                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
+                                        (click)="viewResourceYAML(statefulSet, 'statefulsets')" />
+                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
+                                        tooltipPosition="bottom"
+                                        (click)="describeResource(statefulSet, 'statefulsets')" />
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="4" class="text-center p-4">
+                                @if (loading) {
+                                <div class="flex flex-col items-center">
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                                    <span>Loading stateful sets...</span>
+                                </div>
+                                } @else {
+                                <div>
+                                    <span>No stateful sets found in this namespace</span>
+                                </div>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+
+                @if (selectedResourceType === 'configmaps') {
+                <p-table [value]="configMaps" [loading]="loading" [paginator]="true" [rows]="10"
+                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Data</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-configMap>
+                        <tr>
+                            <td>{{ configMap.name }}</td>
+                            <td>{{ configMap.dataCount }} items</td>
+                            <td>{{ configMap.duration }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
+                                        tooltipPosition="bottom" (click)="deleteConfigMap(configMap)" />
+                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
+                                        (click)="viewResourceYAML(configMap, 'configmaps')" />
+                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
+                                        tooltipPosition="bottom" (click)="describeResource(configMap, 'configmaps')" />
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="4" class="text-center p-4">
+                                @if (loading) {
+                                <div class="flex flex-col items-center">
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                                    <span>Loading config maps...</span>
+                                </div>
+                                } @else {
+                                <div>
+                                    <span>No config maps found in this namespace</span>
+                                </div>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+
+                @if (selectedResourceType === 'ingresses') {
+                <p-table [value]="ingresses" [loading]="loading" [paginator]="true" [rows]="10"
+                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Hosts</th>
+                            <th>Paths</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-ingress>
+                        <tr>
+                            <td>{{ ingress.name }}</td>
+                            <td>
+                                @for (host of ingress.hosts; track host) {
+                                <div>{{ host }}</div>
+                                }
+                            </td>
+                            <td>
+                                @for (path of ingress.paths; track path) {
+                                <div>{{ path.path }} → {{ path.serviceName }}:{{ path.servicePort }}</div>
+                                }
+                            </td>
+                            <td>{{ ingress.duration }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
+                                        tooltipPosition="bottom" (click)="deleteIngress(ingress)" />
+                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
+                                        (click)="viewResourceYAML(ingress, 'ingresses')" />
+                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
+                                        tooltipPosition="bottom" (click)="describeResource(ingress, 'ingresses')" />
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="5" class="text-center p-4">
+                                @if (loading) {
+                                <div class="flex flex-col items-center">
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                                    <span>Loading ingresses...</span>
+                                </div>
+                                } @else {
+                                <div>
+                                    <span>No ingresses found in this namespace</span>
+                                </div>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+
+                @if (selectedResourceType === 'pvcs') {
+                <p-table [value]="persistentVolumeClaims" [loading]="loading" [paginator]="true" [rows]="10"
+                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Volume</th>
+                            <th>Capacity</th>
+                            <th>Access Modes</th>
+                            <th>Storage Class</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-pvc>
+                        <tr>
+                            <td>{{ pvc.name }}</td>
+                            <td>
+                                <p-tag [severity]="getPVCStatusSeverity(pvc.status)" [value]="pvc.status"></p-tag>
+                            </td>
+                            <td>{{ pvc.volumeName }}</td>
+                            <td>{{ pvc.capacity }}</td>
+                            <td>{{ pvc.accessModes.join(', ') }}</td>
+                            <td>{{ pvc.storageClass }}</td>
+                            <td>{{ pvc.duration }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
+                                        tooltipPosition="bottom" (click)="deletePVC(pvc)" />
+                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
+                                        (click)="viewResourceYAML(pvc, 'pvc')" />
+                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
+                                        tooltipPosition="bottom" (click)="describeResource(pvc, 'pvc')" />
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="8" class="text-center p-4">
+                                @if (loading) {
+                                <div class="flex flex-col items-center">
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                                    <span>Loading persistent volume claims...</span>
+                                </div>
+                                } @else {
+                                <div>
+                                    <span>No persistent volume claims found in this namespace</span>
+                                </div>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+            </div>
+        </p-card>
+    </div>
+
+    <p-dialog [(visible)]="showLogsDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+        [header]="selectedPod ? 'Pod Logs: ' + selectedPod.name : 'Pod Logs'">
+        <div class="flex flex-col w-full h-full overflow-hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center">
+                    <i [ngClass]="PrimeIcons.LIST" class="mr-2 text-blue-500"></i>
+                    <h2 class="text-xl font-semibold">Pod Logs</h2>
+                </div>
+                @if (selectedPod) {
+                <p-button [icon]="PrimeIcons.REFRESH" label="Refresh" (onClick)="loadPodLogs(selectedPod)"
+                    size="small" />
+                }
+            </div>
+            <div
+                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-2">
+                @if (logsLoading) {
+                <div class="flex justify-center p-4">
+                    <i class="pi pi-spin pi-spinner text-2xl"></i>
+                </div>
+                } @else if (podLogs.length) {
+                <p-scrollPanel [style]="{width: '100%', height: '100%'}" styleClass="custom-scrollbar">
+                    @for (log of podLogs; track $index) {
+                    <div class="m-1 text-xs font-mono text-black dark:text-white break-words">
+                        {{ log }}
+                    </div>
+                    }
+                </p-scrollPanel>
+                } @else {
+                <div class="p-3 text-center">
+                    <p>No logs found for this pod</p>
+                </div>
+                }
+            </div>
+        </div>
+    </p-dialog>
+
+    <p-dialog [(visible)]="showConfigMapDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+        [header]="selectedConfigMap ? 'ConfigMap: ' + selectedConfigMap.name : 'ConfigMap'">
+        <div class="flex flex-col w-full h-full overflow-hidden">
+            <div
+                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
+                @if (selectedConfigMap) {
+                @for (entry of selectedConfigMap.data | keyvalue; track entry.key) {
+                <div class="mb-4">
+                    <h3 class="font-semibold mb-2">{{ entry.key }}</h3>
+                    <pre class="bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm overflow-auto">{{ entry.value }}</pre>
+                </div>
+                }
+                } @else {
+                <div class="p-3 text-center">
+                    <p>No config map data to display</p>
+                </div>
+                }
+            </div>
+        </div>
+    </p-dialog>
+
+    <p-dialog [(visible)]="showTerminalDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+        [header]="selectedPodForTerminal ? 'Pod Terminal: ' + selectedPodForTerminal.name : 'Pod Terminal'"
+        maximizable="true" (onMaximize)="handleTerminalResize()">
+        @if (selectedPodForTerminal && showTerminalDialog) {
+        <app-pod-terminal [namespace]="namespace" [podName]="selectedPodForTerminal.name"
+            (socketClosed)="handleSocketClosed()" />
+        }
+    </p-dialog>
+
+    <p-dialog [(visible)]="showYAMLDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+        [header]="yamlDialogTitle">
+        <div class="flex flex-col w-full h-full overflow-hidden">
+            <div
+                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
+                @if (resourceYAML) {
+                <pre
+                    class="font-mono text-sm text-black dark:text-white whitespace-pre overflow-auto">{{ resourceYAML }}</pre>
+                } @else {
+                <div class="p-3 text-center">
+                    @if (yamlLoading) {
+                    <div class="flex flex-col items-center">
+                        <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                        <span>Loading YAML...</span>
+                    </div>
+                    } @else {
+                    <p>No YAML data available</p>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+    </p-dialog>
+
+    <p-dialog [(visible)]="showDescribeDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+        [header]="describeDialogTitle">
+        <div class="flex flex-col w-full h-full overflow-hidden">
+            <div
+                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
+                @if (resourceDescription) {
+                <pre
+                    class="font-mono text-sm text-black dark:text-white whitespace-pre overflow-auto">{{ resourceDescription }}</pre>
+                } @else {
+                <div class="p-3 text-center">
+                    @if (describeLoading) {
+                    <div class="flex flex-col items-center">
+                        <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+                        <span>Loading description...</span>
+                    </div>
+                    } @else {
+                    <p>No description available</p>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+    </p-dialog>
+
+    <p-confirmDialog></p-confirmDialog>
+    <p-toast></p-toast>
+</ng-container>

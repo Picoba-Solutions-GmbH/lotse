@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from src.misc.task_status import TaskStatus
-from src.models.metric import Metric
+from src.models.k8s.cluster import PodMetrics
 from src.models.package_request_argument import PackageRequestArgument
 
 
@@ -23,5 +23,5 @@ class TaskInfo(BaseModel):
     ui_port: Optional[int] = None
     original_ui_port: Optional[int] = None
     vscode_port: Optional[int] = None
-    metrics: Optional[Metric] = None
+    metrics: Optional[PodMetrics] = None
     arguments: list[PackageRequestArgument] = []

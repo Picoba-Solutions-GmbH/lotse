@@ -1,12 +1,12 @@
+from src.database.repositories.task_repository import TaskRepository
 from src.services.activemq_service import ActiveMQService
-from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
 
 
 def initialize_registry():
-    task_manager = TaskManagerService()
-    k8s_manager_service = K8sManagerService(task_manager=task_manager)
+    task_manager = TaskRepository()
+    k8s_manager_service = TaskManagerService(task_manager=task_manager)
 
     ActiveMQService(
         host=config.ACTIVEMQ_HOST,

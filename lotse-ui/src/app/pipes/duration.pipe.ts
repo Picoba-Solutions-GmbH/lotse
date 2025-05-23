@@ -2,8 +2,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { differenceInSeconds } from 'date-fns';
 
 @Pipe({
-  name: 'duration',
-  standalone: true
+  name: 'duration'
 })
 export class DurationPipe implements PipeTransform {
   transform(startedAt: string | Date, finishedAt?: string | Date): string {

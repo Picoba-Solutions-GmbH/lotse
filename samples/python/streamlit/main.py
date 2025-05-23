@@ -1,8 +1,8 @@
+import os
 import sys
 
 import numpy as np
 import pandas as pd
-
 import streamlit as st
 from streamlit import runtime
 from streamlit.web import cli as stcli
@@ -29,7 +29,7 @@ data_load_state.text("Done! (using st.cache_data)")
 
 if st.button('Close Application'):
     st.write('Closing the application...')
-    print("CMD: CLOSE APPLICATION")
+    os._exit(0)
 
 if st.checkbox('Show raw data'):
     st.subheader('Raw data')

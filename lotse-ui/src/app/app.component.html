@@ -11,7 +11,11 @@
     <ng-template #item let-item let-root="root">
       <a pRipple class="flex items-center p-menuitem-link" [href]="item.href ? item.href : item.routerLink"
         [class]="{'text-(--p-primary-500)': isRouteActive(item), 'dark:text-(--p-primary-200)': isRouteActive(item)}">
+        @if (item.icon.startsWith("pi")) {
         <span [class]="item.icon"></span>
+        } @else {
+        <ng-icon [svg]="item.icon" />
+        }
         <span class="ml-2">{{ item.label }}</span>
         @if (item.items) {
         <i [ngClass]="['pi', root ? 'pi-angle-down ml-2' : 'pi-angle-right ml-auto']"></i>

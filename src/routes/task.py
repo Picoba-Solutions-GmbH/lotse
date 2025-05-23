@@ -1,21 +1,15 @@
-import asyncio
-import json
 import logging
 
 import psutil
 from aiohttp import ClientSession
-from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
-                     WebSocket, WebSocketDisconnect)
-from fastapi.websockets import WebSocketState
-from kubernetes.stream import stream
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
+from src.database.repositories.task_repository import TaskRepository
 from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.async_execution_response import AsyncExecutionResponse
 from src.models.yaml_config import parse_config
 from src.routes import authentication
-from src.services.kubernetes import k8s_api
-from src.services.kubernetes.k8s_manager_service import K8sManagerService
 from src.services.task_manager_service import TaskManagerService
 from src.utils.singleton_meta import get_service
 from src.utils.task_logger import TaskLogger
@@ -29,7 +23,7 @@ router = APIRouter(prefix="/task", tags=["task"])
 @router.get("/status/{task_id}")
 async def get_task_status(
         task_id: str,
-        task_manager: TaskManagerService = get_service(TaskManagerService)):
+        task_manager: TaskRepository = get_service(TaskRepository)):
     task = task_manager.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -45,7 +39,7 @@ async def get_task_status(
 @router.delete("/{task_id}")
 async def delete_task(
         task_id: str,
-        task_manager: TaskManagerService = get_service(TaskManagerService),
+        task_manager: TaskRepository = get_service(TaskRepository),
         _=Depends(authentication.require_operator_or_admin)):
     task = task_manager.get_task(task_id)
     if not task:
@@ -59,8 +53,8 @@ async def delete_task(
 @router.post("/{task_id}/cancel")
 async def cancel_task(
         task_id: str,
-        task_manager: TaskManagerService = get_service(TaskManagerService),
-        k8s_manager_service=get_service(K8sManagerService),
+        task_manager: TaskRepository = get_service(TaskRepository),
+        k8s_manager_service=get_service(TaskManagerService),
         _=Depends(authentication.require_operator_or_admin)):
     try:
         task = task_manager.get_task(task_id)
@@ -94,7 +88,7 @@ async def cancel_task(
 
 
 @router.get("s/{stage}")
-async def list_tasks(stage: str, task_manager: TaskManagerService = get_service(TaskManagerService)):
+async def list_tasks(stage: str, task_manager: TaskRepository = get_service(TaskRepository)):
     response = task_manager.list_tasks(stage)
     return response
 
@@ -102,17 +96,17 @@ async def list_tasks(stage: str, task_manager: TaskManagerService = get_service(
 @router.get("/{task_id}/logs")
 async def get_task_logs(
     task_id: str,
-    task_manager: TaskManagerService = get_service(TaskManagerService),
-    k8s_service: K8sManagerService = get_service(K8sManagerService)
+    task_repository: TaskRepository = get_service(TaskRepository),
+    task_manager_service: TaskManagerService = get_service(TaskManagerService)
 ):
-    task = task_manager.get_task(task_id)
+    task = task_repository.get_task(task_id)
     config_yaml_content = parse_config(task.package.config)  # type: ignore
     is_container_runtime = config_yaml_content.runtime == RuntimeType.CONTAINER
 
     logs = task_logger.get_logs(task_id)
 
     if is_container_runtime:
-        pod_logs = k8s_service.get_logs(task_id)
+        pod_logs = task_manager_service.get_task_logs(task_id)
         if pod_logs:
             logs.append(pod_logs)
 
@@ -121,97 +115,10 @@ async def get_task_logs(
     return {"logs": logs}
 
 
-@router.websocket("/{task_id}/terminal")
-async def terminal_websocket(
-    websocket: WebSocket,
-    task_id: str,
-    task_manager: TaskManagerService = get_service(TaskManagerService),
-    k8s_service: K8sManagerService = get_service(K8sManagerService)
-):
-    resp = None
-    output_task = None
-
-    try:
-        await websocket.accept()
-
-        task = task_manager.get_task(task_id)
-        if not task:
-            await websocket.close(code=4004, reason="Task not found")
-            return
-        if task.status != TaskStatus.RUNNING:
-            await websocket.close(code=4003, reason="Task is not running")
-            return
-
-        exec_command = k8s_api.get_available_shell(k8s_service.v1, k8s_service.namespace, task_id)
-
-        resp = stream(
-            k8s_service.v1.connect_get_namespaced_pod_exec,
-            task_id,
-            k8s_service.namespace,
-            command=exec_command,
-            stderr=True,
-            stdin=True,
-            stdout=True,
-            tty=True,
-            _preload_content=False
-        )
-
-        async def read_output():
-            try:
-                while True:
-                    if resp.peek_stdout():
-                        output = resp.read_stdout()
-                        await websocket.send_text(output)
-                    if resp.peek_stderr():
-                        error = resp.read_stderr()
-                        await websocket.send_text(error)
-                    await asyncio.sleep(0.01)
-            except asyncio.CancelledError:
-                pass
-            except Exception as e:
-                logger.error(f"Error in terminal output stream: {str(e)}")
-
-        output_task = asyncio.create_task(read_output())
-
-        while True:
-            message = await websocket.receive_text()
-            try:
-                data = json.loads(message)
-                if data.get("type") == "resize":
-                    cols = data.get("cols", 80)
-                    rows = data.get("rows", 24)
-                    resp.write_channel(4, json.dumps({"Width": cols, "Height": rows}).encode())
-                    continue
-            except Exception:
-                pass
-
-            resp.write_stdin(message)
-
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for task {task_id}")
-    except Exception as e:
-        logger.error(f"Terminal WebSocket error: {str(e)}")
-        if websocket.client_state != WebSocketState.DISCONNECTED:
-            await websocket.close(code=4002, reason=str(e))
-    finally:
-        if output_task:
-            output_task.cancel()
-            try:
-                await output_task
-            except asyncio.CancelledError:
-                pass
-
-        if resp and resp.is_open():
-            resp.close()
-
-        if websocket.client_state != WebSocketState.DISCONNECTED:
-            await websocket.close()
-
-
 @router.post("/{task_id}/install-ssh")
 async def install_ssh_server(
         task_id: str,
-        k8s_service: K8sManagerService = get_service(K8sManagerService),
+        k8s_service: TaskManagerService = get_service(TaskManagerService),
         _=Depends(authentication.require_operator_or_admin)):
     tasks = BackgroundTasks()
     tasks.add_task(k8s_service.install_ssh_server, task_id)
@@ -222,7 +129,7 @@ async def install_ssh_server(
 @router.post("/{task_id}/run-vscode-server")
 async def install_and_run_vscode_server(
         task_id: str,
-        k8s_service: K8sManagerService = get_service(K8sManagerService),
+        k8s_service: TaskManagerService = get_service(TaskManagerService),
         _=Depends(authentication.require_operator_or_admin)):
     tasks = BackgroundTasks()
     tasks.add_task(k8s_service.install_and_run_vscode_server, task_id)

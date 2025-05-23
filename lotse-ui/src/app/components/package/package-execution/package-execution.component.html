@@ -41,7 +41,7 @@
         <div class="mb-3 p-3 bg-gray-50 dark:bg-black rounded-lg">
           <div class="flex justify-between items-center mb-3">
             <p class="text-sm font-medium text-gray-700">Custom Arguments</p>
-            <p-button label="Add" icon="pi pi-plus" (onClick)="addCustomArgument()" [text]="true" size="small" />
+            <p-button label="Add" [icon]="PrimeIcons.PLUS" (onClick)="addCustomArgument()" [text]="true" size="small" />
           </div>
 
           @if (customArgs.length) {
@@ -54,7 +54,7 @@
               <input type="text" pInputText [(ngModel)]="arg.value" placeholder="Value" class="w-full" />
             </div>
             <div class="col-span-1 flex justify-end">
-              <p-button icon="pi pi-trash" styleClass="p-button-danger" (click)="removeCustomArgument($index)" />
+              <p-button [icon]="PrimeIcons.TRASH" styleClass="p-button-danger" (click)="removeCustomArgument($index)" />
             </div>
           </div>
           }
@@ -70,7 +70,7 @@
         <label for="waitForCompletion" class="ml-2 text-sm">Wait for completion</label>
       </div>
 
-      <p-button label="Execute Package" icon="pi pi-play" (click)="executePackageAsync()"
+      <p-button label="Execute Package" [icon]="PrimeIcons.PLAY" (click)="executePackageAsync()"
         styleClass="w-full p-button-primary" [loading]="isPackageRunning()" [disabled]="!selectedPackage" />
     </p-card>
   </div>
@@ -80,7 +80,8 @@
       <div class="flex flex-col">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold mb-4">Tasks</h2>
-          <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadTasksAsync()" size="small" class="mb-4" />
+          <p-button [icon]="PrimeIcons.REFRESH" label="Refresh" (onClick)="loadTasksAsync()" size="small"
+            class="mb-4" />
         </div>
         <p-table class="flex-1" [value]="tasks" [scrollable]="true" scrollHeight="400px" [sortField]="'started_at'"
           [sortOrder]="-1" styleClass="p-datatable-sm">
@@ -102,10 +103,10 @@
               <td>
                 <div class="flex gap-2">
                   @if (task.is_ui_app && task.status === 'running') {
-                  <p-button icon="pi pi-external-link" (click)="openUIApp(task.task_id)" />
+                  <p-button [icon]="PrimeIcons.EXTERNAL_LINK" (click)="openUIApp(task.task_id)" />
                   }
-                  <p-button icon="pi pi-info" (click)="loadTaskLogsAsync(task.task_id)" severity="info" />
-                  <p-button icon="pi pi-times" severity="danger" (click)="cancelTaskAsync(task.task_id)"
+                  <p-button [icon]="PrimeIcons.INFO" (click)="loadTaskLogsAsync(task.task_id)" severity="info" />
+                  <p-button [icon]="PrimeIcons.TIMES" severity="danger" (click)="cancelTaskAsync(task.task_id)"
                     [disabled]="task.status !== 'running'" />
                 </div>
               </td>
@@ -124,7 +125,8 @@
     <p-card styleClass="border-solid border-1 border-gray-200 dark:border-gray-700">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-semibold">Task Logs</h2>
-        <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadTaskLogsAsync(selectedLogTaskId)" size="small" />
+        <p-button [icon]="PrimeIcons.REFRESH" label="Refresh" (onClick)="loadTaskLogsAsync(selectedLogTaskId)"
+          size="small" />
       </div>
       <div class="log-container rounded-lg border bg-gray-200 border-gray-200 dark:bg-gray-950 dark:border-gray-700">
         <p-scrollPanel [style]="{ width: '100%', height: '300px' }" styleClass="custom-scroll">

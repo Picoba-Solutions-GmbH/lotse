@@ -1,7 +1,7 @@
 <div class="flex flex-col xl:overflow-hidden relative w-full min-h-full h-full">
     <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
-            <div class="flex items-center gap-2 mb-2">
+            <div class="flex items-end gap-2 mb-2">
                 <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted">{{ packageName }}
                     ({{packageVersion}})</h1>
                 @if (packageInstance.is_default) {
@@ -67,7 +67,7 @@
         <p-card styleClass="border border-solid border-gray-200 dark:border-gray-700 h-full w-full" class="xl:w-8/12">
             <p-table [value]="packageInstance.tasks" [scrollable]="true"
                 styleClass="p-datatable-sm p-datatable-responsive-demo" columnResizeMode="fit" [resizableColumns]="true"
-                selectionMode="single" [(selection)]="selectedTask" dataKey="id" [paginator]="true" [rows]="10"
+                selectionMode="single" [(selection)]="selectedTask" dataKey="task_id" [paginator]="true" [rows]="10"
                 [showCurrentPageReport]="true"
                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} packages">
                 <ng-template pTemplate="header">
@@ -111,7 +111,11 @@
                         <td class="hidden md:table-cell">
                             <div class="flex items-center gap-2">
                                 <i [ngClass]="PrimeIcons.CLOCK"></i>
+                                @if (task.duration) {
+                                {{ task.duration }}
+                                } @else {
                                 {{ task.started_at | duration: task.finished_at }}
+                                }
                             </div>
                         </td>
                         <td class="hidden xl:table-cell">
@@ -247,10 +251,9 @@
                 <div class="flex justify-between items-center mb-4">
                     <div class="flex items-center">
                         <i [ngClass]="PrimeIcons.LIST" class="mr-2 text-blue-500"></i>
-                        <h2 class="text-xl font-semibold">Task Logs</h2>
+                        <h2 class="text-xl font-semibold">Task Logs {{ selectedLogTaskId ? '- ' + selectedLogTaskId : ''
+                            }}</h2>
                     </div>
-                    <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadTaskLogsAsync(selectedLogTaskId)"
-                        size="small" />
                 </div>
                 <div id="task-scroll-container"
                     class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-2">
@@ -293,7 +296,7 @@
             <div class="mb-3 p-3 bg-gray-50 dark:bg-black rounded-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-sm font-medium text-gray-700">Custom Arguments</p>
-                    <p-button label="Add" icon="pi pi-plus" (onClick)="addCustomArgument()" [text]="true"
+                    <p-button label="Add" [icon]="PrimeIcons.PLUS" (onClick)="addCustomArgument()" [text]="true"
                         size="small" />
                 </div>
 
@@ -308,7 +311,7 @@
                         <input type="text" pInputText [(ngModel)]="arg.value" placeholder="Value" class="w-full" />
                     </div>
                     <div class="col-span-1 flex justify-end">
-                        <p-button icon="pi pi-trash" styleClass="p-button-danger"
+                        <p-button [icon]="PrimeIcons.TRASH" styleClass="p-button-danger"
                             (click)="removeCustomArgument($index)" />
                     </div>
                 </div>
@@ -321,13 +324,15 @@
 
         <ng-template pTemplate="footer">
             <p-button label="Cancel" (onClick)="showArgumentsDialog = false" styleClass="p-button-text" />
-            <p-button label="Start" icon="pi pi-play" (onClick)="executePackageAsync(false)"
+            <p-button label="Start" [icon]="PrimeIcons.PLAY" (onClick)="executePackageAsync(false)"
                 [loading]="isPackageRunning" />
         </ng-template>
-    </p-dialog> <p-dialog [(visible)]="showTerminal" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
+    </p-dialog>
+
+    <p-dialog [(visible)]="showTerminal" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
         header="Pod Terminal - {{ selectedTaskId }}" maximizable="true" (onMaximize)="handleTerminalResize()">
         @if (selectedTaskId && showTerminal) {
-        <app-pod-terminal [taskId]="selectedTaskId" (socketClosed)="handleSocketClosed()" />
+        <app-pod-terminal namespace="lotse" [podName]="selectedTaskId" (socketClosed)="handleSocketClosed()" />
         }
     </p-dialog>
 

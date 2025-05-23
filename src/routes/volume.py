@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.database.database_access import get_db_session
+from src.database.repositories.volume_repository import VolumeRepository
 from src.routes import authentication
-from src.services.volume_repository import VolumeRepository
 
 router = APIRouter(prefix="/volumes", tags=["volumes"])
 

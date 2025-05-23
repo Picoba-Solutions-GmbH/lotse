@@ -9,7 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Request, WebSocket
 from fastapi.responses import StreamingResponse
 
 from src.database.models.task_entity import TaskEntity
-from src.services.task_manager_service import TaskManagerService
+from src.database.repositories.task_repository import TaskRepository
 from src.utils import config
 from src.utils.singleton_meta import get_service, get_service_instance
 
@@ -28,7 +28,7 @@ _vscode_task_id_cache = {}
 T = TypeVar('T')
 
 
-def get_task_info(task_id: str, task_manager: TaskManagerService, cache_type: ProxyCacheType) -> Optional[dict]:
+def get_task_info(task_id: str, task_manager: TaskRepository, cache_type: ProxyCacheType) -> Optional[dict]:
     cache_map = {
         ProxyCacheType.PROXY: (_proxy_task_id_cache, lambda t: t.ui_port if isinstance(t, TaskEntity) else None),
         ProxyCacheType.VSCODE: (_vscode_task_id_cache, lambda t: t.vscode_port if isinstance(t, TaskEntity) else None)
@@ -66,7 +66,7 @@ def generate_prefix_suffix(task_id: str, request: Request, cache_type: ProxyCach
 
 async def _handle_proxy_request(request: Request,
                                 task_id: str,
-                                task_manager: TaskManagerService,
+                                task_manager: TaskRepository,
                                 proxy_type: ProxyCacheType):
     HTTP_SERVER = None
     try:
@@ -121,19 +121,19 @@ async def _handle_proxy_request(request: Request,
 @router.api_route("/{task_id}/{path:path}", methods=["GET", "POST"])
 async def _reverse_proxy(task_id: str,
                          request: Request,
-                         task_manager: TaskManagerService = get_service(TaskManagerService)):
+                         task_manager: TaskRepository = get_service(TaskRepository)):
     return await _handle_proxy_request(request, task_id, task_manager, ProxyCacheType.PROXY)
 
 
 @vscode_router.api_route("/{task_id}/{path:path}", methods=["GET", "POST"])
 async def _vscode_proxy(task_id: str,
                         request: Request,
-                        task_manager: TaskManagerService = get_service(TaskManagerService)):
+                        task_manager: TaskRepository = get_service(TaskRepository)):
     return await _handle_proxy_request(request, task_id, task_manager, ProxyCacheType.VSCODE)
 
 
 async def _handle_websocket_proxy(websocket: WebSocket, task_id: str, path: str,
-                                  task_manager: TaskManagerService,
+                                  task_manager: TaskRepository,
                                   cache_type: ProxyCacheType):
     task_info = get_task_info(task_id, task_manager, cache_type)
     if task_info is None:
@@ -184,7 +184,7 @@ async def websocket_proxy(
     websocket: WebSocket,
     task_id: str,
     path: str,
-    task_manager: TaskManagerService = get_service(TaskManagerService)
+    task_manager: TaskRepository = get_service(TaskRepository)
 ):
     await _handle_websocket_proxy(websocket, task_id, path, task_manager, ProxyCacheType.PROXY)
 
@@ -194,7 +194,7 @@ async def vscode_websocket_proxy(
     websocket: WebSocket,
     task_id: str,
     path: str,
-    task_manager: TaskManagerService = get_service(TaskManagerService)
+    task_manager: TaskRepository = get_service(TaskRepository)
 ):
     await _handle_websocket_proxy(websocket, task_id, path, task_manager, ProxyCacheType.VSCODE)
 
@@ -223,7 +223,7 @@ async def forward_ws(source, destination, direction):
 async def proxy_404_forwarder(
         request: Request,
         referer: str) -> Optional[StreamingResponse]:
-    task_manager = get_service_instance(TaskManagerService)
+    task_manager = get_service_instance(TaskRepository)
     cache_type_map = {
         "/proxy/": ProxyCacheType.PROXY,
         "/vscode/": ProxyCacheType.VSCODE
