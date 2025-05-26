@@ -1,23 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  namespace: lotse
-  name: pod-manager
+  name: multi-namespace-pod-manager
 rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
   - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create", "get"]
-  - apiGroups: [""]
-    resources: ["pods/log"]
-    verbs: ["get"]
-  - apiGroups: [""]
-    resources: ["pods/portforward"]
-    verbs: ["create", "get"]
-  - apiGroups: [""]
-    resources: ["pods/attach"]
+    resources: ["pods/exec", "pods/log", "pods/portforward", "pods/attach"]
     verbs: ["create", "get"]
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods", "nodes"]
@@ -33,38 +23,14 @@ rules:
     verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: cluster-resource-viewer
-rules:
-  - apiGroups: [""]
-    resources: ["nodes", "persistentvolumes", "namespaces"]
-    verbs: ["get", "list", "watch"]
-
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: lotse-cluster-resource-viewer
+  name: lotse-multi-namespace-access
 subjects:
   - kind: ServiceAccount
     name: default
     namespace: lotse
 roleRef:
   kind: ClusterRole
-  name: cluster-resource-viewer
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: manage-pods
-  namespace: lotse
-subjects:
-  - kind: ServiceAccount
-    name: default
-    namespace: lotse
-roleRef:
-  kind: Role
-  name: pod-manager
+  name: multi-namespace-pod-manager
   apiGroup: rbac.authorization.k8s.io
