@@ -8,7 +8,11 @@
 
 ## 🌟 Overview
 
-Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond traditional serverless computing. It enables you to deploy and execute entire Python projects, not just individual functions. Built with Kubernetes at its core, Lotse provides a robust platform for managing, deploying, and executing Python applications with sophisticated lifecycle management and development capabilities.
+**Lotse** is a modern cloud platform that goes beyond traditional serverless options. Instead of just deploying single functions, you can deploy complete projects in any programming language you prefer.
+
+It's built on Kubernetes but hides the complexity, giving you both enterprise-level reliability and a simple developer experience. You get a user-friendly interface to manage your apps, access development environments remotely, and control everything through an API if needed.
+
+It was built for people who do not want to write any YAML or Dockerfiles, but still need to deploy applications on a Kubernetes cluster.
 
 > **Why "Lotse"?** Lotse is the German word for "pilot" or "navigator", reflecting its role in guiding packages through the complexities of deployment and execution.
 
@@ -19,10 +23,6 @@ Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond tra
 - 🔄 **Advanced Container Management**: Kubernetes container provisioning with improved status monitoring and lifecycle management
 
 - 🔧 **Cluster Management**: Complete Kubernetes cluster administration capabilities
-
-- ⚡ **Virtual Environment Caching**: Optimized performance through venv caching mechanism for python runtime
-
-- 💻 **IDE Integration**: On-demand VS Code server deployment for remote development
 
 - 🖥️ **Interactive Terminal Access**: Direct terminal access to running containers
 
@@ -35,34 +35,6 @@ Lotse is an advanced Function-as-a-Service (FaaS) framework that goes beyond tra
 ![Overview](assets/Overview.png)
 
 ![Details](assets/Details.png)
-
-## 🚀 How It Works
-
-1. **Project Deployment**
-
-- Package your project (Python, Go, .NET, or custom container)
-
-- Use the REST API or UI drag-and-drop to deploy the project
-
-- Lotse stores information in PostgreSQL and on disk
-
-2. **Execution**
-
-- Request project execution via REST endpoint or UI
-
-- Lotse spins up a Kubernetes container with improved status monitoring
-
-- Dependencies are installed or retrieved from cache
-
-- Project is executed with specified entry point and runtime arguments
-
-3. **Development Features**
-
-- Access running containers through VS Code server
-
-- Use terminal for direct interaction
-
-- Debug applications in real-time
 
 ## 🔧 Technical Stack
 
