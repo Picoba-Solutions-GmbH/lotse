@@ -30,11 +30,11 @@ It was built for people who do not want to write any YAML or Dockerfiles, but st
 
 - 🔌 **Proxy Support**: Automatic proxy configuration
 
-## 📸 Screenshots
+## 📸 Screenshots & Demonstrations
 
-![Overview](assets/Overview.png)
+![Overview](assets/overview.png)
 
-![Details](assets/Details.png)
+Check out our [Screenshots and Demonstrations](SCREENSHOTS.md) to see Lotse in action
 
 ## 🔧 Technical Stack
 
