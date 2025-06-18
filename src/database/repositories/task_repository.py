@@ -204,33 +204,12 @@ class TaskRepository(metaclass=SingletonMeta):
         finally:
             db.close()
 
-    def get_running_tasks_of_pod(self) -> List[TaskInfo]:
-        db = self._get_db_session()
-        try:
-            tasks = (db.query(TaskEntity)
-                     .options(joinedload(TaskEntity.package))
-                     .filter(
-                         TaskEntity.ip_address == self.ip_address,
-                         TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-            )
-                .all())
-            return [
-                map_task_entity_to_task_info(
-                    task,
-                    "Result available" if task.result else None
-                )
-                for task in tasks
-            ]
-        finally:
-            db.close()
-
     def get_running_tasks(self) -> List[TaskInfo]:
         db = self._get_db_session()
         try:
             tasks = (db.query(TaskEntity)
                      .options(joinedload(TaskEntity.package))
                      .filter(
-                         TaskEntity.ip_address == self.ip_address,
                          TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
             )
                 .all())

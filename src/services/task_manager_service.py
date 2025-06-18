@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import threading
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from kubernetes import client, config
@@ -249,6 +250,29 @@ class TaskManagerService(metaclass=SingletonMeta):
                 if pod is None or pod.status.phase != "Running":
                     self.task_manager.kill_and_update_task(task.task_id, TaskStatus.FAILED)
                     continue
+
+                package_info = PackageService.get_package_info(task.package_name, task.stage, task.package_version)
+                if package_info is None:
+                    continue
+
+                parsed_config = parse_config(package_info.package_entity.config)
+                if parsed_config is None:
+                    continue
+
+                if task.started_at:
+                    timeout = (framework_config.GLOBAL_TASK_TIMEOUT_SECONDS if parsed_config.timeout is None
+                               else parsed_config.timeout)
+
+                    started_time = datetime.strptime(
+                        task.started_at, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+                    now = datetime.now(timezone.utc)
+                    duration = (now - started_time).total_seconds()
+                    if duration > timeout:
+                        logger.warning(f"Task {task.task_id} has exceeded the timeout of {timeout} seconds. "
+                                       f"Killing the task.")
+                        self.task_manager.kill_and_update_task(task.task_id, TaskStatus.TIMEOUT)
+                        PodManager.delete_pod(self.v1, self.namespace, pod, None)
+                        continue
 
                 task_logger = self.task_logger.setup_logger(task.task_id)
                 if framework_config.IS_DEBUG and task.is_ui_app and task.original_ui_port:
