@@ -1,8 +1,21 @@
-from src.abstractions.message_parser import JsonMessageParser
+import importlib
+
+from src.abstractions.message_parser import (JsonMessageParser,
+                                             MessageParserProtocol)
 from src.database.repositories.task_repository import TaskRepository
 from src.services.activemq_service import ActiveMQService
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
+
+
+def _get_message_parser() -> MessageParserProtocol:
+    if config.MESSAGE_PARSER_CLASS:
+        module_path, class_name = config.MESSAGE_PARSER_CLASS.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        parser_class = getattr(module, class_name)
+        return parser_class()
+
+    return JsonMessageParser()
 
 
 def initialize_registry():
@@ -16,5 +29,5 @@ def initialize_registry():
         password=config.ACTIVEMQ_PASSWORD,
         queue_name=config.ACTIVEMQ_QUEUE_NAME,
         k8s_manager_service=k8s_manager_service,
-        message_parser=JsonMessageParser()
+        message_parser=_get_message_parser()
     )

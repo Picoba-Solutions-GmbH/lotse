@@ -43,6 +43,8 @@ ACTIVEMQ_USER = os.getenv("ACTIVEMQ_USER", "admin")
 ACTIVEMQ_PASSWORD = os.getenv("ACTIVEMQ_PASSWORD", "password")
 ACTIVEMQ_QUEUE_NAME = os.getenv("ACTIVEMQ_QUEUE_NAME", "default_queue")
 
+MESSAGE_PARSER_CLASS = os.getenv("MESSAGE_PARSER_CLASS", None)
+
 GLOBAL_TASK_TIMEOUT_SECONDS = int(os.getenv("GLOBAL_STASK_TIMEOUT_SECONDS", "3600"))  # 1 hour
 
 K8S_NAMESPACE = os.getenv("K8S_NAMESPACE", "test")
