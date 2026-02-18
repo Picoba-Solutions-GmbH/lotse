@@ -1,7 +1,6 @@
 import functools
 import logging
 import subprocess
-from typing import List
 
 import yaml
 from fastapi import APIRouter, Depends, HTTPException
@@ -44,7 +43,7 @@ def handle_k8s_errors(func):
     return wrapper
 
 
-@router.get("/namespaces", response_model=List[KubernetesNamespace])
+@router.get("/namespaces", response_model=list[KubernetesNamespace])
 @handle_k8s_errors
 async def get_namespaces(_=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()
@@ -64,7 +63,7 @@ async def get_namespaces(_=Depends(authentication.require_admin)):
     return result
 
 
-@router.get("/namespaces/{namespace}/pods", response_model=List[KubernetesPod])
+@router.get("/namespaces/{namespace}/pods", response_model=list[KubernetesPod])
 @handle_k8s_errors
 async def get_pods_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()
@@ -161,7 +160,7 @@ async def kill_pod(namespace: str, pod_name: str, _=Depends(authentication.requi
     return {"message": f"Pod {pod_name} force killed successfully"}
 
 
-@router.get("/namespaces/{namespace}/pods/{pod_name}/logs", response_model=List[str])
+@router.get("/namespaces/{namespace}/pods/{pod_name}/logs", response_model=list[str])
 @handle_k8s_errors
 async def get_pod_logs(namespace: str, pod_name: str, _=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()
@@ -172,7 +171,7 @@ async def get_pod_logs(namespace: str, pod_name: str, _=Depends(authentication.r
     return logs.split("\n") if logs else []
 
 
-@router.get("/namespaces/{namespace}/services", response_model=List[KubernetesService])
+@router.get("/namespaces/{namespace}/services", response_model=list[KubernetesService])
 @handle_k8s_errors
 async def get_services_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()
@@ -208,7 +207,7 @@ async def get_services_for_namespace(namespace: str, _=Depends(authentication.re
     return result
 
 
-@router.get("/namespaces/{namespace}/deployments", response_model=List[KubernetesDeployment])
+@router.get("/namespaces/{namespace}/deployments", response_model=list[KubernetesDeployment])
 @handle_k8s_errors
 async def get_deployments_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
     apps_v1 = client.AppsV1Api()
@@ -270,7 +269,7 @@ async def get_deployments_for_namespace(namespace: str, _=Depends(authentication
     return result
 
 
-@router.get("/namespaces/{namespace}/statefulsets", response_model=List[KubernetesStatefulSet])
+@router.get("/namespaces/{namespace}/statefulsets", response_model=list[KubernetesStatefulSet])
 @handle_k8s_errors
 async def get_statefulsets_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
     apps_v1 = client.AppsV1Api()
@@ -332,7 +331,7 @@ async def get_statefulsets_for_namespace(namespace: str, _=Depends(authenticatio
     return result
 
 
-@router.get("/namespaces/{namespace}/configmaps", response_model=List[KubernetesConfigMap])
+@router.get("/namespaces/{namespace}/configmaps", response_model=list[KubernetesConfigMap])
 @handle_k8s_errors
 async def get_configmaps_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()
@@ -353,7 +352,7 @@ async def get_configmaps_for_namespace(namespace: str, _=Depends(authentication.
     return result
 
 
-@router.get("/namespaces/{namespace}/ingresses", response_model=List[KubernetesIngress])
+@router.get("/namespaces/{namespace}/ingresses", response_model=list[KubernetesIngress])
 @handle_k8s_errors
 async def get_ingresses_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
     networking_v1 = client.NetworkingV1Api()
@@ -383,7 +382,7 @@ async def get_ingresses_for_namespace(namespace: str, _=Depends(authentication.r
     return result
 
 
-@router.get("/namespaces/{namespace}/persistentvolumeclaims", response_model=List[KubernetesPersistentVolumeClaim])
+@router.get("/namespaces/{namespace}/persistentvolumeclaims", response_model=list[KubernetesPersistentVolumeClaim])
 @handle_k8s_errors
 async def get_pvcs_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()
@@ -412,7 +411,7 @@ async def get_pvcs_for_namespace(namespace: str, _=Depends(authentication.requir
     return result
 
 
-@router.get("/nodes", response_model=List[KubernetesNode])
+@router.get("/nodes", response_model=list[KubernetesNode])
 @handle_k8s_errors
 async def get_nodes(_=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()
@@ -452,7 +451,7 @@ async def get_nodes(_=Depends(authentication.require_admin)):
     return result
 
 
-@router.get("/persistentvolumes", response_model=List[KubernetesPersistentVolume])
+@router.get("/persistentvolumes", response_model=list[KubernetesPersistentVolume])
 @handle_k8s_errors
 async def get_persistent_volumes(_=Depends(authentication.require_admin)):
     v1 = client.CoreV1Api()

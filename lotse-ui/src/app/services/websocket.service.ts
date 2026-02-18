@@ -47,9 +47,9 @@ export class WebSocketService {
     );
   }
 
-  public connectToTasks(package_name: string, stage: string, version: string): Observable<any> {
+  public connectToTasks(package_name: string, version: string): Observable<any> {
     if (!this.tasksSocket$ || this.tasksSocket$.closed) {
-      this.tasksSocket$ = this.createWebSocket(`/ws/${package_name}/${stage}/${version}`);
+      this.tasksSocket$ = this.createWebSocket(`/ws/${package_name}/${version}`);
     }
     return this.tasksSocket$.pipe(
       retryWhen(errors =>

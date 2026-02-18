@@ -1,5 +1,4 @@
 import uuid
-from typing import List, Optional
 
 from sqlalchemy import update
 from sqlalchemy.orm import Session
@@ -34,7 +33,7 @@ class UserRepository:
     def get_user_by_id(
         db_session: Session,
         user_id: str
-    ) -> Optional[UserEntity]:
+    ) -> UserEntity | None:
         return db_session.query(UserEntity).filter(
             UserEntity.id == user_id
         ).first()
@@ -43,7 +42,7 @@ class UserRepository:
     def get_user_by_name(
         db_session: Session,
         name: str
-    ) -> Optional[UserEntity]:
+    ) -> UserEntity | None:
         return db_session.query(UserEntity).filter(
             UserEntity.name == name
         ).first()
@@ -51,18 +50,18 @@ class UserRepository:
     @staticmethod
     def list_users(
         db_session: Session,
-    ) -> List[UserEntity]:
+    ) -> list[UserEntity]:
         return db_session.query(UserEntity).all()
 
     @staticmethod
     def update_user(
         db_session: Session,
         user_id: str,
-        name: Optional[str] = None,
-        hashed_password: Optional[str] = None,
-        role: Optional[str] = None,
-        is_ldap: Optional[bool] = None
-    ) -> Optional[UserEntity]:
+        name: str | None = None,
+        hashed_password: str | None = None,
+        role: str | None = None,
+        is_ldap: bool | None = None
+    ) -> UserEntity | None:
         update_values = {}
         if name is not None:
             update_values['name'] = name
@@ -100,7 +99,7 @@ class UserRepository:
         db_session: Session,
         name: str,
         password: str
-    ) -> Optional[UserEntity]:
+    ) -> UserEntity | None:
         user = db_session.query(UserEntity).filter(
             UserEntity.name == name
         ).first()
@@ -114,7 +113,7 @@ class UserRepository:
     def get_user(
         db_session: Session,
         name: str
-    ) -> Optional[UserEntity]:
+    ) -> UserEntity | None:
         user = db_session.query(UserEntity).filter(
             UserEntity.name == name
         ).first()

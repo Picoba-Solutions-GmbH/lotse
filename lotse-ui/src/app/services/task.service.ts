@@ -17,8 +17,8 @@ export class TaskService {
     return await firstValueFromAsync(this.http.get<AsyncPackageResponse>(`${environment.url}/task/status/${taskId}`));
   }
 
-  async getTasksAsync(stage: string): Promise<TaskInfo[]> {
-    return await firstValueFromAsync(this.http.get<TaskInfo[]>(`${environment.url}/tasks/${stage}`));
+  async getTasksAsync(): Promise<TaskInfo[]> {
+    return await firstValueFromAsync(this.http.get<TaskInfo[]>(`${environment.url}/tasks`));
   }
 
   async cancelTaskAsync(taskId: string): Promise<TaskInfo> {

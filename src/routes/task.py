@@ -87,9 +87,9 @@ async def cancel_task(
         raise HTTPException(status_code=500, detail=f"Failed to cancel task: {str(e)}")
 
 
-@router.get("s/{stage}")
-async def list_tasks(stage: str, task_manager: TaskRepository = get_service(TaskRepository)):
-    response = task_manager.list_tasks(stage)
+@router.get("s")
+async def list_tasks(task_manager: TaskRepository = get_service(TaskRepository)):
+    response = task_manager.list_tasks()
     return response
 
 

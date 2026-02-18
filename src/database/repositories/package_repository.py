@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import and_, update
 from sqlalchemy.orm import Session
@@ -15,9 +14,8 @@ class PackageRepository:
         package_name: str,
         version: str,
         python_version: str,
-        stage: str,
         config: str,
-        description: Optional[str] = None,
+        description: str | None = None,
         set_as_active: bool = False
     ) -> PackageEntity:
         metadata = PackageEntity(
@@ -25,7 +23,6 @@ class PackageRepository:
             package_name=package_name,
             python_version=python_version,
             version=version,
-            stage=stage,
             description=description,
             deployed_at=datetime.now(),
             active=set_as_active,
@@ -38,7 +35,6 @@ class PackageRepository:
                 update(PackageEntity).where(  # type: ignore
                     and_(
                         PackageEntity.package_name == package_name,
-                        PackageEntity.stage == stage,
                         PackageEntity.version != version,
                         PackageEntity.active
                     )
@@ -52,7 +48,7 @@ class PackageRepository:
     def get_package_by_deployment_id(
         db_session: Session,
         deployment_id: str
-    ) -> Optional[PackageEntity]:
+    ) -> PackageEntity | None:
         return db_session.query(PackageEntity).filter(
             PackageEntity.deployment_id == deployment_id
         ).first()
@@ -61,13 +57,11 @@ class PackageRepository:
     def get_package(
         db_session: Session,
         package_name: str,
-        stage: str,
-        version: Optional[str] = None
-    ) -> Optional[PackageEntity]:
+        version: str | None = None
+    ) -> PackageEntity | None:
         query = db_session.query(PackageEntity).filter(
             and_(
                 PackageEntity.package_name == package_name,
-                PackageEntity.stage == stage,
                 PackageEntity.deleted.is_(False),
             )
         )
@@ -83,10 +77,9 @@ class PackageRepository:
     def set_active_package(
         db_session: Session,
         package_name: str,
-        version: str,
-        stage: str
+        version: str
     ) -> bool:
-        package = PackageRepository.get_package(db_session, package_name, stage, version)
+        package = PackageRepository.get_package(db_session, package_name, version)
         if not package:
             return False
 
@@ -94,7 +87,6 @@ class PackageRepository:
             update(PackageEntity).where(  # type: ignore
                 and_(
                     PackageEntity.package_name == package_name,
-                    PackageEntity.stage == stage,
                     PackageEntity.version != version
                 )
             ).values(active=False)
@@ -106,19 +98,15 @@ class PackageRepository:
     @staticmethod
     def list_packages(
         db_session: Session,
-        package_name: Optional[str] = None,
-        stage: Optional[str] = None,
-        version: Optional[str] = None
-    ) -> List[PackageEntity]:
+        package_name: str | None = None,
+        version: str | None = None
+    ) -> list[PackageEntity]:
         query = db_session.query(PackageEntity).filter(
             PackageEntity.deleted.is_(False)
         )
 
         if package_name:
             query = query.filter(PackageEntity.package_name == package_name)
-
-        if stage:
-            query = query.filter(PackageEntity.stage == stage)
 
         if version:
             query = query.filter(PackageEntity.version == version)
@@ -130,9 +118,8 @@ class PackageRepository:
         db_session: Session,
         package_name: str,
         version: str,
-        stage: str
     ) -> bool:
-        package = PackageRepository.get_package(db_session, package_name, stage, version)
+        package = PackageRepository.get_package(db_session, package_name, version)
         if not package:
             return False
 
@@ -140,8 +127,7 @@ class PackageRepository:
             update(PackageEntity).where(  # type: ignore
                 and_(
                     PackageEntity.package_name == package_name,
-                    PackageEntity.version == version,
-                    PackageEntity.stage == stage
+                    PackageEntity.version == version
                 )
             ).values(deleted=True, active=False)
         )
@@ -153,13 +139,11 @@ class PackageRepository:
     def list_other_package_version(
         db_session: Session,
         package_name: str,
-        stage: str,
         version: str
-    ) -> List[PackageEntity]:
+    ) -> list[PackageEntity]:
         return db_session.query(PackageEntity).filter(
             and_(
                 PackageEntity.package_name == package_name,
-                PackageEntity.stage == stage,
                 PackageEntity.version != version,
                 PackageEntity.deleted.is_(False)
             )
@@ -169,14 +153,12 @@ class PackageRepository:
     def delete_other_package_versions(
         db_session: Session,
         package_name: str,
-        stage: str,
         version: str
     ) -> bool:
         db_session.execute(
             update(PackageEntity).where(  # type: ignore
                 and_(
                     PackageEntity.package_name == package_name,
-                    PackageEntity.stage == stage,
                     PackageEntity.version != version,
                     PackageEntity.deleted.is_(False)
                 )

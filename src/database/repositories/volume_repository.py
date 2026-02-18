@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
@@ -30,14 +28,14 @@ class VolumeRepository:
     def get_volume(
         db_session: Session,
         volume_id: str
-    ) -> Optional[VolumeEntity]:
+    ) -> VolumeEntity | None:
         return db_session.query(VolumeEntity).filter(
             VolumeEntity.id == volume_id
         ).first()
 
     @staticmethod
     def get_volume_maps(
-        volumes: List[Volume]
+        volumes: list[Volume]
     ) -> list[VolumeMap]:
         db_session = next(get_db_session())
         try:
@@ -67,7 +65,7 @@ class VolumeRepository:
 
     @staticmethod
     def get_non_existing_volumes(
-        volumes: List[Volume]
+        volumes: list[Volume]
     ) -> list[str]:
         result = []
         db_session = next(get_db_session())
@@ -91,16 +89,16 @@ class VolumeRepository:
     @staticmethod
     def list_volumes(
         db_session: Session,
-    ) -> List[VolumeEntity]:
+    ) -> list[VolumeEntity]:
         return db_session.query(VolumeEntity).all()
 
     @staticmethod
     def update_volume(
         db_session: Session,
         volume_id: str,
-        name: Optional[str] = None,
-        pvc_name: Optional[str] = None
-    ) -> Optional[VolumeEntity]:
+        name: str | None = None,
+        pvc_name: str | None = None
+    ) -> VolumeEntity | None:
         volume = db_session.query(VolumeEntity).filter(
             VolumeEntity.id == volume_id
         ).first()

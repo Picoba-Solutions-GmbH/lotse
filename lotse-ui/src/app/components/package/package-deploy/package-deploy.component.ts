@@ -241,10 +241,7 @@ export class PackageDeployComponent {
         }
 
         try {
-            const stage = localStorage.getItem('stage') || 'dev';
             const formData = new FormData();
-            formData.append('stage', stage);
-
             if (this.zipFile) {
                 formData.append('package_file', this.zipFile);
             } else {
@@ -311,7 +308,6 @@ export class PackageDeployComponent {
         }
 
         try {
-            const stage = localStorage.getItem('stage') || 'dev';
             const containerConfig = {
                 package_name: this.containerPackageName,
                 runtime: Runtime.CONTAINER,
@@ -324,7 +320,6 @@ export class PackageDeployComponent {
             const configFile = new File([yamlBlob], `${this.containerPackageName}.yaml`, { type: 'application/x-yaml' });
 
             const formData = new FormData();
-            formData.append('stage', stage);
             formData.append('package_file', new Blob());
             formData.append('config_yaml', configFile);
             formData.append('set_as_default', this.setAsDefault ? 'true' : 'false');

@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 import yaml
 
@@ -30,13 +29,13 @@ class PackageConfig:
     entrypoint: str
     version: str
     python_version: str
-    runtime: Optional[RuntimeType] = RuntimeType.PYTHON
-    image: Optional[str] = None
-    timeout: Optional[int] = None
-    description: Optional[str] = None
-    args: List[Argument] = field(default_factory=list)
-    environment: List[Environment] = field(default_factory=list)
-    volumes: List[Volume] = field(default_factory=list)
+    runtime: RuntimeType | None = RuntimeType.PYTHON
+    image: str | None = None
+    timeout: int | None = None
+    description: str | None = None
+    args: list[Argument] = field(default_factory=list)
+    environment: list[Environment] = field(default_factory=list)
+    volumes: list[Volume] = field(default_factory=list)
 
 
 def parse_config(yaml_content: str) -> PackageConfig:

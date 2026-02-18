@@ -1,5 +1,4 @@
 import uuid
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -18,8 +17,8 @@ class VolumeCreate(BaseModel):
 
 
 class VolumeUpdate(BaseModel):
-    name: Optional[str] = None
-    pvc_name: Optional[str] = None
+    name: str | None = None
+    pvc_name: str | None = None
 
 
 class VolumeResponse(BaseModel):
@@ -46,7 +45,7 @@ async def create_volume(
     )
 
 
-@router.get("/", response_model=List[VolumeResponse])
+@router.get("/", response_model=list[VolumeResponse])
 async def list_volumes(
     db: Session = Depends(get_db_session)
 ):

@@ -9,7 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { MenubarModule } from 'primeng/menubar';
-import { SelectButtonChangeEvent, SelectButtonModule } from 'primeng/selectbutton';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { filter, firstValueFrom as firstValueFromAsync } from 'rxjs';
@@ -50,9 +50,6 @@ export class AppComponent implements OnInit {
   isDarkMode: boolean = false;
   PrimeIcons = PrimeIcons;
 
-  stateOptions: any[] = [{ label: 'Dev', value: 'dev' }, { label: 'Prod', value: 'prod' }];
-  stageValue: string = 'dev';
-
   original_items: MenuItem[] = [
     {
       label: 'Package execution',
@@ -91,8 +88,6 @@ export class AppComponent implements OnInit {
       this.updateMenuItems();
     });
 
-    this.stageValue = localStorage.getItem('stage') || 'dev';
-
     this.isAuthEnabled = await this.authService.isAuthenticationEnabledAsync();
     if (this.isAuthEnabled) {
       const login = this.authService.getLogin();
@@ -113,7 +108,7 @@ export class AppComponent implements OnInit {
       if (item.routerLink === 'cluster') {
         return isAdmin;
       }
-      
+
       return true;
     });
 
@@ -147,11 +142,6 @@ export class AppComponent implements OnInit {
       return item.items.some((subItem: MenuItem) => this.isRouteActive(subItem));
     }
     return false;
-  }
-
-  handleStateChange($event: SelectButtonChangeEvent) {
-    localStorage.setItem('stage', $event.value);
-    window.location.reload();
   }
 
   openLoginDialog(): void {

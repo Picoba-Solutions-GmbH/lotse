@@ -1,3 +1,4 @@
+from src.abstractions.message_parser import JsonMessageParser
 from src.database.repositories.task_repository import TaskRepository
 from src.services.activemq_service import ActiveMQService
 from src.services.task_manager_service import TaskManagerService
@@ -14,5 +15,6 @@ def initialize_registry():
         user=config.ACTIVEMQ_USER,
         password=config.ACTIVEMQ_PASSWORD,
         queue_name=config.ACTIVEMQ_QUEUE_NAME,
-        k8s_manager_service=k8s_manager_service
+        k8s_manager_service=k8s_manager_service,
+        message_parser=JsonMessageParser()
     )

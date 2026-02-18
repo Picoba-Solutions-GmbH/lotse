@@ -46,13 +46,11 @@ def prepare_environment(v1: client.CoreV1Api,
                         task_id: str,
                         task_logger: logging.Logger,
                         package_name: str,
-                        stage: str,
                         package_info: PackageInfo,
                         package_config: PackageConfig) -> None:
     venv_path = PathManager.get_venv_path(
         package_name,
-        package_info.package_entity.version,
-        stage)
+        package_info.package_entity.version)
     if not os.path.exists(venv_path):
         os.makedirs(venv_path, exist_ok=True)
 
@@ -74,12 +72,10 @@ def prepare_runtime(v1: client.CoreV1Api,
                     task_id: str,
                     task_logger: logging.Logger,
                     package_name: str,
-                    stage: str,
                     package_info: PackageInfo) -> None:
     venv_path = PathManager.get_venv_path(
         package_name,
-        package_info.package_entity.version,
-        stage
+        package_info.package_entity.version
     )
     tar_file_path = os.path.join(venv_path, "venv.tar.gz")
 

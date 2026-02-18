@@ -8,4 +8,4 @@ class PackageArgument(BaseModel):
     type: Literal["string", "number", "boolean"]
     default: Optional[Union[str, int, float, bool]] = None
     required: bool = False
-    description: Optional[str] = None
+    description: str | None = None

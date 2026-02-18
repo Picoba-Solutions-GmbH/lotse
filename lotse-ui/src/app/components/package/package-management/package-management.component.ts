@@ -75,8 +75,7 @@ export class PackageManagementComponent implements OnInit {
   async loadPackages(): Promise<void> {
     try {
       this.loading = true;
-      const stage = localStorage.getItem('stage') || 'dev';
-      this.packages = await this.packageService.getPackageOverviewAsync(stage, this.packageName);
+      this.packages = await this.packageService.getPackageOverviewAsync(this.packageName);
       this.availablePackageVersions = this.packages.map(pkg => pkg.version);
     } catch (error) {
       this.messageService.add({
@@ -117,8 +116,7 @@ export class PackageManagementComponent implements OnInit {
       icon: PrimeIcons.QUESTION_CIRCLE,
       accept: async () => {
         try {
-          const stage = localStorage.getItem('stage') || 'dev';
-          await this.packageService.deletePackageVersionAsync(this.packageName, stage, clickedPackage.version);
+          await this.packageService.deletePackageVersionAsync(this.packageName, clickedPackage.version);
           this.messageService.add({
             severity: 'success',
             summary: 'Success',
@@ -143,8 +141,7 @@ export class PackageManagementComponent implements OnInit {
       icon: PrimeIcons.QUESTION_CIRCLE,
       accept: async () => {
         try {
-          const stage = localStorage.getItem('stage') || 'dev';
-          await this.packageService.setAsDefaultVersionAsync(this.packageName, stage, clickedPackage.version);
+          await this.packageService.setAsDefaultVersionAsync(this.packageName, clickedPackage.version);
           this.messageService.add({
             severity: 'success',
             summary: 'Success',

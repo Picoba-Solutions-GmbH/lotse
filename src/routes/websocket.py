@@ -183,9 +183,9 @@ async def websocket_task_endpoint(websocket: WebSocket, task_id: str):
         manager.disconnect(websocket, client_type)
 
 
-@router.websocket("/{package_name}/{stage}/{version}")
-async def websocket_package_instance_endpoint(websocket: WebSocket, package_name: str, stage: str, version: str):
-    client_type = f"{package_name}_{stage}_{version}"
+@router.websocket("/{package_name}/{version}")
+async def websocket_package_instance_endpoint(websocket: WebSocket, package_name: str, version: str):
+    client_type = f"{package_name}_{version}"
     await manager.connect(websocket, client_type)
     session = next(get_db_session())
     try:
@@ -195,7 +195,7 @@ async def websocket_package_instance_endpoint(websocket: WebSocket, package_name
         while True:
             try:
                 package_instance = await get_package_by_version(
-                    package_name, stage, version, session, task_repository, task_manager_service)
+                    package_name, version, session, task_repository, task_manager_service)
                 data = {"tasks": package_instance.tasks}
                 if not await manager.broadcast(data, client_type):
                     break

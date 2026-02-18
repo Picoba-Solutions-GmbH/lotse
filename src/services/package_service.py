@@ -1,7 +1,6 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
@@ -23,12 +22,11 @@ class PackageService:
     @staticmethod
     def get_package_info(
         package_name: str,
-        stage: str,
-        version: Optional[str]
-    ) -> Optional[PackageInfo]:
+        version: str | None
+    ) -> PackageInfo | None:
         db_session = next(get_db_session())
         try:
-            package_info = PackageRepository.get_package(db_session, package_name, stage, version)
+            package_info = PackageRepository.get_package(db_session, package_name, version)
             if not package_info:
                 return None
 
@@ -36,7 +34,7 @@ class PackageService:
             if not config_content:
                 return None
 
-            package_dir = PathManager.get_package_path(package_name, package_info.version, stage)
+            package_dir = PathManager.get_package_path(package_name, package_info.version)
             if not package_dir.exists() and config_content.runtime != RuntimeType.CONTAINER:
                 return None
 
@@ -65,9 +63,8 @@ class PackageService:
     def get_package_path(
         package_name: str,
         version: str,
-        stage: str
-    ) -> Optional[str]:
-        package_dir = PathManager.get_package_path(package_name, version, stage)
+    ) -> str | None:
+        package_dir = PathManager.get_package_path(package_name, version)
         if not package_dir.exists():
             return None
 

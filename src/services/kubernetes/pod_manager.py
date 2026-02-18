@@ -32,7 +32,7 @@ class PodManager:
                 raise
 
     @staticmethod
-    def get_running_pods(api: client.CoreV1Api, namespace: str) -> List[str]:
+    def get_running_pods(api: client.CoreV1Api, namespace: str) -> list[str]:
         try:
             with k8s_api_lock:
                 pods = api.list_namespaced_pod(namespace=namespace, label_selector="app=lotse-package")
@@ -41,7 +41,7 @@ class PodManager:
             raise RuntimeError(f"Error fetching running pods: {e}") from e
 
     @staticmethod
-    def get_pod_metrics(api: client.CustomObjectsApi, namespace: str, pod_name: str) -> Optional[PodMetrics]:
+    def get_pod_metrics(api: client.CustomObjectsApi, namespace: str, pod_name: str) -> PodMetrics | None:
         try:
             with k8s_api_lock:
                 metrics = api.get_namespaced_custom_object(
@@ -64,8 +64,8 @@ class PodManager:
 
     @staticmethod
     def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_version: str,
-                   env_vars: List[Environment], logger: Logger, volumes: List[VolumeMap],
-                   image: Optional[str], runtime: Optional[RuntimeType], empty_instance: bool):
+                   env_vars: list[Environment], logger: Logger, volumes: list[VolumeMap],
+                   image: str | None, runtime: RuntimeType | None, empty_instance: bool):
         if env_vars is None:
             env_vars = []
 

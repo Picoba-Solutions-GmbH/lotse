@@ -3,7 +3,6 @@ import logging
 import os
 import threading
 from datetime import datetime, timezone
-from typing import List, Optional
 
 from kubernetes import client, config
 
@@ -57,16 +56,15 @@ class TaskManagerService(metaclass=SingletonMeta):
             self,
             task_id: str,
             package_name: str,
-            stage: str,
-            version: Optional[str],
-            arguments: List[PackageRequestArgument],
+            version: str | None,
+            arguments: list[PackageRequestArgument],
             empty_instance: bool) -> bool:
         task_logger = self.task_logger.setup_logger(task_id)
 
         try:
-            package_info = PackageService.get_package_info(package_name, stage, version)
+            package_info = PackageService.get_package_info(package_name, version)
             if package_info is None:
-                raise FileNotFoundError(f"Package not found for {package_name} in stage {stage}")
+                raise FileNotFoundError(f"Package not found for {package_name}")
 
             package_config = parse_config(package_info.package_entity.config)
 
@@ -85,7 +83,6 @@ class TaskManagerService(metaclass=SingletonMeta):
                         task_id,
                         task_logger,
                         package_name,
-                        stage,
                         package_info,
                         package_config
                     )
@@ -110,7 +107,6 @@ class TaskManagerService(metaclass=SingletonMeta):
                         task_id,
                         task_logger,
                         package_name,
-                        stage,
                         package_info
                     )
 
@@ -122,7 +118,7 @@ class TaskManagerService(metaclass=SingletonMeta):
                 else:
                     command.append(arg.value)
 
-            task_logger.info(f"Executing package: {package_name}, Stage: {stage}")
+            task_logger.info(f"Executing package: {package_name}")
             self.task_manager.update_task_status(
                 task_id,
                 TaskStatus.RUNNING,
@@ -157,7 +153,7 @@ class TaskManagerService(metaclass=SingletonMeta):
             return False
 
     def __internal_run_package(self, timeout: int, task_id: str, package_name: str,
-                               stage: str, version: Optional[str], arguments: List[PackageRequestArgument],
+                               version: str | None, arguments: list[PackageRequestArgument],
                                empty_instance: bool):
         task_logger = self.task_logger.setup_logger(task_id)
         try:
@@ -174,7 +170,7 @@ class TaskManagerService(metaclass=SingletonMeta):
 
             output_lines = []
             error_lines = []
-            success = self.execute_package(task_id, package_name, stage, version, arguments, empty_instance)
+            success = self.execute_package(task_id, package_name, version, arguments, empty_instance)
 
             if timer:
                 timer.cancel()
@@ -214,28 +210,27 @@ class TaskManagerService(metaclass=SingletonMeta):
 
     async def execute_package_async(self,
                                     package_name: str,
-                                    stage: str,
-                                    version: Optional[str],
-                                    arguments: List[PackageRequestArgument],
+                                    version: str | None,
+                                    arguments: list[PackageRequestArgument],
                                     empty_instance: bool) -> str:
 
-        package_info = PackageService.get_package_info(package_name, stage, version)
+        package_info = PackageService.get_package_info(package_name, version)
         if package_info is None:
-            raise FileNotFoundError(f"Package {package_name} ({version}) not found in stage {stage}")
+            raise FileNotFoundError(f"Package {package_name} ({version}) not found")
 
         task_id = generate_name(package_name)
 
-        self.task_manager.add_task(task_id, package_info.package_entity.deployment_id, stage, arguments)
+        self.task_manager.add_task(task_id, package_info.package_entity.deployment_id, arguments)
         parsed_config = parse_config(package_info.package_entity.config)
         if parsed_config is None:
-            raise FileNotFoundError(f"Package {package_name} ({version}) not found in stage {stage}")
+            raise FileNotFoundError(f"Package {package_name} ({version}) not found")
 
         timeout = (framework_config.GLOBAL_TASK_TIMEOUT_SECONDS if parsed_config.timeout is None
                    else parsed_config.timeout)
 
         threading.Thread(
             target=self.__internal_run_package,
-            args=(timeout, task_id, package_name, stage, version, arguments, empty_instance),
+            args=(timeout, task_id, package_name, version, arguments, empty_instance),
             daemon=True
         ).start()
 
@@ -251,7 +246,7 @@ class TaskManagerService(metaclass=SingletonMeta):
                     self.task_manager.kill_and_update_task(task.task_id, TaskStatus.FAILED)
                     continue
 
-                package_info = PackageService.get_package_info(task.package_name, task.stage, task.package_version)
+                package_info = PackageService.get_package_info(task.package_name, task.package_version)
                 if package_info is None:
                     continue
 
@@ -299,10 +294,10 @@ class TaskManagerService(metaclass=SingletonMeta):
                     task_logger = self.task_logger.setup_logger(task_of_pod.task_id)
                     PodManager.delete_pod(self.v1, self.namespace, pod, task_logger)
 
-    def get_task_metrics(self, task_id: str) -> Optional[PodMetrics]:
+    def get_task_metrics(self, task_id: str) -> PodMetrics | None:
         return PodManager.get_pod_metrics(self.custom_api, self.namespace, task_id)
 
-    def get_task_logs(self, task_id: str) -> Optional[str]:
+    def get_task_logs(self, task_id: str) -> str | None:
         return PodManager.get_pod_logs(self.v1, self.namespace, task_id)
 
     def install_ssh_server(self, task_id: str) -> bool:

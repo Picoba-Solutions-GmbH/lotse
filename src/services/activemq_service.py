@@ -3,6 +3,7 @@ import threading
 
 import stomp
 
+from src.abstractions.message_parser import MessageParserProtocol
 from src.services.package_execution_listener_service import \
     PackageExecutionListenerService
 from src.services.task_manager_service import TaskManagerService
@@ -13,17 +14,19 @@ logger = logging.getLogger(__name__)
 
 class ActiveMQService(metaclass=SingletonMeta):
     def __init__(self, host: str, port: int, user: str,
-                 password: str, queue_name: str, k8s_manager_service: TaskManagerService):
+                 password: str, queue_name: str, k8s_manager_service: TaskManagerService,
+                 message_parser: MessageParserProtocol):
         self.host = host
         self.port = port
         self.user = user
         self.password = password
         self.queue_name = queue_name
         self.k8s_manager_service = k8s_manager_service
+        self.message_parser = message_parser
 
     def setup_connection(self):
         conn = stomp.Connection([(self.host, self.port)])
-        conn.set_listener('', PackageExecutionListenerService(self.k8s_manager_service))
+        conn.set_listener('', PackageExecutionListenerService(self.k8s_manager_service, self.message_parser))
         conn.connect(self.user, self.password, wait=True)
         conn.subscribe(destination=self.queue_name, id=1, ack='auto')
         return conn

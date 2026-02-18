@@ -12,7 +12,6 @@ class TaskEntity(Base):
     task_id = Column(String, primary_key=True)
     deployment_id = Column(String, ForeignKey(PackageEntity.deployment_id), nullable=False)
     status = Column(String)
-    stage = Column(String)
     result = Column(JSON, nullable=True)
     pid = Column(Integer, nullable=True)
     started_at = Column(DateTime)

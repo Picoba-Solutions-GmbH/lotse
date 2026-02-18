@@ -132,8 +132,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   }
 
   async loadPackageInstanceAsync(): Promise<void> {
-    const stage = localStorage.getItem('stage') || 'dev';
-    this.packageInstance = await this.packageService.getPackageInstanceAsync(stage, this.packageName, this.packageVersion);
+    this.packageInstance = await this.packageService.getPackageInstanceAsync(this.packageName, this.packageVersion);
   }
 
   private async setupWebSocketForTasks(): Promise<void> {
@@ -141,8 +140,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
       this.wsSubscriptionForTasks.unsubscribe();
     }
 
-    const stage = localStorage.getItem('stage') || 'dev';
-    this.wsSubscriptionForTasks = this.webSocketService.connectToTasks(this.packageName, stage, this.packageVersion).subscribe({
+    this.wsSubscriptionForTasks = this.webSocketService.connectToTasks(this.packageName, this.packageVersion).subscribe({
       next: (data: { tasks: TaskInfo[] }) => {
         if (data.tasks) {
           for (const task of data.tasks) {
@@ -202,8 +200,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     try {
       await this.taskService.cancelTaskAsync(taskId);
       this.showSuccess('Task cancelled');
-      const stage = localStorage.getItem('stage') || 'dev';
-      this.packageInstance = await this.packageService.getPackageInstanceAsync(stage, this.packageName, this.packageVersion);
+      this.packageInstance = await this.packageService.getPackageInstanceAsync(this.packageName, this.packageVersion);
     } catch (error) {
       this.showError('Failed to cancel task');
     }
@@ -270,10 +267,8 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
       }
     }
 
-    const stage = localStorage.getItem('stage') || 'dev';
     const request = {
       package_name: this.packageName,
-      stage: stage,
       version: this.packageVersion,
       arguments: args,
       wait_for_completion: false,
@@ -340,8 +335,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
 
   async showEnvironmentVariables(): Promise<void> {
     try {
-      const stage = localStorage.getItem('stage') || 'dev';
-      this.packageEnvironmentVariables = await this.packageService.getPackageEnvironmentAsync(stage, this.packageName, this.packageVersion);
+      this.packageEnvironmentVariables = await this.packageService.getPackageEnvironmentAsync(this.packageName, this.packageVersion);
       this.showEnvironmentDialog = true;
     } catch (error) {
       this.showError('Failed to load environment variables');

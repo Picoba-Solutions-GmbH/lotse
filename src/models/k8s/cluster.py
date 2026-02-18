@@ -30,16 +30,16 @@ class KubernetesPod(BaseModel):
     podIP: str
     creationTimestamp: str
     ready: bool
-    containerStatuses: List[ContainerStatus]
+    containerStatuses: list[ContainerStatus]
     node: str
-    podMetrics: Optional[PodMetrics]
+    podMetrics: PodMetrics | None
 
 
 class KubernetesContainer(BaseModel):
     name: str
     image: str
-    ports: Optional[List[Dict[str, int]]] = None
-    env: Optional[List[Dict[str, str]]] = None
+    ports: Optional[list[Dict[str, int]]] = None
+    env: Optional[list[Dict[str, str]]] = None
     resources: Optional[Dict[str, Dict[str, str]]] = None
 
 
@@ -47,8 +47,8 @@ class KubernetesService(BaseModel):
     name: str
     namespace: str
     type: str
-    clusterIP: Optional[str] = None
-    ports: List[Dict[str, Any]]
+    clusterIP: str | None = None
+    ports: list[Dict[str, Any]]
     selector: Dict[str, str]
     creationTimestamp: str
 
@@ -58,7 +58,7 @@ class KubernetesDeployment(BaseModel):
     namespace: str
     replicas: int
     selector: Dict[str, str]
-    containers: List[KubernetesContainer]
+    containers: list[KubernetesContainer]
     creationTimestamp: str
     ready: str
     available: bool
@@ -69,7 +69,7 @@ class KubernetesStatefulSet(BaseModel):
     namespace: str
     replicas: int
     selector: Dict[str, str]
-    containers: List[KubernetesContainer]
+    containers: list[KubernetesContainer]
     creationTimestamp: str
     ready: str
     available: bool
@@ -85,8 +85,8 @@ class KubernetesConfigMap(BaseModel):
 class KubernetesIngress(BaseModel):
     name: str
     namespace: str
-    rules: List[Dict[str, object]]
-    tls: Optional[List[Dict[str, object]]] = None
+    rules: list[Dict[str, object]]
+    tls: Optional[list[Dict[str, object]]] = None
     creationTimestamp: str
 
 
@@ -97,14 +97,14 @@ class KubernetesPersistentVolumeClaim(BaseModel):
     status: str
     storageClass: str
     size: str
-    accessModes: List[str]
+    accessModes: list[str]
     creationTimestamp: str
 
 
 class KubernetesNode(BaseModel):
     name: str
     status: str
-    roles: List[str]
+    roles: list[str]
     addresses: Dict[str, str]
     cpu: str
     memory: str
@@ -115,9 +115,9 @@ class KubernetesNode(BaseModel):
 class KubernetesPersistentVolume(BaseModel):
     name: str
     capacity: str
-    accessModes: List[str]
+    accessModes: list[str]
     reclaimPolicy: str
     status: str
     storageClass: str
-    claim: Optional[str] = None
+    claim: str | None = None
     creationTimestamp: str

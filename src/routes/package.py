@@ -1,7 +1,6 @@
 import os
 import shutil
 from datetime import datetime
-from typing import Optional
 
 import patoolib
 import semver
@@ -16,7 +15,6 @@ from src.database.repositories.package_repository import PackageRepository
 from src.database.repositories.task_repository import (
     TaskRepository, map_task_entity_to_task_info)
 from src.database.repositories.volume_repository import VolumeRepository
-from src.misc import constants
 from src.misc.package_status import PackageStatus
 from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
@@ -35,7 +33,6 @@ router = APIRouter(prefix="/packages", tags=["packages"])
 async def deploy_package(
     package_file: UploadFile = File(...),
     config_yaml: UploadFile = File(...),
-    stage=Form(..., regex=constants.stage_regex_pattern),
     set_as_default: bool = Form(False),
     delete_previous_versions: bool = Form(False),
     db_session: Session = Depends(get_db_session),
@@ -53,13 +50,13 @@ async def deploy_package(
                 raise HTTPException(status_code=400, detail="Invalid Python version format. Use semver (e.g., 3.8.10)")
 
     existing_package = PackageRepository.get_package(
-        db_session, package_config.package_name, stage, package_config.version)
+        db_session, package_config.package_name, package_config.version)
     if existing_package:
         raise HTTPException(
             status_code=409,
             detail=(
                 f"Package {package_config.package_name} version {package_config.version} "
-                f"already exists in {stage} environment"
+                f"already exists"
             )
         )
 
@@ -77,7 +74,7 @@ async def deploy_package(
 
     if package_config.runtime != RuntimeType.CONTAINER:
         package_dir = PathManager.get_package_path(package_config.package_name,
-                                                   package_config.version, stage)
+                                                   package_config.version)
         os.makedirs(package_dir, exist_ok=True)
         file_path = os.path.join(package_dir, f"{package_config.package_name}.7z")
 
@@ -89,17 +86,17 @@ async def deploy_package(
     set_active = set_as_default or delete_previous_versions
     metadata = PackageRepository.create_package(
         db_session, package_config.package_name, package_config.version,
-        package_config.python_version, stage,
+        package_config.python_version,
         config_yaml_content, package_config.description, set_active
     )
 
     if delete_previous_versions:
         other_versions = PackageRepository.list_other_package_version(
-            db_session, package_config.package_name, stage, package_config.version)
+            db_session, package_config.package_name, package_config.version)
         for other_version in other_versions:
             package_dir = PathManager.get_package_path(
-                other_version.package_name, other_version.version, other_version.stage)
-            venv_dir = PathManager.get_venv_path(other_version.package_name, other_version.version, other_version.stage)
+                other_version.package_name, other_version.version)
+            venv_dir = PathManager.get_venv_path(other_version.package_name, other_version.version)
             if os.path.exists(package_dir):
                 shutil.rmtree(package_dir, ignore_errors=True)
 
@@ -107,13 +104,12 @@ async def deploy_package(
                 shutil.rmtree(venv_dir, ignore_errors=True)
 
         PackageRepository.delete_other_package_versions(
-            db_session, package_config.package_name, stage, package_config.version)
+            db_session, package_config.package_name, package_config.version)
 
     response_data = {
         "package_name": metadata.package_name,
         "python_version": metadata.python_version,
         "version": metadata.version,
-        "stage": metadata.stage,
         "description": metadata.description,
         "deployed_at": metadata.deployed_at.isoformat(),  # type: ignore
         "deployment_id": metadata.deployment_id,
@@ -133,11 +129,10 @@ async def deploy_package(
 async def set_active_package(
     package_name: str = Form(...),
     version: str = Form(...),
-    stage: str = Form(..., regex=constants.stage_regex_pattern),
     db: Session = Depends(get_db_session),
     _=Depends(authentication.require_operator_or_admin)
 ):
-    success = PackageRepository.set_active_package(db, package_name, version, stage)
+    success = PackageRepository.set_active_package(db, package_name, version)
     if not success:
         raise HTTPException(status_code=404, detail="Package not found")
 
@@ -146,11 +141,10 @@ async def set_active_package(
 
 @router.get("/list")
 async def list_packages(
-    package_name: Optional[str] = None,
-    stage: Optional[str] = None,
+    package_name: str | None = None,
     db: Session = Depends(get_db_session)
 ):
-    packages = PackageRepository.list_packages(db, package_name, stage)
+    packages = PackageRepository.list_packages(db, package_name)
 
     result = []
     for package in packages:
@@ -174,7 +168,6 @@ async def list_packages(
             "package_name": package.package_name,
             "python_version": package.python_version,
             "version": package.version,
-            "stage": package.stage,
             "description": package.description,
             "deployed_at": package.deployed_at.isoformat(),
             "deployment_id": package.deployment_id,
@@ -186,18 +179,17 @@ async def list_packages(
     return result
 
 
-@router.delete("/{package_name}/{stage}/{version}")
+@router.delete("/{package_name}/{version}")
 async def delete_package(
     package_name: str,
-    stage: str,
     version: str,
     db: Session = Depends(get_db_session),
     _=Depends(authentication.require_admin)
 ):
-    package_dir = PathManager.get_package_path(package_name, version, stage)
-    venv_dir = PathManager.get_venv_path(package_name, version, stage)
+    package_dir = PathManager.get_package_path(package_name, version)
+    venv_dir = PathManager.get_venv_path(package_name, version)
 
-    success = PackageRepository.delete_package(db, package_name, version, stage)
+    success = PackageRepository.delete_package(db, package_name, version)
     if success:
         if os.path.exists(package_dir):
             shutil.rmtree(package_dir, ignore_errors=True)
@@ -208,14 +200,13 @@ async def delete_package(
     return {"message": "Package deleted successfully"}
 
 
-@router.get("/{stage}")
+@router.get("/")
 async def get_packages_by_stage(
-    stage: str,
     db: Session = Depends(get_db_session),
     task_manager_service: TaskRepository = get_service(TaskRepository)
 ):
     package_infos: list[PackageInfo] = []
-    packages = PackageRepository.list_packages(db, None, stage)
+    packages = PackageRepository.list_packages(db, None)
 
     # pylint: disable=E1120
     grouped_packages: list[tuple[str, list[PackageEntity]]] = packages | groupby(lambda x: x.package_name)
@@ -244,15 +235,14 @@ async def get_packages_by_stage(
     return package_infos
 
 
-@router.get("/{package_name}/{stage}")
+@router.get("/{package_name}")
 async def get_package_by_stage(
     package_name: str,
-    stage: str,
     db: Session = Depends(get_db_session),
     task_manager_service: TaskRepository = get_service(TaskRepository)
 ):
     package_details: list[PackageDetail] = []
-    packages = PackageRepository.list_packages(db, package_name, stage)
+    packages = PackageRepository.list_packages(db, package_name)
 
     for package in packages:
         tasks_count = task_manager_service.get_tasks_count_by_deployment_id(
@@ -272,16 +262,15 @@ async def get_package_by_stage(
     return package_details
 
 
-@router.get("/{package_name}/{stage}/{version}")
+@router.get("/{package_name}/{version}")
 async def get_package_by_version(
     package_name: str,
-    stage: str,
     version: str,
     db: Session = Depends(get_db_session),
     task_repository: TaskRepository = get_service(TaskRepository),
     task_manager_service: TaskManagerService = get_service(TaskManagerService)
 ):
-    package = PackageRepository.get_package(db, package_name, stage, version)
+    package = PackageRepository.get_package(db, package_name, version)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
 
@@ -317,15 +306,14 @@ async def get_package_by_version(
     return package_instance
 
 
-@router.get("/{package_name}/{stage}/{version}/environment")
+@router.get("/{package_name}/{version}/environment")
 async def get_package_environment(
     package_name: str,
-    stage: str,
     version: str,
     db: Session = Depends(get_db_session),
     _=Depends(authentication.require_admin)
 ):
-    package = PackageRepository.get_package(db, package_name, stage, version)
+    package = PackageRepository.get_package(db, package_name, version)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
 
@@ -337,18 +325,17 @@ async def get_package_environment(
     return environment
 
 
-@router.post("/{package_name}/{stage}/{version}/default")
+@router.post("/{package_name}/{version}/default")
 async def set_default_package(
     package_name: str,
-    stage: str,
     version: str,
     db: Session = Depends(get_db_session),
     _=Depends(authentication.require_admin)
 ):
-    package = PackageRepository.get_package(db, package_name, stage, version)
+    package = PackageRepository.get_package(db, package_name, version)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
 
-    PackageRepository.set_active_package(db, package_name, version, stage)
+    PackageRepository.set_active_package(db, package_name, version)
 
     return {"message": "Package set as default successfully"}

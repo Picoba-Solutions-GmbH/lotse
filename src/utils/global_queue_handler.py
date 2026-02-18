@@ -84,7 +84,7 @@ class TaskQueue:
                 if task_id in self.tasks:
                     del self.tasks[task_id]
 
-    async def wait_for_tasks(self, task_ids: List[str], timeout: Optional[float] = None) -> Dict[str, Any]:
+    async def wait_for_tasks(self, task_ids: list[str], timeout: Optional[float] = None) -> Dict[str, Any]:
         pending = set(task_ids)
         results = {}
         end_time = None if timeout is None else asyncio.get_event_loop().time() + timeout

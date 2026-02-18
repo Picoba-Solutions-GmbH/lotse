@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 
 from src.misc.task_status import TaskStatus
@@ -12,16 +10,15 @@ class TaskInfo(BaseModel):
     package_name: str
     package_version: str
     status: TaskStatus
-    stage: str
     hostname: str
     ip_address: str
-    pid: Optional[int] = None
-    message: Optional[str] = None
-    started_at: Optional[str] = None
-    finished_at: Optional[str] = None
+    pid: int | None = None
+    message: str | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
     is_ui_app: bool = False
-    ui_port: Optional[int] = None
-    original_ui_port: Optional[int] = None
-    vscode_port: Optional[int] = None
-    metrics: Optional[PodMetrics] = None
+    ui_port: int | None = None
+    original_ui_port: int | None = None
+    vscode_port: int | None = None
+    metrics: PodMetrics | None = None
     arguments: list[PackageRequestArgument] = []

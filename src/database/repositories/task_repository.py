@@ -2,7 +2,6 @@ import datetime
 import json
 import os
 import socket
-from typing import List, Optional
 
 import psutil
 from sqlalchemy.orm import joinedload
@@ -16,17 +15,17 @@ from src.models.task_info import TaskInfo
 from src.utils.singleton_meta import SingletonMeta
 
 
-def map_task_entity_to_task_info(task: TaskEntity, message: Optional[str]) -> TaskInfo:
+def map_task_entity_to_task_info(task: TaskEntity, message: str | None) -> TaskInfo:
     arguments: list[PackageRequestArgument] = []
     if task.arguments:
-        arguments = [PackageRequestArgument(**arg) for arg in json.loads(task.arguments)]  # type: ignore
+        raw_json = task.arguments if isinstance(task.arguments, str) else json.dumps(task.arguments)
+        arguments = [PackageRequestArgument(**arg) for arg in json.loads(raw_json)]
 
     return TaskInfo(
         task_id=task.task_id,
         package_name=task.package.package_name,
         package_version=task.package.version,
         status=task.status,  # type: ignore
-        stage=task.stage,
         pid=task.pid,
         started_at=str(task.started_at),
         finished_at=str(task.finished_at) if task.finished_at else None,
@@ -56,7 +55,7 @@ class TaskRepository(metaclass=SingletonMeta):
     def _get_db_session(self):
         return next(get_db_session())
 
-    def get_task(self, task_id: str) -> Optional[TaskEntity]:
+    def get_task(self, task_id: str) -> TaskEntity | None:
         db = self._get_db_session()
         try:
             return (db.query(TaskEntity)
@@ -66,14 +65,13 @@ class TaskRepository(metaclass=SingletonMeta):
         finally:
             db.close()
 
-    def add_task(self, task_id: str, deployment_id: str, stage: str, arguments: list[PackageRequestArgument]) -> None:
+    def add_task(self, task_id: str, deployment_id: str, arguments: list[PackageRequestArgument]) -> None:
         db = self._get_db_session()
         try:
             task = TaskEntity(
                 task_id=task_id,
                 deployment_id=deployment_id,
                 status=TaskStatus.INITIALIZING,
-                stage=stage,
                 started_at=datetime.datetime.now(datetime.timezone.utc),
                 result=None,
                 pid=None,
@@ -86,7 +84,7 @@ class TaskRepository(metaclass=SingletonMeta):
         finally:
             db.close()
 
-    def update_task_pid(self, task_id: str, pid: Optional[int]) -> None:
+    def update_task_pid(self, task_id: str, pid: int | None) -> None:
         db = self._get_db_session()
         try:
             task = (db.query(TaskEntity)
@@ -98,7 +96,7 @@ class TaskRepository(metaclass=SingletonMeta):
         finally:
             db.close()
 
-    def update_task_status(self, task_id: str, status: TaskStatus, result: Optional[dict] = None) -> None:
+    def update_task_status(self, task_id: str, status: TaskStatus, result: dict | None = None) -> None:
         db = self._get_db_session()
         try:
             task = (db.query(TaskEntity)
@@ -120,8 +118,8 @@ class TaskRepository(metaclass=SingletonMeta):
     def update_task_ui_info(self,
                             task_id: str,
                             is_ui_app: bool,
-                            ui_ip_address: Optional[str] = None,
-                            ui_port: Optional[int] = None) -> None:
+                            ui_ip_address: str | None = None,
+                            ui_port: int | None = None) -> None:
         db = self._get_db_session()
         try:
             task = (db.query(TaskEntity)
@@ -186,37 +184,37 @@ class TaskRepository(metaclass=SingletonMeta):
             response_message
         )
 
-    def list_tasks(self, stage: str) -> List[TaskInfo]:
+    def list_tasks(self) -> list[TaskInfo]:
         db = self._get_db_session()
         try:
-            tasks = (db.query(TaskEntity)
-                     .options(joinedload(TaskEntity.package))
-                     .filter(TaskEntity.stage == stage)
-                     .all())
+            tasks: list[TaskEntity] = (db.query(TaskEntity)
+                                       .options(joinedload(TaskEntity.package))
+                                       .all())
 
             return [
                 map_task_entity_to_task_info(
                     task,
-                    "Result available" if task.result else None
+                    "Result available" if task and task.result else None
                 )
                 for task in tasks
             ]
         finally:
             db.close()
 
-    def get_running_tasks(self) -> List[TaskInfo]:
+    def get_running_tasks(self) -> list[TaskInfo]:
         db = self._get_db_session()
         try:
-            tasks = (db.query(TaskEntity)
-                     .options(joinedload(TaskEntity.package))
-                     .filter(
-                         TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
-            )
+            tasks: list[TaskEntity] = (
+                db.query(TaskEntity)
+                .options(joinedload(TaskEntity.package))
+                .filter(
+                    TaskEntity.status.in_([TaskStatus.RUNNING, TaskStatus.INITIALIZING])
+                )
                 .all())
             return [
                 map_task_entity_to_task_info(
                     task,
-                    "Result available" if task.result else None
+                    "Result available" if task and task.result else None
                 )
                 for task in tasks
             ]

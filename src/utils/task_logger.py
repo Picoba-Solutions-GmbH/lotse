@@ -2,7 +2,6 @@ import logging
 import os
 import platform
 from pathlib import Path
-from typing import List
 
 from src.utils import config
 
@@ -46,7 +45,7 @@ class TaskLogger:
         self.loggers[task_id] = logger
         return logger
 
-    def get_logs(self, task_id: str) -> List[str]:
+    def get_logs(self, task_id: str) -> list[str]:
         log_file = self.get_log_file_path(task_id)
         if not log_file.exists():
             return []

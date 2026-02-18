@@ -1,7 +1,6 @@
 import asyncio
 import re
 from logging import Logger
-from typing import List, Optional
 
 from kubernetes import client
 
@@ -59,7 +58,7 @@ async def match_port(pod_name: str, line: str, api: client.CoreV1Api,
 
 
 async def watch_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
-                    task_logger: Logger, task_id: str, task_manager: TaskRepository) -> Optional[int]:
+                    task_logger: Logger, task_id: str, task_manager: TaskRepository) -> int | None:
     port_matched = False
     while True:
         container_exists = await check_container_exists(api, namespace, pod_name)
@@ -76,8 +75,8 @@ async def watch_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
 
 
 def start_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
-              args: List[str], task_logger: Logger, task_id: str, task_manager: TaskRepository,
-              runtime: Optional[RuntimeType] = RuntimeType.PYTHON) -> Optional[int]:
+              args: list[str], task_logger: Logger, task_id: str, task_manager: TaskRepository,
+              runtime: RuntimeType | None = RuntimeType.PYTHON) -> int | None:
     pre_start_command = None
     match runtime:
         case RuntimeType.PYTHON:

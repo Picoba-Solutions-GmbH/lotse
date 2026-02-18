@@ -28,11 +28,6 @@ interface CustomArgument {
   value: string;
 }
 
-enum Stage {
-  dev = "dev",
-  prod = "prod",
-}
-
 @Component({
   selector: 'app-package-execution',
   templateUrl: './package-execution.component.html',
@@ -108,8 +103,7 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
 
   async loadTasksAsync(): Promise<void> {
     try {
-      const stage = localStorage.getItem('stage') || 'dev';
-      this.tasks = await this.taskService.getTasksAsync(stage);
+      this.tasks = await this.taskService.getTasksAsync();
     } catch (error) {
       this.showError('Failed to load tasks');
     }
@@ -152,10 +146,8 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
       args.push({ name: arg.name, value: arg.value });
     }
 
-    const stage = localStorage.getItem('stage') || 'dev';
     const request: PackageRequest = {
       package_name: this.selectedPackage.package_name,
-      stage: stage,
       arguments: args,
       wait_for_completion: this.waitForCompletion,
     };

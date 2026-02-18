@@ -1,7 +1,7 @@
 import asyncio
 import os
 from enum import Enum
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import httpx
 import websockets
@@ -28,7 +28,7 @@ _vscode_task_id_cache = {}
 T = TypeVar('T')
 
 
-def get_task_info(task_id: str, task_manager: TaskRepository, cache_type: ProxyCacheType) -> Optional[dict]:
+def get_task_info(task_id: str, task_manager: TaskRepository, cache_type: ProxyCacheType) -> dict | None:
     cache_map = {
         ProxyCacheType.PROXY: (_proxy_task_id_cache, lambda t: t.ui_port if isinstance(t, TaskEntity) else None),
         ProxyCacheType.VSCODE: (_vscode_task_id_cache, lambda t: t.vscode_port if isinstance(t, TaskEntity) else None)
@@ -222,7 +222,7 @@ async def forward_ws(source, destination, direction):
 
 async def proxy_404_forwarder(
         request: Request,
-        referer: str) -> Optional[StreamingResponse]:
+        referer: str) -> StreamingResponse | None:
     task_manager = get_service_instance(TaskRepository)
     cache_type_map = {
         "/proxy/": ProxyCacheType.PROXY,

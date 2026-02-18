@@ -34,7 +34,7 @@ class PodExecutor:
 
     @staticmethod
     def run_command(api: client.CoreV1Api, namespace: str, pod_name: str,
-                    command: List[str], callback: Optional[Callable[[str], bool]] = None) -> Optional[int]:
+                    command: list[str], callback: Optional[Callable[[str], bool]] = None) -> int | None:
         with k8s_api_lock:
             resp = stream(
                 api.connect_get_namespaced_pod_exec,

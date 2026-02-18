@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, Union
+from typing import Union
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -17,14 +17,14 @@ from src.utils.singleton_meta import get_service
 router = APIRouter(prefix="/execute", tags=["execute"])
 
 
-async def execute_package(package_name: str, version: Optional[str], stage: str, arguments: list,
+async def execute_package(package_name: str, version: str | None, arguments: list,
                           wait_for_completion: bool,
                           redirect_to_ui: bool,
                           task_manager: TaskRepository,
                           k8s_manager_service: TaskManagerService,
                           empty_instance: bool
                           ) -> Union[SyncExecutionResponse, AsyncExecutionResponse, RedirectResponse]:
-    task_id = await k8s_manager_service.execute_package_async(package_name, stage, version, arguments, empty_instance)
+    task_id = await k8s_manager_service.execute_package_async(package_name, version, arguments, empty_instance)
 
     if wait_for_completion:
         while True:
@@ -76,11 +76,10 @@ async def execute_package(package_name: str, version: Optional[str], stage: str,
         )
 
 
-@router.get("/{package_name}/default/{stage}",
+@router.get("/{package_name}/default",
             response_model=Union[SyncExecutionResponse, AsyncExecutionResponse])
 async def execute_package_get(
         package_name: str,
-        stage: str,
         request: Request,
         task_manager: TaskRepository = get_service(TaskRepository),
         k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
@@ -92,7 +91,6 @@ async def execute_package_get(
     return await execute_package(
         package_name=package_name,
         version=None,
-        stage=stage,
         arguments=arguments,
         wait_for_completion=wait_for_completion,
         redirect_to_ui=redirect_to_ui,
@@ -102,12 +100,11 @@ async def execute_package_get(
     )
 
 
-@router.get("/{package_name}/{version}/{stage}",
+@router.get("/{package_name}/{version}",
             response_model=Union[SyncExecutionResponse, AsyncExecutionResponse])
 async def execute_versioned_package_get(
         package_name: str,
         version: str,
-        stage: str,
         request: Request,
         task_manager: TaskRepository = get_service(TaskRepository),
         k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
@@ -119,7 +116,6 @@ async def execute_versioned_package_get(
     return await execute_package(
         package_name=package_name,
         version=version,
-        stage=stage,
         arguments=arguments,
         wait_for_completion=wait_for_completion,
         redirect_to_ui=redirect_to_ui,
@@ -137,7 +133,6 @@ async def execute_package_post(
     return await execute_package(
         package_name=request.package_name,
         version=request.version,
-        stage=request.stage,
         arguments=request.arguments,
         wait_for_completion=request.wait_for_completion,
         redirect_to_ui=False,
@@ -155,7 +150,6 @@ async def execute_empty_instance(
     return await execute_package(
         package_name=request.package_name,
         version=request.version,
-        stage=request.stage,
         arguments=request.arguments,
         wait_for_completion=request.wait_for_completion,
         redirect_to_ui=False,

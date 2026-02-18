@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 class PathManager:
     @staticmethod
-    def get_venv_path(package_name: str, version: str, stage: str) -> Path:
+    def get_venv_path(package_name: str, version: str) -> Path:
         sanitized_package_name = sanitize_name(package_name)
-        versioned_path = Path(os.path.join(config.VENVS_ROOT, sanitized_package_name, version, stage))
+        versioned_path = Path(os.path.join(config.VENVS_ROOT, sanitized_package_name, version))
         return versioned_path
 
     @staticmethod
-    def get_package_path(package_name: str, version: str, stage: str) -> Path:
+    def get_package_path(package_name: str, version: str) -> Path:
         sanitized_package_name = sanitize_name(package_name)
-        package_path = Path(os.path.join(config.PACKAGES_ROOT, sanitized_package_name, version, stage))
+        package_path = Path(os.path.join(config.PACKAGES_ROOT, sanitized_package_name, version))
         return package_path

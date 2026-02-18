@@ -55,8 +55,7 @@ export class PackagesOverviewComponent implements OnInit {
   }
 
   async loadPackages(): Promise<void> {
-    const stage = localStorage.getItem('stage') || 'dev';
-    this.packages = await this.packageService.getAllPackagesOverviewAsync(stage);
+    this.packages = await this.packageService.getAllPackagesOverviewAsync();
   }
 
   onPackageSelect(clickedPackage: PackageInfo): void {
