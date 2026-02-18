@@ -17,7 +17,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
 
     Write-Host "Building the project..." -ForegroundColor Cyan
-    & ng build --base-href /lotse/ui/
+    & ng build --base-href /ui/
 
     if ($LASTEXITCODE -ne 0) { throw "npm build failed" }
 

@@ -79,7 +79,7 @@ spec:
               mountPath: /var/Kubernetes/Lotse
           env:
             - name: OPENAPI_PREFIX_PATH
-              value: /lotse
+              value: ""
             - name: POSTGRES_HOST
               value: "postgres"
             - name: POSTGRES_USER
@@ -144,19 +144,6 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      if ($http_referer ~* ".*proxy.*") {
-          set $should_rewrite 1;
-      }
-
-      if ($uri ~* "^/lotse") {
-          set $should_rewrite 0;
-      }
-
-      if ($should_rewrite = 1) {
-          rewrite ^/(.*)$ /lotse/$1 break;
-      }
   labels:
     app.kubernetes.io/name: lotse
   name: lotse
@@ -164,16 +151,9 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: kubernetes.docker.internal
+    - host: lotse.kubernetes.docker.internal
       http:
         paths:
-          - path: /lotse(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: lotse
-                port:
-                  number: 8000
           - path: /
             pathType: Prefix
             backend:
