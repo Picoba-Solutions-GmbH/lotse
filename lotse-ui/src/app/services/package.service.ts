@@ -2,7 +2,6 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Runtime } from '../misc/Runtime';
 import { PackageDetail, PackageInfo, PackageInstance } from '../models/Package';
 import { PackageEnvironment } from '../models/PackageEnvironment';
 import { RepositoryConfig as PackageConfig } from '../models/RepositoryConfig';
@@ -18,7 +17,7 @@ export class PackageService {
   }
 
   async getAllPackagesOverviewAsync(): Promise<PackageInfo[]> {
-    return await firstValueFrom(this.http.get<PackageInfo[]>(`${environment.url}/packages`));
+    return await firstValueFrom(this.http.get<PackageInfo[]>(`${environment.url}/packages/`));
   }
 
   async getPackageOverviewAsync(packageName: string): Promise<PackageDetail[]> {
