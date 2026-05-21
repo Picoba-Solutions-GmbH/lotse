@@ -10,71 +10,108 @@
     </div>
     }
 
-    <div class="mb-4 flex justify-between items-center">
+    <div class="mb-6 flex justify-between items-center">
         <div>
-            <h1 class="text-3xl font-bold text-color-muted mb-2">{{ packageName }}</h1>
-            <p class="text-color-muted">Manage and monitor Versions for {{ packageName }}</p>
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">{{ packageName }}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Manage and monitor Versions for {{ packageName }}</p>
         </div>
-        <p-button label="Deploy New Version" [icon]="PrimeIcons.PLUS" (onClick)="showDeployPackageDialog()"
-            *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+        <p-button label="Deploy New Version" [icon]="PrimeIcons.UPLOAD" (onClick)="showDeployPackageDialog()"
+            size="small" *hasRole="[Role.ADMIN, Role.OPERATOR]" />
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4">
-        <p-card styleClass="bg-blue-50 dark:bg-blue-950">
-            <div class="text-center">
-                <i class="text-2xl text-blue-500 mb-2" [ngClass]="PrimeIcons.BOX"></i>
-                <h3 class="font-bold">Total Versions</h3>
-                <p class="text-2xl">{{ packages.length }}</p>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div
+            class="flex items-center gap-4 p-5 bg-[var(--p-content-background)] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="flex items-center justify-center w-11 h-11 rounded-lg bg-blue-500/10 shrink-0">
+                <i class="text-lg text-blue-500" [ngClass]="PrimeIcons.BOX"></i>
             </div>
-        </p-card>
-        <p-card styleClass="bg-green-50 dark:bg-green-900">
-            <div class="text-center">
-                <i class="text-2xl text-green-500 mb-2" [ngClass]="PrimeIcons.CHECK_CIRCLE"></i>
-                <h3 class="font-bold">Running</h3>
-
-                <p class="text-2xl">{{ packages | packageCountByStatePipe:PackageStatus.RUNNING }}</p>
+            <div>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Total
+                    Versions</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-50">{{ packages.length }}</p>
             </div>
-        </p-card>
-        <p-card styleClass="bg-yellow-50 dark:bg-yellow-900">
-            <div class="text-center">
-                <i class="text-2xl text-yellow-500 mb-2" [ngClass]="PrimeIcons.REFRESH"></i>
-                <h3 class="font-bold">Initializing</h3>
-                <p class="text-2xl">{{ packages | packageCountByStatePipe:PackageStatus.INITIALIZING }}</p>
+        </div>
+        <div
+            class="flex items-center gap-4 p-5 bg-[var(--p-content-background)] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="flex items-center justify-center w-11 h-11 rounded-lg bg-green-500/10 shrink-0">
+                <i class="text-lg text-green-500" [ngClass]="PrimeIcons.CHECK_CIRCLE"></i>
             </div>
-        </p-card>
-        <p-card styleClass="bg-gray-50 dark:bg-gray-900">
-            <div class="text-center">
-                <i class="text-2xl text-gray-500 mb-2" [ngClass]="PrimeIcons.CLOCK"></i>
-                <h3 class="font-bold">Idle</h3>
-                <p class="text-2xl">{{ packages | packageCountByStatePipe:PackageStatus.IDLE }}</p>
+            <div>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Running
+                </p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-50">{{ packages |
+                    packageCountByStatePipe:PackageStatus.RUNNING }}</p>
             </div>
-        </p-card>
+        </div>
+        <div
+            class="flex items-center gap-4 p-5 bg-[var(--p-content-background)] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="flex items-center justify-center w-11 h-11 rounded-lg bg-amber-500/10 shrink-0">
+                <i class="text-lg text-amber-500" [ngClass]="PrimeIcons.REFRESH"></i>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
+                    Initializing</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-50">{{ packages |
+                    packageCountByStatePipe:PackageStatus.INITIALIZING }}</p>
+            </div>
+        </div>
+        <div
+            class="flex items-center gap-4 p-5 bg-[var(--p-content-background)] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="flex items-center justify-center w-11 h-11 rounded-lg bg-gray-500/10 shrink-0">
+                <i class="text-lg text-gray-500" [ngClass]="PrimeIcons.CLOCK"></i>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Idle</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-50">{{ packages |
+                    packageCountByStatePipe:PackageStatus.IDLE }}</p>
+            </div>
+        </div>
     </div>
 
-    <p-card styleClass="border border-solid border-gray-200 dark:border-gray-700">
-        <p-table [value]="packages" [scrollable]="true" [sortField]="'version'" [sortOrder]="1"
-            styleClass="p-datatable-sm" columnResizeMode="fit" [resizableColumns]="true" selectionMode="single"
+    <div
+        class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+
+        <!-- Table toolbar -->
+        <div
+            class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20">
+            <div class="relative">
+                <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    style="font-size:11px"></i>
+                <input type="text" (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+                    placeholder="Search versions..."
+                    class="pl-8 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 w-52 transition-all" />
+            </div>
+            <p-button [icon]="PrimeIcons.REFRESH" (onClick)="loadPackages()" [text]="true" size="small"
+                severity="secondary" pTooltip="Refresh" />
+        </div>
+
+        <p-table #dt [value]="packages" [globalFilterFields]="['version', 'status']" [scrollable]="true"
+            [sortField]="'version'" [sortOrder]="1" styleClass="p-datatable-sm" selectionMode="single"
             [(selection)]="selectedPackage" dataKey="id" [paginator]="true" [rows]="10" [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} packages">
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} versions">
 
             <ng-template pTemplate="header">
                 <tr>
-                    <th>Version</th>
-                    <th>Status</th>
-                    <th>Instances</th>
-                    <th>Creation Date</th>
+                    <th pSortableColumn="version">Version <p-sortIcon field="version" /></th>
+                    <th pSortableColumn="status">Status <p-sortIcon field="status" /></th>
+                    <th pSortableColumn="instances">Instances <p-sortIcon field="instances" /></th>
+                    <th pSortableColumn="creation_date">Created <p-sortIcon field="creation_date" /></th>
                     <th>Default</th>
-                    <th>Actions</th>
+                    <th class="w-24">Actions</th>
                 </tr>
             </ng-template>
 
             <ng-template pTemplate="body" let-package>
-                <tr class="hover:surface-50 cursor-pointer transition-colors duration-200"
+                <tr class="cursor-pointer transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-800/40"
                     (click)="onPackageSelect(package)">
                     <td>
-                        <div class="flex items-center gap-2">
-                            <i [ngClass]="PrimeIcons.BOX"></i>
-                            {{ package.version }}
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 dark:bg-gray-800 shrink-0">
+                                <i class="pi pi-tag text-sm text-gray-400 dark:text-gray-500"></i>
+                            </div>
+                            <span class="font-mono font-medium text-gray-900 dark:text-gray-100 text-sm">{{
+                                package.version }}</span>
                         </div>
                     </td>
                     <td>
@@ -82,39 +119,37 @@
                             [value]="package.status | titlecase" />
                     </td>
                     <td>
-                        <div class="flex items-center gap-2">
-                            <i [ngClass]="PrimeIcons.SERVER"></i>
-                            {{ package.instances }}
-                        </div>
+                        <span class="text-gray-700 dark:text-gray-300">{{ package.instances }}</span>
                     </td>
                     <td>
-                        <div class="flex items-center gap-2">
-                            <i [ngClass]="PrimeIcons.CALENDAR"></i>
-                            {{ package.creation_date | date: "YY.MM.dd HH:mm:ss" }}
-                        </div>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">{{ package.creation_date | date: "dd
+                            MMM yy, HH:mm" }}</span>
                     </td>
                     <td>
-                        <div class="flex items-center justify-content-center">
-                            @if (package.is_default) {
-                            <i [ngClass]="PrimeIcons.CHECK_CIRCLE" class="text-green-500"></i>
-                            } @else {
-                            <span class="text-gray-400">—</span>
-                            }
-                        </div>
+                        @if (package.is_default) {
+                        <span
+                            class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <i class="pi pi-check-circle text-xs"></i> Default
+                        </span>
+                        } @else {
+                        <span class="text-gray-300 dark:text-gray-600">—</span>
+                        }
                     </td>
                     <td>
-                        <div class="flex gap-2">
+                        <div class="flex gap-1" (click)="$event.stopPropagation()">
                             @if (!package.is_default) {
                             <ng-container *hasRole="[Role.ADMIN, Role.OPERATOR]">
-                                <p-button [icon]="PrimeIcons.STAR_FILL" size="small" rounded severity="info"
-                                    pTooltip="Set as Default"
-                                    (onClick)="$event.stopPropagation(); setAsDefaultVersion(package)" />
+                                <button class="icon-action-btn text-blue-400" pTooltip="Set as default"
+                                    (click)="setAsDefaultVersion(package)">
+                                    <i class="pi pi-star text-xs"></i>
+                                </button>
                             </ng-container>
                             }
                             <ng-container *hasRole="[Role.ADMIN]">
-                                <p-button [icon]="PrimeIcons.TRASH" size="small" rounded severity="danger"
-                                    pTooltip="Delete"
-                                    (onClick)="$event.stopPropagation(); deletePackageVersion(package)" />
+                                <button class="icon-action-btn text-red-400" pTooltip="Delete version"
+                                    (click)="deletePackageVersion(package)">
+                                    <i class="pi pi-trash text-xs"></i>
+                                </button>
                             </ng-container>
                         </div>
                     </td>
@@ -123,14 +158,21 @@
 
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="6" class="text-center p-8">
-                        <i class="text-5xl text-gray-300 mb-4" [ngClass]="PrimeIcons.INBOX"></i>
-                        <p class="text-gray-500">No packages found</p>
+                    <td colspan="6">
+                        <div class="flex flex-col items-center py-16 text-center">
+                            <div
+                                class="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                                <i class="pi pi-inbox text-2xl text-gray-400 dark:text-gray-500"></i>
+                            </div>
+                            <p class="font-medium text-gray-500 dark:text-gray-400 mb-1">No versions deployed</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Deploy a new version to get started</p>
+                        </div>
                     </td>
                 </tr>
             </ng-template>
         </p-table>
-    </p-card>
+
+    </div>
 
     <app-package-deploy #packageDeploy [packageName]="packageName" (packageDeployed)="onPackageDeployed()"
         [setAsDefault]="packages.length === 0" [availablePackageVersions]="availablePackageVersions" />

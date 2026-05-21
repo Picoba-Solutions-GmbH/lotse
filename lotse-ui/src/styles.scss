@@ -10,18 +10,55 @@
 
 @import "xterm/css/xterm.css";
 
+// ── Base ─────────────────────────────────────────────────────────────────────
+
 html,
 body {
   height: 100%;
   margin: 0;
   overflow: hidden;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+// ── Scrollbars ───────────────────────────────────────────────────────────────
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(156 163 175 / 0.35);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156 163 175 / 0.55);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(75 85 99 / 0.45);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(75 85 99 / 0.7);
+}
+
+// ── Layout helpers ───────────────────────────────────────────────────────────
 
 .scrollable-content {
   height: 100%;
   max-height: 100%;
   overflow: auto;
 }
+
+// ── PrimeNG scrollpanel custom scrollbar ─────────────────────────────────────
 
 html:not(.dark) {
   .custom-scroll {
@@ -40,22 +77,41 @@ html:not(.dark) {
   }
 }
 
+// ── Log viewer ───────────────────────────────────────────────────────────────
+
 .log-container {
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 1rem;
+  background: var(--p-surface-950);
+  border: 1px solid var(--p-surface-800);
+
+  html:not(.dark) & {
+    background: var(--p-surface-50);
+    border-color: var(--p-surface-200);
+  }
 
   .log-line {
-    font-family: monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
     white-space: pre-wrap;
-    margin-bottom: 0.25rem;
+    margin-bottom: 2px;
+    color: rgb(209 213 219); // gray-300
+
+    html:not(.dark) & {
+      color: rgb(31 41 55); // gray-800
+    }
   }
 }
+
+// ── SVG icons ────────────────────────────────────────────────────────────────
 
 .svgl {
   width: 14.4px;
   height: 16px;
   scale: 1.4;
 }
+
+// ── Drag-and-drop overlay ────────────────────────────────────────────────────
 
 .drop-overlay {
   position: absolute;
@@ -65,10 +121,72 @@ html:not(.dark) {
   bottom: -0.5rem;
   backdrop-filter: blur(0.25rem);
   border-radius: 0.75rem;
-  border: 0.125rem dashed var(--p-primary-color);
+  border: 2px dashed var(--p-primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   pointer-events: none;
 }
+
+// ── Icon action button ───────────────────────────────────────────────────────
+
+.icon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  color: rgb(156 163 175); // gray-400
+
+  &:hover:not(:disabled) {
+    background: rgba(0 0 0 / 0.06);
+    color: rgb(55 65 81); // gray-700
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  html.dark & {
+    &:hover:not(:disabled) {
+      background: rgba(255 255 255 / 0.08);
+      color: rgb(229 231 235); // gray-200
+    }
+  }
+}
+
+// ── PrimeNG table refinements ─────────────────────────────────────────────────
+
+.p-datatable {
+  // Override PrimeNG DataTable's own surface tokens so every layer
+  // inherits the parent panel background instead of painting its own.
+  --p-datatable-header-background: transparent;
+  --p-datatable-header-cell-background: transparent;
+  --p-datatable-body-row-background: transparent;
+  --p-datatable-footer-background: transparent;
+  --p-datatable-paginator-background: transparent;
+  --p-datatable-body-row-even-background: transparent;
+
+  background: transparent;
+
+  .p-datatable-table-container {
+    background: transparent;
+  }
+
+  .p-datatable-thead > tr > th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}
+

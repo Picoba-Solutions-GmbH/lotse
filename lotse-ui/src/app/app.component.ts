@@ -8,10 +8,7 @@ import { MenuItem, MessageService, PrimeIcons } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { MenubarModule } from 'primeng/menubar';
-import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { filter, firstValueFrom as firstValueFromAsync } from 'rxjs';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { Role } from './misc/Role';
@@ -27,11 +24,8 @@ import './utils/global-functions';
     CommonModule,
     FormsModule,
     ToastModule,
-    MenubarModule,
     RouterModule,
     ButtonModule,
-    ToggleSwitchModule,
-    SelectButtonModule,
     ConfirmDialogModule,
     NgIcon
   ],
@@ -49,6 +43,14 @@ export class AppComponent implements OnInit {
   currentRoute: string = '';
   isDarkMode: boolean = false;
   PrimeIcons = PrimeIcons;
+
+  sidebarOpen = false;
+  sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+  toggleCollapse(): void {
+    this.sidebarCollapsed = !this.sidebarCollapsed;
+    localStorage.setItem('sidebarCollapsed', String(this.sidebarCollapsed));
+  }
 
   original_items: MenuItem[] = [
     {
@@ -150,9 +152,15 @@ export class AppComponent implements OnInit {
       width: '300px',
     });
 
-    ref.onClose.subscribe(async (result: { username: string; password: string } | undefined) => {
+    ref.onClose.subscribe((result: boolean | undefined) => {
       if (result) {
-        await this.loginAsync(result.username, result.password);
+        this.isLoggedIn = true;
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Logged in successfully',
+          life: 3000,
+        });
       }
     });
   }

@@ -1,11 +1,11 @@
 <ng-container *hasRole="[Role.ADMIN]">
     <div class="flex flex-col xl:overflow-hidden relative w-full min-h-full h-full">
-        <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
-                <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted mb-2">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">
                     Kubernetes Cluster
                 </h1>
-                <p class="text-color-muted text-sm md:text-base">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
                     View and manage Kubernetes cluster resources
                 </p>
             </div>
@@ -18,186 +18,180 @@
         <p-selectButton [options]="viewTypes" [(ngModel)]="selectedView" (onChange)="onViewChange()"
             styleClass="mb-3" />
 
-        <p-card styleClass="mb-4">
-            <div class="card">
-                @if (selectedView === 'namespaces') {
-                <p-table [value]="namespaces" [loading]="namespacesLoading" [paginator]="true" [rows]="10"
-                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Namespace</th>
-                            <th>Status</th>
-                            <th>Age</th>
-                        </tr>
-                    </ng-template>
+        <div
+            class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+            @if (selectedView === 'namespaces') {
+            <p-table [value]="namespaces" [loading]="namespacesLoading" [paginator]="true" [rows]="10"
+                styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Namespace</th>
+                        <th>Status</th>
+                        <th>Age</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-namespace>
-                        <tr>
-                            <td>
-                                <span class="font-semibold cursor-pointer hover:text-blue-500"
-                                    (click)="navigateToNamespacePods(namespace.name)">
-                                    {{ namespace.name }}
-                                </span>
-                            </td>
-                            <td>
-                                <p-tag [severity]="namespace.status === 'Active' ? 'success' : 'warn'"
-                                    [value]="namespace.status"></p-tag>
-                            </td>
-                            <td>{{ namespace.creationTimestamp | age }}</td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-namespace>
+                    <tr>
+                        <td>
+                            <span class="font-semibold cursor-pointer hover:text-blue-500"
+                                (click)="navigateToNamespacePods(namespace.name)">
+                                {{ namespace.name }}
+                            </span>
+                        </td>
+                        <td>
+                            <p-tag [severity]="namespace.status === 'Active' ? 'success' : 'warn'"
+                                [value]="namespace.status"></p-tag>
+                        </td>
+                        <td>{{ namespace.creationTimestamp | age }}</td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="4" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="3">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (namespacesLoading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading namespaces...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading namespaces…</p>
                                 } @else {
-                                <div>
-                                    <span>No namespaces found</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No namespaces found</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedView === 'nodes') {
-                <p-table [value]="nodes" [loading]="loading" [showLoader]="false" styleClass="p-datatable-sm">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Roles</th>
-                            <th>Addresses</th>
-                            <th>CPU</th>
-                            <th>Memory</th>
-                            <th>Version</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-node>
-                        <tr>
-                            <td>{{ node.name }}</td>
-                            <td>
-                                <p-tag [severity]="getNodeStatusSeverity(node.status)" [value]="node.status"></p-tag>
-                            </td>
-                            <td>{{ node.roles.join(', ') }}</td>
-                            <td>
-                                <div *ngFor="let address of getAddressPairs(node)">
-                                    {{ address.type }}: {{ address.value }}
-                                </div>
-                            </td>
-                            <td>{{ node.cpu }}</td>
-                            <td>{{ node.memory }}</td>
-                            <td>{{ node.kubeletVersion }}</td>
-                            <td>{{ node.creationTimestamp | age }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewYAML(node, 'node')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom" (click)="describe(node, 'node')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+            @if (selectedView === 'nodes') {
+            <p-table [value]="nodes" [loading]="loading" [showLoader]="false" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Roles</th>
+                        <th>Addresses</th>
+                        <th>CPU</th>
+                        <th>Memory</th>
+                        <th>Version</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-node>
+                    <tr>
+                        <td>{{ node.name }}</td>
+                        <td>
+                            <p-tag [severity]="getNodeStatusSeverity(node.status)" [value]="node.status"></p-tag>
+                        </td>
+                        <td>{{ node.roles.join(', ') }}</td>
+                        <td>
+                            <div *ngFor="let address of getAddressPairs(node)">
+                                {{ address.type }}: {{ address.value }}
+                            </div>
+                        </td>
+                        <td>{{ node.cpu }}</td>
+                        <td>{{ node.memory }}</td>
+                        <td>{{ node.kubeletVersion }}</td>
+                        <td>{{ node.creationTimestamp | age }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button class="icon-action-btn" title="View YAML" (click)="viewYAML(node, 'node')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe" (click)="describe(node, 'node')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedView === 'persistentvolumes') {
-                <p-table [value]="persistentVolumes" [loading]="loading" [showLoader]="false"
-                    styleClass="p-datatable-sm">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Capacity</th>
-                            <th>Access Modes</th>
-                            <th>Reclaim Policy</th>
-                            <th>Storage Class</th>
-                            <th>Claim</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-pv>
-                        <tr>
-                            <td>{{ pv.name }}</td>
-                            <td>
-                                <p-tag [severity]="getPvStatusSeverity(pv.status)" [value]="pv.status"></p-tag>
-                            </td>
-                            <td>{{ pv.capacity }}</td>
-                            <td>{{ pv.accessModes.join(', ') }}</td>
-                            <td>{{ pv.reclaimPolicy }}</td>
-                            <td>{{ pv.storageClass }}</td>
-                            <td>{{ pv.claim || '-' }}</td>
-                            <td>{{ pv.creationTimestamp | age }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewYAML(pv, 'persistentvolume')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom" (click)="describe(pv, 'persistentvolume')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
-            </div>
-        </p-card>
+            @if (selectedView === 'persistentvolumes') {
+            <p-table [value]="persistentVolumes" [loading]="loading" [showLoader]="false" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Capacity</th>
+                        <th>Access Modes</th>
+                        <th>Reclaim Policy</th>
+                        <th>Storage Class</th>
+                        <th>Claim</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-pv>
+                    <tr>
+                        <td>{{ pv.name }}</td>
+                        <td>
+                            <p-tag [severity]="getPvStatusSeverity(pv.status)" [value]="pv.status"></p-tag>
+                        </td>
+                        <td>{{ pv.capacity }}</td>
+                        <td>{{ pv.accessModes.join(', ') }}</td>
+                        <td>{{ pv.reclaimPolicy }}</td>
+                        <td>{{ pv.storageClass }}</td>
+                        <td>{{ pv.claim || '-' }}</td>
+                        <td>{{ pv.creationTimestamp | age }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewYAML(pv, 'persistentvolume')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe"
+                                    (click)="describe(pv, 'persistentvolume')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
+        </div>
     </div>
 </ng-container>
 
-<p-dialog [(visible)]="showYAMLDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}" [header]="'YAML'">
-    <div class="flex flex-col w-full h-full overflow-hidden">
-        <div
-            class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
-            @if (resourceYAML) {
-            <pre
-                class="font-mono text-sm text-black dark:text-white whitespace-pre overflow-auto">{{ resourceYAML }}</pre>
+<p-dialog [(visible)]="showYAMLDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}" [header]="'YAML'"
+    maximizable="true">
+    <div class="log-container overflow-y-auto" style="height:calc(80vh - 110px)">
+        @if (resourceYAML) {
+        <pre class="log-line whitespace-pre overflow-auto">{{ resourceYAML }}</pre>
+        } @else {
+        <div class="flex flex-col items-center py-10 text-center">
+            @if (yamlLoading) {
+            <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-2"></i>
+            <span class="text-sm text-gray-500">Loading YAML…</span>
             } @else {
-            <div class="p-3 text-center">
-                @if (yamlLoading) {
-                <div class="flex flex-col items-center">
-                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                    <span>Loading yaml...</span>
-                </div>
-                } @else {
-                <p>No yaml available</p>
-                }
-            </div>
+            <i class="pi pi-file text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+            <p class="text-sm text-gray-400 dark:text-gray-500">No YAML available</p>
             }
         </div>
+        }
     </div>
 </p-dialog>
 
 <p-dialog [(visible)]="showDescribeDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
-    [header]="'Describe'">
-    <div class="flex flex-col w-full h-full overflow-hidden">
-        <div
-            class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
-            @if (resourceDescription) {
-            <pre
-                class="font-mono text-sm text-black dark:text-white whitespace-pre overflow-auto">{{ resourceDescription }}</pre>
+    [header]="'Describe'" maximizable="true">
+    <div class="log-container overflow-y-auto" style="height:calc(80vh - 110px)">
+        @if (resourceDescription) {
+        <pre class="log-line whitespace-pre overflow-auto">{{ resourceDescription }}</pre>
+        } @else {
+        <div class="flex flex-col items-center py-10 text-center">
+            @if (describeLoading) {
+            <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-2"></i>
+            <span class="text-sm text-gray-500">Loading description…</span>
             } @else {
-            <div class="p-3 text-center">
-                @if (describeLoading) {
-                <div class="flex flex-col items-center">
-                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                    <span>Loading description...</span>
-                </div>
-                } @else {
-                <p>No description available</p>
-                }
-            </div>
+            <i class="pi pi-info-circle text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+            <p class="text-sm text-gray-400 dark:text-gray-500">No description available</p>
             }
         </div>
+        }
     </div>
 </p-dialog>

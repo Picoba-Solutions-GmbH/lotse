@@ -1,15 +1,15 @@
 <ng-container *hasRole="[Role.ADMIN]">
     <div class="flex flex-col xl:overflow-hidden relative w-full min-h-full h-full">
-        <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
-                <div class="flex items-center mb-2 items-start">
+                <div class="flex items-center mb-1">
                     <p-button [icon]="PrimeIcons.ARROW_LEFT" rounded text size="small" styleClass="mr-2"
                         (click)="navigateBack()" pTooltip="Back to Namespaces" />
-                    <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-color-muted">
+                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50">
                         Namespace: {{ namespace }}
                     </h1>
                 </div>
-                <p class="text-color-muted text-sm md:text-base">
+                <p class="text-sm text-gray-500 dark:text-gray-400 ml-10">
                     Viewing and managing resources in the {{ namespace }} namespace
                 </p>
             </div>
@@ -21,479 +21,522 @@
         <p-selectButton [options]="resourceTypes" [(ngModel)]="selectedResourceType" (onChange)="onResourceTypeChange()"
             optionValue="value" optionLabel="label" styleClass="mb-3"></p-selectButton>
 
-        <p-card styleClass="mb-4">
-            <div class="card">
-                @if (selectedResourceType === 'pods') {
-                <p-table [value]="pods" [loading]="loading" [paginator]="true" [rows]="10" styleClass="p-datatable-sm"
-                    responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Ready</th>
-                            <th>Status</th>
-                            <th>Restarts</th>
-                            <th>CPU</th>
-                            <th>Memory</th>
-                            <th>IP</th>
-                            <th>Node</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
+        <div
+            class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+            @if (selectedResourceType === 'pods') {
+            <p-table [value]="pods" [loading]="loading" [paginator]="true" [rows]="10" styleClass="p-datatable-sm"
+                responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Ready</th>
+                        <th>Status</th>
+                        <th>Restarts</th>
+                        <th>CPU</th>
+                        <th>Memory</th>
+                        <th>IP</th>
+                        <th>Node</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-pod>
-                        <tr>
-                            <td>
-                                <span class="font-semibold">{{ pod.name }}</span>
-                            </td>
-                            <td>
-                                <div class="flex items-center">
-                                    {{ getReadyContainersCount(pod) }}/{{ pod.containerStatuses.length }}
-                                </div>
-                            </td>
-                            <td>
-                                <p-tag [severity]="getPodStatusSeverity(pod.phase)" [value]="pod.phase"></p-tag>
-                            </td>
-                            <td>{{ getTotalRestarts(pod) }}</td>
-                            <td>{{ pod.podMetrics?.cpu }}</td>
-                            <td>{{ pod.podMetrics?.memory }}</td>
-                            <td>
-                                <div class="text-sm">
-                                    <div>Pod: {{ pod.podIP || 'N/A' }}</div>
-                                    <div>Host: {{ pod.hostIP || 'N/A' }}</div>
-                                </div>
-                            </td>
-                            <td>{{ pod.node || 'N/A' }}</td>
-                            <td>{{ pod.duration }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
-                                        tooltipPosition="bottom" (click)="deletePod(pod)" />
-                                    <p-button [icon]="PrimeIcons.BAN" severity="warn" pTooltip="Kill"
-                                        tooltipPosition="bottom" (click)="killPod(pod)" />
-                                    <p-button [icon]="PrimeIcons.LIST" pTooltip="View Logs" tooltipPosition="bottom"
-                                        (click)="viewPodLogs(pod)" />
-                                    <p-button [icon]="PrimeIcons.DESKTOP" pTooltip="Terminal" tooltipPosition="bottom"
-                                        (click)="openTerminal(pod)" />
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewResourceYAML(pod, 'pods')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom" (click)="describeResource(pod, 'pods')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-pod>
+                    <tr>
+                        <td>
+                            <span class="font-semibold">{{ pod.name }}</span>
+                        </td>
+                        <td>
+                            <div class="flex items-center">
+                                {{ getReadyContainersCount(pod) }}/{{ pod.containerStatuses.length }}
+                            </div>
+                        </td>
+                        <td>
+                            <p-tag [severity]="getPodStatusSeverity(pod.phase)" [value]="pod.phase"></p-tag>
+                        </td>
+                        <td>{{ getTotalRestarts(pod) }}</td>
+                        <td>{{ pod.podMetrics?.cpu }}</td>
+                        <td>{{ pod.podMetrics?.memory }}</td>
+                        <td>
+                            <div class="text-sm">
+                                <div>Pod: {{ pod.podIP || 'N/A' }}</div>
+                                <div>Host: {{ pod.hostIP || 'N/A' }}</div>
+                            </div>
+                        </td>
+                        <td>{{ pod.node || 'N/A' }}</td>
+                        <td>{{ pod.duration }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Delete" (click)="deletePod(pod)">
+                                    <i class="pi pi-trash" style="font-size:11px"></i>
+                                </button>
+                                <button
+                                    class="icon-action-btn hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                    title="Kill" (click)="killPod(pod)">
+                                    <i class="pi pi-ban" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View Logs" (click)="viewPodLogs(pod)">
+                                    <i class="pi pi-list" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Terminal" (click)="openTerminal(pod)">
+                                    <i class="pi pi-desktop" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewResourceYAML(pod, 'pods')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe"
+                                    (click)="describeResource(pod, 'pods')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="10" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="10">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (loading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading pods...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading pods…</p>
                                 } @else {
-                                <div>
-                                    <span>No pods found in this namespace</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No pods found in this
+                                    namespace</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedResourceType === 'services') {
-                <p-table [value]="services" [loading]="loading" [paginator]="true" [rows]="10"
-                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Cluster IP</th>
-                            <th>External IP</th>
-                            <th>Ports</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
+            @if (selectedResourceType === 'services') {
+            <p-table [value]="services" [loading]="loading" [paginator]="true" [rows]="10" styleClass="p-datatable-sm"
+                responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Cluster IP</th>
+                        <th>External IP</th>
+                        <th>Ports</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-service>
-                        <tr>
-                            <td>{{ service.name }}</td>
-                            <td>{{ service.type }}</td>
-                            <td>{{ service.clusterIP || 'N/A' }}</td>
-                            <td>{{ service.externalIP || 'N/A' }}</td>
-                            <td>
-                                @for (port of service.ports; track port.port) {
-                                <div>{{ port.port }}:{{ port.targetPort }}/{{ port.protocol }}</div>
-                                }
-                            </td>
-                            <td>{{ service.duration }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
-                                        tooltipPosition="bottom" (click)="deleteService(service)" />
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewResourceYAML(service, 'services')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom" (click)="describeResource(service, 'services')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-service>
+                    <tr>
+                        <td>{{ service.name }}</td>
+                        <td>{{ service.type }}</td>
+                        <td>{{ service.clusterIP || 'N/A' }}</td>
+                        <td>{{ service.externalIP || 'N/A' }}</td>
+                        <td>
+                            @for (port of service.ports; track port.port) {
+                            <div>{{ port.port }}:{{ port.targetPort }}/{{ port.protocol }}</div>
+                            }
+                        </td>
+                        <td>{{ service.duration }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Delete" (click)="deleteService(service)">
+                                    <i class="pi pi-trash" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewResourceYAML(service, 'services')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe"
+                                    (click)="describeResource(service, 'services')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="7" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="7">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (loading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading services...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading services…</p>
                                 } @else {
-                                <div>
-                                    <span>No services found in this namespace</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No services found in
+                                    this namespace</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedResourceType === 'deployments') {
-                <p-table [value]="deployments" [loading]="loading" [paginator]="true" [rows]="10"
-                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Ready</th>
-                            <th>Up-to-date</th>
-                            <th>Available</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
+            @if (selectedResourceType === 'deployments') {
+            <p-table [value]="deployments" [loading]="loading" [paginator]="true" [rows]="10"
+                styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Ready</th>
+                        <th>Up-to-date</th>
+                        <th>Available</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-deployment>
-                        <tr>
-                            <td>{{ deployment.name }}</td>
-                            <td>{{ deployment.readyReplicas }}/{{ deployment.replicas }}</td>
-                            <td>{{ deployment.updatedReplicas }}</td>
-                            <td>{{ deployment.availableReplicas }}</td>
-                            <td>{{ deployment.duration }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
-                                        tooltipPosition="bottom" (click)="deleteDeployment(deployment)" />
-                                    <p-button [icon]="PrimeIcons.REFRESH" pTooltip="Restart" tooltipPosition="bottom"
-                                        (click)="restartDeployment(deployment)" />
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewResourceYAML(deployment, 'deployments')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom"
-                                        (click)="describeResource(deployment, 'deployments')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-deployment>
+                    <tr>
+                        <td>{{ deployment.name }}</td>
+                        <td>{{ deployment.readyReplicas }}/{{ deployment.replicas }}</td>
+                        <td>{{ deployment.updatedReplicas }}</td>
+                        <td>{{ deployment.availableReplicas }}</td>
+                        <td>{{ deployment.duration }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Delete" (click)="deleteDeployment(deployment)">
+                                    <i class="pi pi-trash" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Restart" (click)="restartDeployment(deployment)">
+                                    <i class="pi pi-refresh" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewResourceYAML(deployment, 'deployments')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe"
+                                    (click)="describeResource(deployment, 'deployments')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="6" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (loading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading deployments...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading deployments…</p>
                                 } @else {
-                                <div>
-                                    <span>No deployments found in this namespace</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No deployments found in
+                                    this namespace</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedResourceType === 'statefulsets') {
-                <p-table [value]="statefulSets" [loading]="loading" [paginator]="true" [rows]="10"
-                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Ready</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
+            @if (selectedResourceType === 'statefulsets') {
+            <p-table [value]="statefulSets" [loading]="loading" [paginator]="true" [rows]="10"
+                styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Ready</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-statefulSet>
-                        <tr>
-                            <td>{{ statefulSet.name }}</td>
-                            <td>{{ statefulSet.readyReplicas }}/{{ statefulSet.replicas }}</td>
-                            <td>{{ statefulSet.duration }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
-                                        tooltipPosition="bottom" (click)="deleteStatefulSet(statefulSet)" />
-                                    <p-button [icon]="PrimeIcons.REFRESH" pTooltip="Restart" tooltipPosition="bottom"
-                                        (click)="restartStatefulSet(statefulSet)" />
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewResourceYAML(statefulSet, 'statefulsets')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom"
-                                        (click)="describeResource(statefulSet, 'statefulsets')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-statefulSet>
+                    <tr>
+                        <td>{{ statefulSet.name }}</td>
+                        <td>{{ statefulSet.readyReplicas }}/{{ statefulSet.replicas }}</td>
+                        <td>{{ statefulSet.duration }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Delete" (click)="deleteStatefulSet(statefulSet)">
+                                    <i class="pi pi-trash" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Restart"
+                                    (click)="restartStatefulSet(statefulSet)">
+                                    <i class="pi pi-refresh" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewResourceYAML(statefulSet, 'statefulsets')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe"
+                                    (click)="describeResource(statefulSet, 'statefulsets')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="4" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="4">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (loading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading stateful sets...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading stateful sets…</p>
                                 } @else {
-                                <div>
-                                    <span>No stateful sets found in this namespace</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No stateful sets found
+                                    in this namespace</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedResourceType === 'configmaps') {
-                <p-table [value]="configMaps" [loading]="loading" [paginator]="true" [rows]="10"
-                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Data</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
+            @if (selectedResourceType === 'configmaps') {
+            <p-table [value]="configMaps" [loading]="loading" [paginator]="true" [rows]="10" styleClass="p-datatable-sm"
+                responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Data</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-configMap>
-                        <tr>
-                            <td>{{ configMap.name }}</td>
-                            <td>{{ configMap.dataCount }} items</td>
-                            <td>{{ configMap.duration }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
-                                        tooltipPosition="bottom" (click)="deleteConfigMap(configMap)" />
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewResourceYAML(configMap, 'configmaps')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom" (click)="describeResource(configMap, 'configmaps')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-configMap>
+                    <tr>
+                        <td>{{ configMap.name }}</td>
+                        <td>{{ configMap.dataCount }} items</td>
+                        <td>{{ configMap.duration }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Delete" (click)="deleteConfigMap(configMap)">
+                                    <i class="pi pi-trash" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewResourceYAML(configMap, 'configmaps')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe"
+                                    (click)="describeResource(configMap, 'configmaps')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="4" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="4">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (loading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading config maps...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading config maps…</p>
                                 } @else {
-                                <div>
-                                    <span>No config maps found in this namespace</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No config maps found in
+                                    this namespace</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedResourceType === 'ingresses') {
-                <p-table [value]="ingresses" [loading]="loading" [paginator]="true" [rows]="10"
-                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Hosts</th>
-                            <th>Paths</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
+            @if (selectedResourceType === 'ingresses') {
+            <p-table [value]="ingresses" [loading]="loading" [paginator]="true" [rows]="10" styleClass="p-datatable-sm"
+                responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Hosts</th>
+                        <th>Paths</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-ingress>
-                        <tr>
-                            <td>{{ ingress.name }}</td>
-                            <td>
-                                @for (host of ingress.hosts; track host) {
-                                <div>{{ host }}</div>
-                                }
-                            </td>
-                            <td>
-                                @for (path of ingress.paths; track path) {
-                                <div>{{ path.path }} → {{ path.serviceName }}:{{ path.servicePort }}</div>
-                                }
-                            </td>
-                            <td>{{ ingress.duration }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
-                                        tooltipPosition="bottom" (click)="deleteIngress(ingress)" />
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewResourceYAML(ingress, 'ingresses')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom" (click)="describeResource(ingress, 'ingresses')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-ingress>
+                    <tr>
+                        <td>{{ ingress.name }}</td>
+                        <td>
+                            @for (host of ingress.hosts; track host) {
+                            <div>{{ host }}</div>
+                            }
+                        </td>
+                        <td>
+                            @for (path of ingress.paths; track path) {
+                            <div>{{ path.path }} → {{ path.serviceName }}:{{ path.servicePort }}</div>
+                            }
+                        </td>
+                        <td>{{ ingress.duration }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Delete" (click)="deleteIngress(ingress)">
+                                    <i class="pi pi-trash" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewResourceYAML(ingress, 'ingresses')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe"
+                                    (click)="describeResource(ingress, 'ingresses')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="5" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="5">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (loading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading ingresses...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading ingresses…</p>
                                 } @else {
-                                <div>
-                                    <span>No ingresses found in this namespace</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No ingresses found in
+                                    this namespace</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
 
-                @if (selectedResourceType === 'pvcs') {
-                <p-table [value]="persistentVolumeClaims" [loading]="loading" [paginator]="true" [rows]="10"
-                    styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Volume</th>
-                            <th>Capacity</th>
-                            <th>Access Modes</th>
-                            <th>Storage Class</th>
-                            <th>Age</th>
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
+            @if (selectedResourceType === 'pvcs') {
+            <p-table [value]="persistentVolumeClaims" [loading]="loading" [paginator]="true" [rows]="10"
+                styleClass="p-datatable-sm" responsiveLayout="stack" [rowsPerPageOptions]="[10,25,50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Volume</th>
+                        <th>Capacity</th>
+                        <th>Access Modes</th>
+                        <th>Storage Class</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="body" let-pvc>
-                        <tr>
-                            <td>{{ pvc.name }}</td>
-                            <td>
-                                <p-tag [severity]="getPVCStatusSeverity(pvc.status)" [value]="pvc.status"></p-tag>
-                            </td>
-                            <td>{{ pvc.volumeName }}</td>
-                            <td>{{ pvc.capacity }}</td>
-                            <td>{{ pvc.accessModes.join(', ') }}</td>
-                            <td>{{ pvc.storageClass }}</td>
-                            <td>{{ pvc.duration }}</td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <p-button [icon]="PrimeIcons.TRASH" severity="danger" pTooltip="Delete"
-                                        tooltipPosition="bottom" (click)="deletePVC(pvc)" />
-                                    <p-button [icon]="PrimeIcons.FILE" pTooltip="View YAML" tooltipPosition="bottom"
-                                        (click)="viewResourceYAML(pvc, 'pvc')" />
-                                    <p-button [icon]="PrimeIcons.INFO_CIRCLE" pTooltip="Describe"
-                                        tooltipPosition="bottom" (click)="describeResource(pvc, 'pvc')" />
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
+                <ng-template pTemplate="body" let-pvc>
+                    <tr>
+                        <td>{{ pvc.name }}</td>
+                        <td>
+                            <p-tag [severity]="getPVCStatusSeverity(pvc.status)" [value]="pvc.status"></p-tag>
+                        </td>
+                        <td>{{ pvc.volumeName }}</td>
+                        <td>{{ pvc.capacity }}</td>
+                        <td>{{ pvc.accessModes.join(', ') }}</td>
+                        <td>{{ pvc.storageClass }}</td>
+                        <td>{{ pvc.duration }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Delete" (click)="deletePVC(pvc)">
+                                    <i class="pi pi-trash" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="View YAML"
+                                    (click)="viewResourceYAML(pvc, 'pvc')">
+                                    <i class="pi pi-file" style="font-size:11px"></i>
+                                </button>
+                                <button class="icon-action-btn" title="Describe" (click)="describeResource(pvc, 'pvc')">
+                                    <i class="pi pi-info-circle" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="8" class="text-center p-4">
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="8">
+                            <div class="flex flex-col items-center py-12 text-center">
                                 @if (loading) {
-                                <div class="flex flex-col items-center">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                                    <span>Loading persistent volume claims...</span>
-                                </div>
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading persistent volume claims…</p>
                                 } @else {
-                                <div>
-                                    <span>No persistent volume claims found in this namespace</span>
-                                </div>
+                                <i class="pi pi-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No persistent volume
+                                    claims found</p>
                                 }
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-                }
-            </div>
-        </p-card>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            }
+        </div>
     </div>
 
     <p-dialog [(visible)]="showLogsDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
-        [header]="selectedPod ? 'Pod Logs: ' + selectedPod.name : 'Pod Logs'">
-        <div class="flex flex-col w-full h-full overflow-hidden">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center">
-                    <i [ngClass]="PrimeIcons.LIST" class="mr-2 text-blue-500"></i>
-                    <h2 class="text-xl font-semibold">Pod Logs</h2>
-                </div>
-                @if (selectedPod) {
-                <p-button [icon]="PrimeIcons.REFRESH" label="Refresh" (onClick)="loadPodLogs(selectedPod)"
-                    size="small" />
-                }
+        [header]="selectedPod ? 'Pod Logs: ' + selectedPod.name : 'Pod Logs'" maximizable="true">
+        <div class="flex justify-end mb-2">
+            @if (selectedPod) {
+            <p-button [icon]="PrimeIcons.REFRESH" (onClick)="loadPodLogs(selectedPod)" [text]="true" size="small"
+                severity="secondary" title="Refresh" />
+            }
+        </div>
+        <div class="log-container overflow-y-auto" style="height:calc(80vh - 130px)">
+            @if (logsLoading) {
+            <div class="flex flex-col items-center py-10">
+                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-2"></i>
+                <span class="text-sm text-gray-500">Loading logs…</span>
             </div>
-            <div
-                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-2">
-                @if (logsLoading) {
-                <div class="flex justify-center p-4">
-                    <i class="pi pi-spin pi-spinner text-2xl"></i>
-                </div>
-                } @else if (podLogs.length) {
-                <p-scrollPanel [style]="{width: '100%', height: '100%'}" styleClass="custom-scrollbar">
-                    @for (log of podLogs; track $index) {
-                    <div class="m-1 text-xs font-mono text-black dark:text-white break-words">
-                        {{ log }}
-                    </div>
-                    }
-                </p-scrollPanel>
-                } @else {
-                <div class="p-3 text-center">
-                    <p>No logs found for this pod</p>
-                </div>
-                }
+            } @else if (podLogs.length) {
+            @for (log of podLogs; track $index) {
+            <div class="log-line text-xs break-words">{{ log }}</div>
+            }
+            } @else {
+            <div class="flex flex-col items-center py-10 text-center">
+                <i class="pi pi-file-edit text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                <p class="text-sm text-gray-400 dark:text-gray-500">No logs found for this pod</p>
             </div>
+            }
         </div>
     </p-dialog>
 
     <p-dialog [(visible)]="showConfigMapDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
-        [header]="selectedConfigMap ? 'ConfigMap: ' + selectedConfigMap.name : 'ConfigMap'">
-        <div class="flex flex-col w-full h-full overflow-hidden">
-            <div
-                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
-                @if (selectedConfigMap) {
-                @for (entry of selectedConfigMap.data | keyvalue; track entry.key) {
-                <div class="mb-4">
-                    <h3 class="font-semibold mb-2">{{ entry.key }}</h3>
-                    <pre class="bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm overflow-auto">{{ entry.value }}</pre>
-                </div>
-                }
-                } @else {
-                <div class="p-3 text-center">
-                    <p>No config map data to display</p>
-                </div>
-                }
+        [header]="selectedConfigMap ? 'ConfigMap: ' + selectedConfigMap.name : 'ConfigMap'" maximizable="true">
+        <div class="log-container overflow-y-auto" style="height:calc(80vh - 110px)">
+            @if (selectedConfigMap) {
+            @for (entry of selectedConfigMap.data | keyvalue; track entry.key) {
+            <div class="mb-4">
+                <h3 class="font-semibold text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">{{
+                    entry.key }}</h3>
+                <pre class="log-line whitespace-pre overflow-auto">{{ entry.value }}</pre>
             </div>
+            }
+            } @else {
+            <div class="flex flex-col items-center py-10 text-center">
+                <i class="pi pi-file-edit text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                <p class="text-sm text-gray-400 dark:text-gray-500">No config map data to display</p>
+            </div>
+            }
         </div>
     </p-dialog>
 
@@ -507,50 +550,40 @@
     </p-dialog>
 
     <p-dialog [(visible)]="showYAMLDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
-        [header]="yamlDialogTitle">
-        <div class="flex flex-col w-full h-full overflow-hidden">
-            <div
-                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
-                @if (resourceYAML) {
-                <pre
-                    class="font-mono text-sm text-black dark:text-white whitespace-pre overflow-auto">{{ resourceYAML }}</pre>
+        [header]="yamlDialogTitle" maximizable="true">
+        <div class="log-container overflow-y-auto" style="height:calc(80vh - 110px)">
+            @if (resourceYAML) {
+            <pre class="log-line whitespace-pre overflow-auto">{{ resourceYAML }}</pre>
+            } @else {
+            <div class="flex flex-col items-center py-10 text-center">
+                @if (yamlLoading) {
+                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-2"></i>
+                <span class="text-sm text-gray-500">Loading YAML…</span>
                 } @else {
-                <div class="p-3 text-center">
-                    @if (yamlLoading) {
-                    <div class="flex flex-col items-center">
-                        <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                        <span>Loading YAML...</span>
-                    </div>
-                    } @else {
-                    <p>No YAML data available</p>
-                    }
-                </div>
+                <i class="pi pi-file text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                <p class="text-sm text-gray-400 dark:text-gray-500">No YAML data available</p>
                 }
             </div>
+            }
         </div>
     </p-dialog>
 
     <p-dialog [(visible)]="showDescribeDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
-        [header]="describeDialogTitle">
-        <div class="flex flex-col w-full h-full overflow-hidden">
-            <div
-                class="flex flex-col h-full overflow-auto border bg-gray-100 border-gray-200 dark:bg-gray-950 dark:border-gray-700 p-4">
-                @if (resourceDescription) {
-                <pre
-                    class="font-mono text-sm text-black dark:text-white whitespace-pre overflow-auto">{{ resourceDescription }}</pre>
+        [header]="describeDialogTitle" maximizable="true">
+        <div class="log-container overflow-y-auto" style="height:calc(80vh - 110px)">
+            @if (resourceDescription) {
+            <pre class="log-line whitespace-pre overflow-auto">{{ resourceDescription }}</pre>
+            } @else {
+            <div class="flex flex-col items-center py-10 text-center">
+                @if (describeLoading) {
+                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-2"></i>
+                <span class="text-sm text-gray-500">Loading description…</span>
                 } @else {
-                <div class="p-3 text-center">
-                    @if (describeLoading) {
-                    <div class="flex flex-col items-center">
-                        <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-                        <span>Loading description...</span>
-                    </div>
-                    } @else {
-                    <p>No description available</p>
-                    }
-                </div>
+                <i class="pi pi-info-circle text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                <p class="text-sm text-gray-400 dark:text-gray-500">No description available</p>
                 }
             </div>
+            }
         </div>
     </p-dialog>
 

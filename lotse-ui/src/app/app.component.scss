@@ -1,4 +1,97 @@
-.active-route {
-  color: var(--p-primary-500);
-  font-weight: bold;
+// ── Sidebar layout ──────────────────────────────────────────────────────────
+
+.sidebar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  width: 224px;
+  height: 100%;
+  overflow: hidden;
+  transition: width 0.2s ease-in-out;
+
+  &.is-collapsed {
+    @media (min-width: 768px) {
+      width: 60px;
+    }
+  }
+
+  // On mobile, slide in from the left
+  @media (max-width: 767px) {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-in-out, width 0.2s ease-in-out;
+
+    &.is-open {
+      transform: translateX(0);
+    }
+  }
+}
+
+// ── Sidebar nav item ─────────────────────────────────────────────────────────
+
+.sidebar-nav-item {
+  color: rgb(107 114 128); // gray-500
+  border: 1px solid transparent;
+  text-decoration: none;
+
+  &:hover {
+    color: rgb(243 244 246); // gray-100
+    background: rgba(255 255 255 / 0.05);
+  }
+
+  &.active {
+    color: rgb(52 211 153); // emerald-400
+    background: rgba(16 185 129 / 0.1);
+    border-color: rgba(16 185 129 / 0.2);
+  }
+}
+
+html:not(.dark) .sidebar-nav-item {
+  color: rgb(75 85 99); // gray-600
+
+  &:hover {
+    color: rgb(17 24 39); // gray-900
+    background: rgb(243 244 246); // gray-100
+  }
+
+  &.active {
+    color: rgb(5 150 105); // emerald-600
+    background: rgba(16 185 129 / 0.08);
+    border-color: rgba(16 185 129 / 0.25);
+  }
+}
+
+// ── Icon action button (small inline icon button) ────────────────────────────
+
+.icon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  color: rgb(156 163 175); // gray-400
+
+  &:hover:not(:disabled) {
+    background: rgba(255 255 255 / 0.08);
+    color: rgb(229 231 235); // gray-200
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+html:not(.dark) .icon-action-btn:hover:not(:disabled) {
+  background: rgb(243 244 246); // gray-100
+  color: rgb(55 65 81); // gray-700
 }

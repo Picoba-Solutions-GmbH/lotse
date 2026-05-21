@@ -1,110 +1,118 @@
-<p-dialog header="Deploy Package" [(visible)]="showDeployDialog" [modal]="true" [style]="{ width: '450px' }"
-    class="p-fluid">
-    <div class="flex flex-col gap-4">
+<p-dialog header="Deploy Package" [(visible)]="showDeployDialog" [modal]="true" [style]="{ width: '480px' }">
+    <div class="space-y-4 pt-1">
         @if (detectedRuntime) {
-        <div>
-            <label class="block mb-2">Detected Runtime</label>
+        <div
+            class="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
             <p-tag [severity]="detectedRuntime === Runtime.CONTAINER ? 'info' : 'success'"
-                [value]="detectedRuntime | titlecase"></p-tag>
-            <small class="block mt-1 text-gray-500">Runtime automatically detected from YAML configuration</small>
+                [value]="detectedRuntime | titlecase" />
+            <span class="text-xs text-gray-500 dark:text-gray-400">Runtime auto-detected from YAML</span>
         </div>
         }
-
         @if (notSameNameError) {
-        <div>
-            <p-tag severity="danger" value="Package Name Mismatch"></p-tag>
-            <small class="block mt-1 text-red-500">
-                Package name in YAML ({{ detectedName }}) does not match the current package ({{
-                packageName }})
-            </small>
+        <div
+            class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <i class="pi pi-exclamation-circle text-red-500" style="font-size:13px"></i>
+            <span class="text-xs text-red-600 dark:text-red-400">Package name in YAML (<strong>{{ detectedName
+                    }}</strong>) does not match the current package (<strong>{{ packageName }}</strong>)</span>
         </div>
         }
-
         @if (sameVersionError) {
-        <div>
-            <p-tag severity="danger" value="Version Already Exists"></p-tag>
-            <small class="block mt-1 text-red-500">
-                Version {{ detectedVersion }} already exists for this package
-            </small>
+        <div
+            class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <i class="pi pi-exclamation-circle text-red-500" style="font-size:13px"></i>
+            <span class="text-xs text-red-600 dark:text-red-400">Version <strong>{{ detectedVersion }}</strong> already
+                exists for this package</span>
         </div>
         }
-
         @if (detectedRuntime !== Runtime.CONTAINER) {
-        <div>
-            <label class="block mb-2">Package ZIP File</label>
-            <p-fileUpload mode="basic" chooseLabel="Choose ZIP File" [auto]="true" accept=".zip,.7z"
-                (onSelect)="onZipFileSelect($event)" [showUploadButton]="false">
-            </p-fileUpload>
+        <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Package ZIP
+                File</label>
+            <p-fileUpload mode="basic" chooseLabel="Choose ZIP File" chooseIcon="pi pi-folder-open" [auto]="true"
+                accept=".zip,.7z" (onSelect)="onZipFileSelect($event)" [showUploadButton]="false" styleClass="w-full"
+                [chooseButtonProps]="{ outlined: true, severity: 'secondary' }" />
             @if (zipFile) {
-            <small class="text-green-500">Selected: {{ zipFile.name }}</small>
+            <p class="text-xs text-emerald-600 dark:text-emerald-400"><i class="pi pi-check mr-1"></i>{{ zipFile.name }}
+            </p>
             }
         </div>
         }
-
-        <div>
-            <label class="block mb-2">Config YAML File</label>
-            <p-fileUpload mode="basic" chooseLabel="Choose YAML File" [auto]="true" accept=".yaml,.yml"
-                (onSelect)="onConfigFileSelect($event)" [showUploadButton]="false">
-            </p-fileUpload>
+        <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Config YAML
+                File</label>
+            <p-fileUpload mode="basic" chooseLabel="Choose YAML File" chooseIcon="pi pi-file" [auto]="true"
+                accept=".yaml,.yml" (onSelect)="onConfigFileSelect($event)" [showUploadButton]="false"
+                styleClass="w-full" [chooseButtonProps]="{ outlined: true, severity: 'secondary' }" />
             @if (configFile) {
-            <small class="text-green-500">Selected: {{ configFile.name }}</small>
+            <p class="text-xs text-emerald-600 dark:text-emerald-400"><i class="pi pi-check mr-1"></i>{{ configFile.name
+                }}</p>
             }
         </div>
-
-        <div class="field">
-            <p-checkbox [(ngModel)]="setAsDefault" [binary]="true" label="Set as default" inputId="setAsDefault" />
-            <label for="setAsDefault" class="ml-2 text-sm">Set as default</label>
-        </div>
-
-        <div class="field">
-            <p-checkbox [(ngModel)]="deletePreviousVersions" [binary]="true" label="Delete previous versions"
-                inputId="deletePreviousVersions" />
-            <label for="deletePreviousVersions" class="ml-2 text-sm">Delete previous versions</label>
+        <div
+            class="flex flex-col gap-2.5 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center gap-2">
+                <p-checkbox [(ngModel)]="setAsDefault" [binary]="true" inputId="setAsDefault" />
+                <label for="setAsDefault"
+                    class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">Set as default</label>
+            </div>
+            <div class="flex items-center gap-2">
+                <p-checkbox [(ngModel)]="deletePreviousVersions" [binary]="true" inputId="deletePreviousVersions" />
+                <label for="deletePreviousVersions"
+                    class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">Delete previous
+                    versions</label>
+            </div>
         </div>
     </div>
-
     <ng-template pTemplate="footer">
-        <p-button label="Cancel" (onClick)="showDeployDialog = false" styleClass="p-button-text" />
-        <p-button label="Deploy" (onClick)="deployPackage()"
+        <p-button label="Cancel" (onClick)="showDeployDialog = false" [text]="true" severity="secondary"
+            [disabled]="isDeploying" />
+        <p-button label="Deploy" [icon]="PrimeIcons.UPLOAD" (onClick)="deployPackage()" [loading]="isDeploying"
             [disabled]="!configFile || (detectedRuntime !== Runtime.CONTAINER && !zipFile) || notSameNameError || sameVersionError" />
     </ng-template>
 </p-dialog>
 
-<p-dialog header="Deploy Container" [(visible)]="showContainerDialog" [modal]="true" [style]="{ width: '450px' }"
-    class="p-fluid">
-    <div class="flex flex-col gap-4">
-        <div>
-            <label class="block mb-2">Container Image Name</label>
-            <input type="text" pInputText [(ngModel)]="containerImageName" placeholder="e.g., nginx:latest" />
-            <small class="block mt-1 text-gray-500">Full image name including tag if applicable</small>
+<p-dialog header="Deploy Container" [(visible)]="showContainerDialog" [modal]="true" [style]="{ width: '480px' }">
+    <div class="space-y-4 pt-1">
+        <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Container
+                Image</label>
+            <input type="text" pInputText [(ngModel)]="containerImageName" placeholder="e.g., nginx:latest"
+                class="w-full" />
+            <p class="text-xs text-gray-400 dark:text-gray-500">Full image name including tag if applicable</p>
         </div>
-
-        <div>
-            <label class="block mb-2">Package Name</label>
-            <input type="text" pInputText [(ngModel)]="containerPackageName" placeholder="e.g., my-web-app" />
-            <small class="block mt-1 text-gray-500">A unique identifier for this package</small>
+        <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Package
+                Name</label>
+            <input type="text" pInputText [(ngModel)]="containerPackageName" placeholder="e.g., my-web-app"
+                class="w-full" />
+            <p class="text-xs text-gray-400 dark:text-gray-500">A unique identifier for this package</p>
         </div>
-
-        <div>
-            <label class="block mb-2">Version</label>
-            <input type="text" pInputText [(ngModel)]="containerVersion" placeholder="e.g., 1.0.0" />
-            <small class="block mt-1 text-gray-500">Version identifier for this deployment</small>
+        <div class="space-y-1.5">
+            <label
+                class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Version</label>
+            <input type="text" pInputText [(ngModel)]="containerVersion" placeholder="e.g., 1.0.0" class="w-full" />
+            <p class="text-xs text-gray-400 dark:text-gray-500">Version identifier for this deployment</p>
         </div>
-
-        <div class="field">
-            <p-checkbox [(ngModel)]="setAsDefault" [binary]="true" label="Set as default" inputId="containerSetAsDefault" />
-            <label for="containerSetAsDefault" class="ml-2 text-sm">Set as default</label>
-        </div>
-
-        <div class="field">
-            <p-checkbox [(ngModel)]="deletePreviousVersions" [binary]="true" label="Delete previous versions"
-                inputId="containerDeletePreviousVersions" />
-            <label for="containerDeletePreviousVersions" class="ml-2 text-sm">Delete previous versions</label>
+        <div
+            class="flex flex-col gap-2.5 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center gap-2">
+                <p-checkbox [(ngModel)]="setAsDefault" [binary]="true" inputId="containerSetAsDefault" />
+                <label for="containerSetAsDefault"
+                    class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">Set as default</label>
+            </div>
+            <div class="flex items-center gap-2">
+                <p-checkbox [(ngModel)]="deletePreviousVersions" [binary]="true"
+                    inputId="containerDeletePreviousVersions" />
+                <label for="containerDeletePreviousVersions"
+                    class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">Delete previous
+                    versions</label>
+            </div>
         </div>
     </div>
-
     <ng-template pTemplate="footer">
-        <p-button label="Cancel" (onClick)="showContainerDialog = false" styleClass="p-button-text" />
-        <p-button label="Deploy" (onClick)="deployContainer()" [disabled]="!containerImageName || !containerPackageName" />
+        <p-button label="Cancel" (onClick)="showContainerDialog = false" [text]="true" severity="secondary"
+            [disabled]="isDeploying" />
+        <p-button label="Deploy" [icon]="PrimeIcons.SERVER" (onClick)="deployContainer()" [loading]="isDeploying"
+            [disabled]="!containerImageName || !containerPackageName" />
     </ng-template>
 </p-dialog>

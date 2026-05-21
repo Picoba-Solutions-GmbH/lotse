@@ -54,6 +54,7 @@ export class PackageDeployComponent {
     configFile: File | null = null;
     deletePreviousVersions: boolean = false;
     isDraggingOver: boolean = false;
+    isDeploying: boolean = false;
     private dragCounter: number = 0;
     private dragTimer: any = null;
 
@@ -241,6 +242,7 @@ export class PackageDeployComponent {
         }
 
         try {
+            this.isDeploying = true;
             const formData = new FormData();
             if (this.zipFile) {
                 formData.append('package_file', this.zipFile);
@@ -276,6 +278,8 @@ export class PackageDeployComponent {
                 detail: `Failed to deploy package: ${message}`,
                 life: 5000,
             });
+        } finally {
+            this.isDeploying = false;
         }
     }
 
@@ -308,6 +312,7 @@ export class PackageDeployComponent {
         }
 
         try {
+            this.isDeploying = true;
             const containerConfig = {
                 package_name: this.containerPackageName,
                 runtime: Runtime.CONTAINER,
@@ -349,6 +354,8 @@ export class PackageDeployComponent {
                 detail: `Failed to deploy container: ${message}`,
                 life: 5000,
             });
+        } finally {
+            this.isDeploying = false;
         }
     }
 }

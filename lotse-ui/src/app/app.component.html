@@ -1,46 +1,110 @@
 <p-toast position="bottom-right" />
 <p-confirmdialog />
-<div class="flex flex-col h-full overflow-hidden">
-  <p-menubar [model]="items">
-    <ng-template pTemplate="start">
-      <div class="flex items-center mr-4">
-        <img src="lotse.webp" alt="logo" width="30px" />
-        <span class="ml-2 font-bold text-lg">Lotse</span>
+
+<div class="flex h-full overflow-hidden bg-gray-50 dark:bg-gray-950">
+
+  <!-- Mobile backdrop -->
+  @if (sidebarOpen) {
+  <div class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden" (click)="sidebarOpen = false"></div>
+  }
+
+  <!-- Sidebar -->
+  <aside class="sidebar bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800"
+    [class.is-open]="sidebarOpen"
+    [class.is-collapsed]="sidebarCollapsed">
+
+    <!-- Brand + collapse toggle -->
+    <div class="flex items-center h-14 border-b border-gray-200 dark:border-gray-800 shrink-0 gap-2 px-3">
+      @if (!sidebarCollapsed) {
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/20 shrink-0">
+          <img src="lotse.webp" alt="Lotse" class="w-5 h-5" />
+        </div>
+        <div class="overflow-hidden">
+          <span class="text-sm font-semibold text-gray-900 dark:text-white tracking-tight leading-none block">Lotse</span>
+          <span class="text-[10px] text-gray-400 dark:text-gray-500 leading-none block mt-0.5">Management UI</span>
+        </div>
       </div>
-    </ng-template>
-    <ng-template #item let-item let-root="root">
-      <a pRipple class="flex items-center p-menuitem-link" [href]="item.href ? item.href : item.routerLink"
-        [class]="{'text-(--p-primary-500)': isRouteActive(item), 'dark:text-(--p-primary-200)': isRouteActive(item)}">
-        @if (item.icon.startsWith("pi")) {
-        <span [class]="item.icon"></span>
+      <button (click)="toggleCollapse()" title="Collapse sidebar"
+        class="sidebar-nav-item shrink-0 flex items-center justify-center w-7 h-7 rounded-md p-0">
+        <i class="pi pi-chevron-left text-xs"></i>
+      </button>
+      } @else {
+      <button (click)="toggleCollapse()" title="Expand sidebar"
+        class="sidebar-nav-item flex items-center justify-center w-8 h-8 rounded-md p-0 mx-auto">
+        <i class="pi pi-chevron-right text-xs"></i>
+      </button>
+      }
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+      @for (item of items; track item.label) {
+      <a [routerLink]="'/' + item.routerLink"
+        class="sidebar-nav-item flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-100 cursor-pointer no-underline"
+        [class.justify-center]="sidebarCollapsed"
+        [class.active]="isRouteActive(item)"
+        [title]="sidebarCollapsed ? (item.label || '') : ''">
+        @if (item.icon?.startsWith('pi')) {
+        <i [class]="item.icon + ' shrink-0 text-sm'"></i>
         } @else {
-        <ng-icon [svg]="item.icon" />
+        <ng-icon [svg]="item.icon!" class="shrink-0" style="width:14px;height:14px;display:block" />
         }
-        <span class="ml-2">{{ item.label }}</span>
-        @if (item.items) {
-        <i [ngClass]="['pi', root ? 'pi-angle-down ml-2' : 'pi-angle-right ml-auto']"></i>
+        @if (!sidebarCollapsed) {
+        <span class="truncate">{{ item.label }}</span>
         }
       </a>
-    </ng-template>
-    <ng-template pTemplate="end">
-      <div class="flex items-center gap-1">
-        <div>
-          @if (isDarkMode) {
-          <p-button [icon]="PrimeIcons.SUN" rounded (onClick)="themeService.setDarkMode(false)" text severity="warn" />
-          } @else {
-          <p-button [icon]="PrimeIcons.MOON" (onClick)="themeService.setDarkMode(true)" rounded text
-            severity="contrast" />
-          }
-        </div>
-        @if (isAuthEnabled) {
-        <p-button class="ml-auto" [outlined]="true" [label]="isLoggedIn ? 'Logout' : 'Login'"
-          (onClick)="isLoggedIn ? logout() : openLoginDialog()" size="small"
-          [icon]="isLoggedIn ? PrimeIcons.SIGN_OUT : PrimeIcons.SIGN_IN" />
+      }
+    </nav>
+
+    <!-- Footer -->
+    <div class="px-2 py-3 border-t border-gray-200 dark:border-gray-800 space-y-0.5 shrink-0">
+      <button
+        (click)="isDarkMode ? themeService.setDarkMode(false) : themeService.setDarkMode(true)"
+        class="sidebar-nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left transition-all duration-100"
+        [class.justify-center]="sidebarCollapsed"
+        [title]="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        <i [class]="'shrink-0 text-sm ' + (isDarkMode ? 'pi pi-sun' : 'pi pi-moon')"></i>
+        @if (!sidebarCollapsed) {
+        <span>{{ isDarkMode ? 'Light mode' : 'Dark mode' }}</span>
         }
+      </button>
+      @if (isAuthEnabled) {
+      <button (click)="isLoggedIn ? logout() : openLoginDialog()"
+        class="sidebar-nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left transition-all duration-100"
+        [class.justify-center]="sidebarCollapsed"
+        [title]="isLoggedIn ? 'Sign out' : 'Sign in'">
+        <i [class]="'shrink-0 text-sm ' + (isLoggedIn ? 'pi pi-sign-out' : 'pi pi-sign-in')"></i>
+        @if (!sidebarCollapsed) {
+        <span>{{ isLoggedIn ? 'Sign out' : 'Sign in' }}</span>
+        }
+      </button>
+      }
+    </div>
+
+  </aside>
+
+  <!-- Main area -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+    <!-- Mobile topbar -->
+    <header class="md:hidden flex items-center gap-3 h-14 px-4 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shrink-0">
+      <button (click)="sidebarOpen = true" class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors p-0.5">
+        <i class="pi pi-bars text-base"></i>
+      </button>
+      <div class="flex items-center gap-2">
+        <img src="lotse.webp" alt="Lotse" class="w-6 h-6" />
+        <span class="text-sm font-semibold text-gray-900 dark:text-white">Lotse</span>
       </div>
-    </ng-template>
-  </p-menubar>
-  <div class="scrollable-content p-4">
-    <router-outlet />
+    </header>
+
+    <!-- Page content -->
+    <main class="flex-1 overflow-auto">
+      <div class="p-6 lg:p-8">
+        <router-outlet />
+      </div>
+    </main>
+
   </div>
+
 </div>

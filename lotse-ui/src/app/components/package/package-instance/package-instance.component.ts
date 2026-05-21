@@ -87,6 +87,8 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   customArgs: { name: string; value: string }[] = [];
   isPackageRunning = false;
 
+  showLogsExpandedDialog = false;
+
   showTerminal = false;
   selectedTaskId: string | null = null;
   isVsCodeBusy = signal(false);
@@ -301,6 +303,12 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     } finally {
       this.isPackageRunning = false;
     }
+  }
+
+  onStartInstanceDialogKeydown(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'BUTTON') return;
+    this.executePackageAsync(false);
   }
 
   openTerminal(taskId: string): void {

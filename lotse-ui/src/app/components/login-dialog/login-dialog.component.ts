@@ -5,6 +5,8 @@ import { ButtonModule } from 'primeng/button';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login-dialog',
@@ -21,12 +23,25 @@ import { PasswordModule } from 'primeng/password';
 export class LoginDialogComponent {
   username: string = '';
   password: string = '';
+  isLoading = false;
+  errorMessage: string | null = null;
 
-  constructor(public ref: DynamicDialogRef) { }
+  constructor(
+    public ref: DynamicDialogRef,
+    private authService: AuthService
+  ) { }
 
-  onLogin(): void {
-    if (this.username && this.password) {
-      this.ref.close({ username: this.username, password: this.password });
+  async onLogin(): Promise<void> {
+    if (!this.username || !this.password) return;
+    this.isLoading = true;
+    this.errorMessage = null;
+    try {
+      await firstValueFrom(this.authService.login(this.username, this.password));
+      this.ref.close(true);
+    } catch {
+      this.errorMessage = 'Invalid username or password.';
+    } finally {
+      this.isLoading = false;
     }
   }
 
