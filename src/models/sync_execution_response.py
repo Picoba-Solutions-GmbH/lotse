@@ -6,3 +6,4 @@ class SyncExecutionResponse(BaseModel):
     output: str
     task_id: str
     error: str | None = ""
+    execution_time: float | None = None

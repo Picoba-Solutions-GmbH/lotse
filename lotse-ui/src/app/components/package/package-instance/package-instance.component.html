@@ -1,6 +1,4 @@
 <div class="flex flex-col w-full min-h-full">
-
-    <!-- ── Page header ───────────────────────────────────────────────────── -->
     <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
             <div class="flex items-center gap-2 mb-1">
@@ -16,6 +14,14 @@
                 }
             </div>
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ packageInstance.description }}</p>
+            <div class="flex items-center gap-1.5 mt-2">
+                <span
+                    class="text-xs font-mono text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">GET
+                    /execute/{{ packageName }}/{{ packageVersion }}</span>
+                <button class="icon-action-btn" title="Copy endpoint URL" (click)="copyEndpointUrl()">
+                    <i class="pi pi-copy" style="font-size:11px"></i>
+                </button>
+            </div>
         </div>
         <div class="flex gap-2 shrink-0">
             <ng-container *hasRole="[Role.ADMIN, Role.OPERATOR]">
@@ -32,7 +38,6 @@
         </div>
     </div>
 
-    <!-- ── Stat cards ────────────────────────────────────────────────────── -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         <div
             class="flex items-center gap-3 p-4 bg-[var(--p-content-background)] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -95,10 +100,7 @@
         </div>
     </div>
 
-    <!-- ── Main content: task table + detail panel ───────────────────────── -->
     <div class="grid grid-cols-12 gap-5">
-
-        <!-- Task table -->
         <div
             class="col-span-12 xl:col-span-8 bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -203,10 +205,7 @@
             </p-table>
         </div>
 
-        <!-- Detail + Log panel -->
         <div class="col-span-12 xl:col-span-4 flex flex-col gap-4">
-
-            <!-- Task detail -->
             <div
                 class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
                 <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -322,7 +321,6 @@
         </div>
     </div>
 
-    <!-- ── Start New Instance dialog ─────────────────────────────────────── -->
     <p-dialog [(visible)]="showArgumentsDialog" [style]="{width: '480px'}" [modal]="true" header="Start New Instance">
         <div class="space-y-4 pt-1" (keydown.enter)="onStartInstanceDialogKeydown($event)">
             @if (packageInstance.package_arguments?.length) {
@@ -392,7 +390,6 @@
         </ng-template>
     </p-dialog>
 
-    <!-- ── Pod terminal dialog ───────────────────────────────────────────── -->
     <p-dialog [(visible)]="showTerminal" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
         header="Pod Terminal — {{ selectedTaskId }}" maximizable="true" (onMaximize)="handleTerminalResize()">
         @if (selectedTaskId && showTerminal) {
@@ -400,7 +397,6 @@
         }
     </p-dialog>
 
-    <!-- ── Environment variables dialog ─────────────────────────────────── -->
     <p-dialog [(visible)]="showEnvironmentDialog" [modal]="true" [style]="{width: '480px'}"
         header="Environment Variables — {{ packageName }} v{{ packageVersion }}">
         @if (packageEnvironmentVariables.length) {
@@ -435,7 +431,7 @@
             <p-button label="Close" (onClick)="showEnvironmentDialog = false" severity="secondary" />
         </ng-template>
     </p-dialog>
-    <!-- ── Expanded logs dialog ────────────────────────────────────── -->
+
     <p-dialog [(visible)]="showLogsExpandedDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"
         [header]="'Logs' + (selectedLogTaskId ? ' — ' + selectedLogTaskId : '')" maximizable="true">
         <div class="flex justify-end mb-2">
@@ -455,5 +451,4 @@
             }
         </div>
     </p-dialog>
-
 </div>

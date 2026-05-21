@@ -2,6 +2,7 @@ import { HTTP_INTERCEPTORS, provideHttpClient, withFetch, withInterceptorsFromDi
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
+import { provideMonacoEditor } from 'ngx-monaco-editor-v2';
 import { definePreset } from '@primeng/themes';
 import Aura from '@primeng/themes/aura';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -691,6 +692,7 @@ export const appConfig: ApplicationConfig = {
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         MessageService,
         ConfirmationService,
-        DialogService
+        DialogService,
+        provideMonacoEditor({ baseUrl: 'assets/monaco/vs' }),
     ],
 };

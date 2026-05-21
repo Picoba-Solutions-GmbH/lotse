@@ -1,0 +1,231 @@
+<div class="flex flex-col w-full min-h-full">
+
+  <!-- ── Page header ──────────────────────────────────────────────────────── -->
+  <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50">Live Coding</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        Write and run Python packages directly in the browser.
+      </p>
+      @if (currentPackage) {
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="text-xs font-mono text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">POST /packages/live/{{ currentPackage.package_name }}/run</span>
+          <button class="icon-action-btn" title="Copy endpoint URL" (click)="copyEndpointUrl()">
+            <i class="pi pi-copy" style="font-size:11px"></i>
+          </button>
+        </div>
+      }
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <p-dropdown
+        [(ngModel)]="selectedPackageName"
+        [options]="packageNameOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select package…"
+        [showClear]="true"
+        (onChange)="onPackageSelect($event.value)"
+        [style]="{'min-width': '180px'}"
+        size="small" />
+      <p-button [icon]="PrimeIcons.PLUS" label="New" severity="secondary" size="small"
+        (onClick)="openNewPackageDialog()" />
+      <p-dropdown
+        [(ngModel)]="selectedPythonVersion"
+        [options]="pythonVersions"
+        [style]="{'width': '88px'}"
+        size="small"
+        pTooltip="Python version" tooltipPosition="bottom" />
+      <p-button [icon]="PrimeIcons.SAVE" label="Save" severity="secondary" size="small"
+        [loading]="isSaving" (onClick)="savePackage()" [disabled]="!currentPackage" />
+      <p-splitbutton label="Run" [icon]="isRunning ? PrimeIcons.SPINNER : PrimeIcons.PLAY" size="small"
+        (onClick)="runDirectly()" [model]="runMenuItems"
+        [disabled]="!currentPackage || isRunning" />
+    </div>
+  </div>
+
+  @if (!currentPackage) {
+    <!-- ── Empty state ────────────────────────────────────────────────────── -->
+    <div class="flex-1 flex items-center justify-center" style="min-height: 400px">
+      <div class="text-center">
+        <div
+          class="flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 mx-auto mb-4">
+          <i class="pi pi-code text-2xl text-gray-400"></i>
+        </div>
+        <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">No package selected</h2>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mb-4">
+          Select an existing package or create a new one to start live coding.
+        </p>
+        <p-button label="New Package" [icon]="PrimeIcons.PLUS" size="small"
+          (onClick)="openNewPackageDialog()" />
+      </div>
+    </div>
+
+  } @else {
+
+    <!-- ── IDE layout ──────────────────────────────────────────────────────── -->
+    <div class="ide-container rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex bg-[var(--p-content-background)]">
+
+      <!-- File sidebar -->
+      <div class="file-sidebar border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-900 shrink-0">
+        <div
+          class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Explorer</span>
+          <button (click)="addFile()"
+            class="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            title="New file">
+            <i class="pi pi-plus" style="font-size: 10px"></i>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto py-1">
+          @for (file of currentPackage.files; track file.name) {
+            <div class="group flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer text-xs transition-colors rounded mx-1"
+              [ngClass]="fileTabClass(file.name)"
+              (click)="renamingFileName !== file.name && selectFile(file.name)">
+              <i class="pi pi-file shrink-0" style="font-size: 11px; color: #60a5fa"></i>
+              @if (renamingFileName === file.name) {
+                <input class="rename-input flex-1 font-mono bg-transparent border-b border-blue-400 outline-none min-w-0 text-gray-900 dark:text-gray-100"
+                  [(ngModel)]="renameInput"
+                  (keyup.enter)="commitRename(file.name)"
+                  (keyup.escape)="cancelRename()"
+                  (blur)="commitRename(file.name)"
+                  (click)="$event.stopPropagation()" />
+              } @else {
+                <span class="flex-1 truncate font-mono"
+                  (dblclick)="startRename(file.name, $event)">{{ file.name }}</span>
+                <button (click)="startRename(file.name, $event)"
+                  class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-blue-500 transition-all"
+                  title="Rename file">
+                  <i class="pi pi-pencil" style="font-size: 9px"></i>
+                </button>
+                @if (file.name !== 'main.py') {
+                  <button (click)="deleteFile(file.name, $event)"
+                    class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-red-500 transition-all"
+                    title="Delete file">
+                    <i class="pi pi-times" style="font-size: 9px"></i>
+                  </button>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Editor column -->
+      <div class="editor-column flex flex-col flex-1 min-w-0">
+
+        <!-- Tab bar -->
+        <div
+          class="editor-tabbar border-b border-gray-200 dark:border-gray-700 flex items-center px-3 bg-gray-50 dark:bg-gray-900/60 shrink-0">
+          <div
+            class="flex items-center gap-1.5 px-3 py-1 rounded-t text-xs font-mono bg-white dark:bg-gray-800 border border-b-0 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">
+            <i class="pi pi-file" style="font-size: 10px; color: #60a5fa"></i>
+            {{ selectedFileName }}
+            @if (isDirty) {
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block ml-0.5"
+                title="Unsaved changes"></span>
+            }
+          </div>
+        </div>
+
+        <!-- Monaco editor -->
+        <div class="editor-area" style="position: relative">
+          <ngx-monaco-editor
+            style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; height: 100%; width: 100%"
+            [options]="editorOptions"
+            [(ngModel)]="currentFileContent"
+            (ngModelChange)="onCodeChange()"
+            (onInit)="onEditorInit($event)">
+          </ngx-monaco-editor>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Output panel ────────────────────────────────────────────────────── -->
+    <div class="mt-3 rounded-xl border border-gray-700 shadow-sm overflow-hidden">
+      <div
+        class="flex items-center justify-between px-4 py-2 bg-gray-800 dark:bg-gray-900 border-b border-gray-700 shrink-0">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-terminal text-xs text-gray-400"></i>
+          <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Output</span>
+          @if (isRunning) {
+            <span class="flex items-center gap-1 text-xs text-blue-300">
+              <i class="pi pi-spin pi-spinner" style="font-size: 10px"></i>
+              Running…
+            </span>
+          }
+        </div>
+        <button (click)="clearOutput()"
+          class="text-xs text-gray-500 hover:text-gray-300 transition-colors px-2 py-0.5 rounded hover:bg-gray-700">
+          <i class="pi pi-trash text-xs mr-1"></i>Clear
+        </button>
+      </div>
+      <div class="output-area p-4 font-mono text-xs overflow-auto bg-gray-950">
+        @if (!isRunning && taskLogs.length === 0 && !runSummary) {
+          <span class="text-gray-600">Run your package to see output here…</span>
+        }
+        @if (runHeader) {
+          <div class="leading-5 text-blue-300 mb-1">{{ runHeader }}</div>
+        }
+        @for (log of taskLogs; track $index) {
+          <div class="log-line leading-5 text-gray-300 whitespace-pre-wrap break-words">{{ log }}</div>
+        }
+        @if (runSummary) {
+          <div class="leading-5 mt-1" [class]="runSummary.success ? 'text-green-400' : 'text-red-400'">
+            {{ runSummary.text }}
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── New Package dialog ──────────────────────────────────────────────── -->
+  <p-dialog header="New Live Package" [(visible)]="showNewPackageDialog" [modal]="true"
+    [style]="{width: '400px'}" [closable]="true">
+    <div class="flex flex-col gap-3 pt-2">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Package Name</label>
+      <input pInputText [(ngModel)]="newPackageName" placeholder="my_package" class="w-full"
+        (keyup.enter)="createPackage()" />
+      <p class="text-xs text-gray-400">Use lowercase letters, numbers, and underscores.</p>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" size="small"
+        (onClick)="showNewPackageDialog = false" />
+      <p-button label="Create" [icon]="PrimeIcons.PLUS" size="small"
+        [disabled]="!newPackageName.trim()" (onClick)="createPackage()" />
+    </ng-template>
+  </p-dialog>
+
+  <!-- ── Run dialog ─────────────────────────────────────────────────────── -->
+  <p-dialog header="Run Package" [(visible)]="showRunDialog" [modal]="true"
+    [style]="{width: '480px'}" [closable]="true">
+    <div class="flex flex-col gap-3 pt-2">
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Configure arguments for
+        <span class="font-semibold text-gray-700 dark:text-gray-300">
+          {{ currentPackage?.package_name }}
+        </span>:
+      </p>
+      @for (arg of runArgs; track $index; let i = $index) {
+        <div class="flex gap-2 items-center">
+          <input pInputText [(ngModel)]="arg.name" placeholder="name" class="flex-1 text-sm" />
+          <span class="text-gray-400 text-sm">=</span>
+          <input pInputText [(ngModel)]="arg.value" placeholder="value" class="flex-1 text-sm" />
+          <button (click)="removeRunArg(i)"
+            class="text-red-400 hover:text-red-600 transition-colors p-1">
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </div>
+      }
+      <p-button label="Add argument" [icon]="PrimeIcons.PLUS" severity="secondary" size="small"
+        [text]="true" (onClick)="addRunArg()" />
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" size="small"
+        (onClick)="showRunDialog = false" />
+      <p-button label="Save &amp; Run" [icon]="PrimeIcons.PLAY" size="small"
+        (onClick)="saveAndRun()" />
+    </ng-template>
+  </p-dialog>
+
+</div>

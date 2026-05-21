@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import threading
+import time
 from datetime import datetime, timezone
 
 from kubernetes import client, config
@@ -58,7 +59,7 @@ class TaskManagerService(metaclass=SingletonMeta):
             package_name: str,
             version: str | None,
             arguments: list[PackageRequestArgument],
-            empty_instance: bool) -> bool:
+            empty_instance: bool) -> tuple[bool, str]:
         task_logger = self.task_logger.setup_logger(task_id)
 
         try:
@@ -67,6 +68,7 @@ class TaskManagerService(metaclass=SingletonMeta):
                 raise FileNotFoundError(f"Package not found for {package_name}")
 
             package_config = parse_config(package_info.package_entity.config)
+            captured_output = ""
 
             self.task_manager.update_task_status(
                 task_id,
@@ -135,22 +137,25 @@ class TaskManagerService(metaclass=SingletonMeta):
 
                     PodExecutor.run_command(self.v1, self.namespace, task_id, command, line_callback)
                     result = 1
+                    captured_output = ""
                 else:
                     file_name = os.path.basename(package_info.entry_point_path)
-                    result = pod_api_wrapper.start_app(
+                    exit_code, captured_output = pod_api_wrapper.start_app(
                         self.v1, self.namespace, task_id,
                         file_name, command, task_logger, task_id, self.task_manager,
                         package_config.runtime
                     )
+                    result = exit_code
             else:
                 result = asyncio.run(pod_api_wrapper.watch_pod(self.v1, self.namespace,
                                      task_id, task_logger, task_id, self.task_manager))
+                captured_output = ""
 
-            return result is not None and result == 0
+            return result is not None and result == 0, captured_output
         except Exception as e:
             PodManager.delete_pod(self.v1, self.namespace, task_id, task_logger)
             logger.error(f"Error executing package: {str(e)}")
-            return False
+            return False, ""
 
     def __internal_run_package(self, timeout: int, task_id: str, package_name: str,
                                version: str | None, arguments: list[PackageRequestArgument],
@@ -168,9 +173,10 @@ class TaskManagerService(metaclass=SingletonMeta):
                 timer.daemon = True
                 timer.start()
 
-            output_lines = []
-            error_lines = []
-            success = self.execute_package(task_id, package_name, version, arguments, empty_instance)
+            start_time = time.time()
+            success, captured_output = self.execute_package(
+                task_id, package_name, version, arguments, empty_instance)
+            elapsed = time.time() - start_time
 
             if timer:
                 timer.cancel()
@@ -178,8 +184,9 @@ class TaskManagerService(metaclass=SingletonMeta):
             result = SyncExecutionResponse(
                 success=success,
                 task_id=task_id,
-                output=''.join(output_lines),
-                error=''.join(error_lines)
+                output=captured_output,
+                error="",
+                execution_time=round(elapsed, 2)
             )
 
             status = TaskStatus.COMPLETED if success else TaskStatus.FAILED

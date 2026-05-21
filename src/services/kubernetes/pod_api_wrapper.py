@@ -76,7 +76,7 @@ async def watch_pod(api: client.CoreV1Api, namespace: str, pod_name: str,
 
 def start_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point: str,
               args: list[str], task_logger: Logger, task_id: str, task_manager: TaskRepository,
-              runtime: RuntimeType | None = RuntimeType.PYTHON) -> int | None:
+              runtime: RuntimeType | None = RuntimeType.PYTHON) -> tuple[int | None, str]:
     pre_start_command = None
     match runtime:
         case RuntimeType.PYTHON:
@@ -88,11 +88,13 @@ def start_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point:
     exec_command = [shell, '-c', f'cd /app && {pre_start_command} {" ".join(args)}']
 
     exit_code = None
+    output_lines: list[str] = []
 
     try:
         def line_callback(line: str) -> bool:
             port_matched = False
             task_logger.info(line)
+            output_lines.append(line)
             if not port_matched:
                 port_matched = asyncio.run(match_port(
                     pod_name, line, api, namespace, task_logger, task_id, task_manager))
@@ -114,10 +116,10 @@ def start_app(api: client.CoreV1Api, namespace: str, pod_name: str, entry_point:
                     SyncExecutionResponse(
                         success=False,
                         task_id=task_id,
-                        output="",
+                        output="\n".join(output_lines),
                         error=f"Package execution failed with exit code {exit_code}"
                     ).__dict__
                 )
 
     task_logger.info("Application finished")
-    return exit_code
+    return exit_code, "\n".join(output_lines)

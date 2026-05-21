@@ -213,6 +213,13 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     window.open(url, '_blank');
   }
 
+  copyEndpointUrl(): void {
+    const url = `${environment.url}/execute/${this.packageName}/${this.packageVersion}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showSuccess('Endpoint URL copied to clipboard');
+    });
+  }
+
   showSuccess(message: string): void {
     this.messageService.add({
       severity: 'success',

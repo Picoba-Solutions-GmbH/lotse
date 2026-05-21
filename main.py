@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 import src.utils.service_registry as service_registry
 from src.database import seed_users
 from src.database.database_access import get_db_session, init_db
-from src.routes import (authentication, cluster, execute, package,
+from src.routes import (authentication, cluster, execute, package, package_live,
                         pod_terminal, proxy, status, task, volume, websocket)
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
@@ -59,6 +59,7 @@ app.add_middleware(
 app.include_router(authentication.router)
 app.include_router(cluster.router)
 app.include_router(execute.router)
+app.include_router(package_live.router)
 app.include_router(package.router)
 app.include_router(pod_terminal.router)
 app.include_router(proxy.router)

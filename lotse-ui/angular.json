@@ -45,6 +45,11 @@
                 "glob": "**/aura-*-teal/**/*",
                 "input": "./node_modules/primeng/resources/themes/",
                 "output": "./themes/"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/monaco-editor/min",
+                "output": "assets/monaco"
               }
             ],
             "styles": [

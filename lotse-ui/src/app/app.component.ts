@@ -64,6 +64,11 @@ export class AppComponent implements OnInit {
       routerLink: 'packages'
     },
     {
+      label: 'Live Coding',
+      icon: PrimeIcons.CODE,
+      routerLink: 'live-coding'
+    },
+    {
       label: 'Cluster',
       icon: svglKubernetes,
       routerLink: 'cluster'

@@ -1,0 +1,41 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.ide-container {
+  height: calc(100vh - 320px);
+  min-height: 420px;
+  display: flex;
+  overflow: hidden;
+}
+
+.file-sidebar {
+  width: 192px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.editor-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editor-tabbar {
+  flex-shrink: 0;
+  height: 36px;
+}
+
+.editor-area {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.output-area {
+  max-height: 220px;
+  min-height: 80px;
+}

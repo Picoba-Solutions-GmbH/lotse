@@ -3,6 +3,7 @@ import { ClusterComponent } from './components/cluster/cluster.component';
 import { NamespaceResourcesComponent } from './components/cluster/namespace-resources/namespace-resources.component';
 import { PackageExecutionComponent } from './components/package/package-execution/package-execution.component';
 import { PackageInstanceComponent } from './components/package/package-instance/package-instance.component';
+import { PackageLiveCodeComponent } from './components/package/package-live-code/package-live-code.component';
 import { PackageManagementComponent } from './components/package/package-management/package-management.component';
 import { PackagesOverviewComponent } from './components/package/packages-overview/packages-overview.component';
 
@@ -27,6 +28,10 @@ export const routes: Routes = [
     {
         path: 'packages/:package_name/:package_version',
         component: PackageInstanceComponent,
+    },
+    {
+        path: 'live-coding',
+        component: PackageLiveCodeComponent,
     },
     {
         path: 'cluster',
