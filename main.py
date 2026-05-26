@@ -18,6 +18,11 @@ from src.services.activemq_service import ActiveMQService
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
 from src.utils.singleton_meta import get_service_instance
+from fastapi.staticfiles import StaticFiles
+from fastapi.openapi.docs import (
+    get_redoc_html,
+    get_swagger_ui_html
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +49,9 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title=config.APP_NAME, root_path=config.OPENAPI_PREFIX_PATH,
-              version=config.API_VERSION, lifespan=lifespan)
+              version=config.API_VERSION, lifespan=lifespan, docs_url=None, redoc_url=None)
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 app.middleware('http')(handle_proxy_404_middleware)
 
 app.add_middleware(
@@ -77,6 +83,26 @@ async def serve_angular(full_path: str):
         return FileResponse(file_path)
 
     return FileResponse("ui/index.html")
+
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,  # type: ignore
+        title=app.title + " - Swagger UI",
+        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+        swagger_js_url="/static/swagger-ui-bundle.js",
+        swagger_css_url="/static/swagger-ui.css",
+    )
+
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html():
+    return get_redoc_html(
+        openapi_url=app.openapi_url,  # type: ignore
+        title=app.title + " - ReDoc",
+        redoc_js_url="/static/redoc.standalone.js",
+    )
 
 
 async def tracking_middleware(request: Request, call_next):
