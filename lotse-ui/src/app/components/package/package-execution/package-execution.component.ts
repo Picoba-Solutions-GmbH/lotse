@@ -18,8 +18,8 @@ import { PackageRequestArguments } from '../../../models/PackageRequestArguments
 import { RepositoryConfig } from '../../../models/RepositoryConfig';
 import { TaskInfo } from '../../../models/TaskInfo';
 import { TaskStatusToSeverityPipe } from '../../../pipes/task-status.pipe';
-import { AuthService } from '../../../services/auth.service';
 import { ExecutionService } from '../../../services/execution.service';
+import { FeatureFlagService } from '../../../services/feature-flag.service';
 import { PackageService } from '../../../services/package.service';
 import { TaskService } from '../../../services/task.service';
 
@@ -69,13 +69,13 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
     private packageService: PackageService,
     private messageService: MessageService,
     private taskService: TaskService,
-    private authService: AuthService
+    private featureFlagService: FeatureFlagService
   ) { }
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.loadPackagesAsync(), this.loadTasksAsync()]);
     this.startTaskPolling();
-    this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
+    this.isAuthenticationEnabled = await this.featureFlagService.isAuthenticationEnabled();
   }
 
   ngOnDestroy(): void {

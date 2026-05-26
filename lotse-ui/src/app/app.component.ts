@@ -15,6 +15,7 @@ import { Role } from './misc/Role';
 import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
 import './utils/global-functions';
+import { FeatureFlagService } from './services/feature-flag.service';
 
 @Component({
   selector: 'app-root',
@@ -34,6 +35,7 @@ import './utils/global-functions';
 export class AppComponent implements OnInit {
   isLoggedIn: boolean = false;
   isAuthEnabled: boolean = false;
+  isLiveCodingEnabled: boolean = true;
 
   title = 'lotse-ui';
   logoOpacity: number = 1;
@@ -81,6 +83,7 @@ export class AppComponent implements OnInit {
     private router: Router,
     public themeService: ThemeService,
     private authService: AuthService,
+    private featureFlagService: FeatureFlagService,
     private messageService: MessageService,
     private dialogService: DialogService) {
     themeService.darkMode.subscribe((darkMode) => {
@@ -95,7 +98,9 @@ export class AppComponent implements OnInit {
       this.updateMenuItems();
     });
 
-    this.isAuthEnabled = await this.authService.isAuthenticationEnabledAsync();
+    this.isAuthEnabled = await this.featureFlagService.isAuthenticationEnabled();
+    this.isLiveCodingEnabled = await this.featureFlagService.isLiveCodingEnabled();
+    this.updateMenuItems();
     if (this.isAuthEnabled) {
       const login = this.authService.getLogin();
       if (login) {
@@ -115,7 +120,9 @@ export class AppComponent implements OnInit {
       if (item.routerLink === 'cluster') {
         return isAdmin;
       }
-
+      if (item.routerLink === 'live-coding') {
+        return this.isLiveCodingEnabled;
+      }
       return true;
     });
 

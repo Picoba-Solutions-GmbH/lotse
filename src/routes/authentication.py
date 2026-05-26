@@ -130,11 +130,6 @@ async def require_operator_or_admin(_: Request, token: str = Depends(oauth2_sche
     return token_data
 
 
-@router.get("/is-authentication-enabled")
-async def is_authentication_enabled():
-    return {"authentication_enabled": config.ENABLE_AUTH}
-
-
 @router.post("/register", response_model=schemas.Token)
 async def register_user(
         db: Session = Depends(get_db_session),

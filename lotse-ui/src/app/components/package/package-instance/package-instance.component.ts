@@ -28,8 +28,8 @@ import { DurationPipe } from "../../../pipes/duration.pipe";
 import { TaskCountByStatePipe } from "../../../pipes/task-count-by-state.pipe";
 import { TaskStatusToSeverityPipe } from "../../../pipes/task-status.pipe";
 import { UtcToLocalPipe } from "../../../pipes/utcToLocal.pipe";
-import { AuthService } from '../../../services/auth.service';
 import { ExecutionService } from '../../../services/execution.service';
+import { FeatureFlagService } from '../../../services/feature-flag.service';
 import { PackageService } from '../../../services/package.service';
 import { TaskService } from '../../../services/task.service';
 import { WebSocketService } from '../../../services/websocket.service';
@@ -109,8 +109,8 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private messageService: MessageService,
     private taskService: TaskService,
-    private authService: AuthService,
-    private webSocketService: WebSocketService
+    private webSocketService: WebSocketService,
+    private featureFlagService: FeatureFlagService
   ) { }
 
   async ngOnInit(): Promise<void> {
@@ -118,7 +118,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     this.packageVersion = this.route.snapshot.params['package_version'];
     this.setupWebSocketForTasks();
     await this.loadPackageInstanceAsync();
-    this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
+    this.isAuthenticationEnabled = await this.featureFlagService.isAuthenticationEnabled();
   }
 
   ngOnDestroy(): void {

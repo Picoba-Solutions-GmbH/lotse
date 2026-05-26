@@ -5,10 +5,6 @@ import { map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { Role } from '../misc/Role';
 
-interface AuthenticationResponse {
-  authentication_enabled: boolean;
-}
-
 interface TokenResponse {
   access_token: string;
 }
@@ -18,7 +14,6 @@ interface TokenResponse {
 })
 export class AuthService {
   private token: string | null = null;
-  private isAuthEnabled: boolean | null = null;
   public authStateChanged = new EventEmitter<boolean>();
 
   constructor(private http: HttpClient) {
@@ -26,18 +21,6 @@ export class AuthService {
     if (storedToken) {
       this.token = storedToken;
     }
-  }
-
-  async isAuthenticationEnabledAsync(): Promise<boolean> {
-    if (this.isAuthEnabled !== null) {
-      return this.isAuthEnabled;
-    }
-
-    const response = await firstValueFromAsync(
-      this.http.get<AuthenticationResponse>(`${environment.url}/authentication/is-authentication-enabled`)
-    ) as AuthenticationResponse;
-    this.isAuthEnabled = response.authentication_enabled;
-    return this.isAuthEnabled;
   }
 
   login(username: string, password: string): Observable<string> {

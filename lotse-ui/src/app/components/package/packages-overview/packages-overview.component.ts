@@ -13,7 +13,7 @@ import { Role } from '../../../misc/Role';
 import { PackageInfo } from '../../../models/Package';
 import { PackageCountByStatePipe } from '../../../pipes/package-count-by-state.pipe';
 import { PackageStatusToSeverityPipe } from '../../../pipes/package-status.pipe';
-import { AuthService } from '../../../services/auth.service';
+import { FeatureFlagService } from '../../../services/feature-flag.service';
 import { PackageService } from '../../../services/package.service';
 import { PackageDeployComponent } from '../package-deploy/package-deploy.component';
 
@@ -46,12 +46,12 @@ export class PackagesOverviewComponent implements OnInit {
   constructor(
     private packageService: PackageService,
     private router: Router,
-    private authService: AuthService,
+    private featureFlagService: FeatureFlagService
   ) { }
 
   async ngOnInit(): Promise<void> {
     await this.loadPackages();
-    this.isAuthenticationEnabled = await this.authService.isAuthenticationEnabledAsync();
+    this.isAuthenticationEnabled = await this.featureFlagService.isAuthenticationEnabled();
   }
 
   async loadPackages(): Promise<void> {

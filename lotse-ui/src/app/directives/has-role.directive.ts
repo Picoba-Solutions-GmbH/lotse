@@ -2,6 +2,7 @@ import { Directive, Input, OnDestroy, OnInit, TemplateRef, ViewContainerRef } fr
 import { Subscription } from 'rxjs';
 import { Role } from '../misc/Role';
 import { AuthService } from '../services/auth.service';
+import { FeatureFlagService } from '../services/feature-flag.service';
 
 @Directive({
     selector: '[hasRole]'
@@ -18,7 +19,8 @@ export class HasRoleDirective implements OnInit, OnDestroy {
     constructor(
         private templateRef: TemplateRef<any>,
         private viewContainer: ViewContainerRef,
-        private authService: AuthService
+        private authService: AuthService,
+        private featureFlagService: FeatureFlagService
     ) { }
 
     ngOnInit(): void {
@@ -36,7 +38,7 @@ export class HasRoleDirective implements OnInit, OnDestroy {
     }
 
     private async updateView(): Promise<void> {
-        const isAuthEnabled = await this.authService.isAuthenticationEnabledAsync();
+        const isAuthEnabled = await this.featureFlagService.isAuthenticationEnabled();
         const currentRole = this.authService.getRole();
         const isAllowed = this.allowedRoles.includes(currentRole);
 
