@@ -92,6 +92,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   showTerminal = false;
   selectedTaskId: string | null = null;
   isVsCodeBusy = signal(false);
+  packageEnvironmentVariablesLoading = signal(false);
   isAuthenticationEnabled: boolean = false;
 
   showEnvironmentDialog = false;
@@ -350,10 +351,13 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
 
   async showEnvironmentVariables(): Promise<void> {
     try {
+      this.packageEnvironmentVariablesLoading.set(true);
       this.packageEnvironmentVariables = await this.packageService.getPackageEnvironmentAsync(this.packageName, this.packageVersion);
       this.showEnvironmentDialog = true;
     } catch (error) {
       this.showError('Failed to load environment variables');
+    } finally {
+      this.packageEnvironmentVariablesLoading.set(false);
     }
   }
 }

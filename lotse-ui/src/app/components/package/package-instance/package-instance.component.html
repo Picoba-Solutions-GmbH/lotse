@@ -421,10 +421,15 @@
                 </tr>
             </ng-template>
         </p-table>
-        } @else {
+        } @else if (packageEnvironmentVariablesLoading()) {
         <div class="flex flex-col items-center py-10 text-center">
             <i class="pi pi-spin pi-spinner text-3xl text-gray-400 mb-3"></i>
             <p class="text-sm text-gray-500">Loading environment variables…</p>
+        </div>
+        } @else {
+        <div class="flex flex-col items-center py-10 text-center">
+            <i class="pi pi-info-circle text-3xl text-gray-400 mb-3"></i>
+            <p class="text-sm text-gray-500">No environment variables configured for this package</p>
         </div>
         }
         <ng-template pTemplate="footer">
