@@ -51,6 +51,7 @@ class PodExecutor:
         exit_code = None
         try:
             while resp.is_open():
+                resp.update(timeout=1)
                 line = None
                 if resp.peek_stdout():
                     line = resp.read_stdout()
@@ -69,7 +70,6 @@ class PodExecutor:
                             resp.close()
                             return 0
 
-            resp.update(timeout=1)
             exit_code = resp.returncode
         finally:
             resp.close()

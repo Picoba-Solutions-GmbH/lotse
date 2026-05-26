@@ -129,6 +129,40 @@ html:not(.dark) {
   pointer-events: none;
 }
 
+// ── Sidebar nav item ─────────────────────────────────────────────────────────
+
+.sidebar-nav-item {
+  color: rgb(75 85 99); // gray-600 (light mode default)
+  border: 1px solid transparent;
+  text-decoration: none;
+
+  &:hover {
+    color: rgb(17 24 39); // gray-900
+    background: rgb(243 244 246); // gray-100
+  }
+
+  &.active {
+    color: rgb(5 150 105); // emerald-600
+    background: rgba(16 185 129 / 0.08);
+    border-color: rgba(16 185 129 / 0.25);
+  }
+
+  html.dark & {
+    color: rgb(107 114 128); // gray-500
+
+    &:hover {
+      color: rgb(243 244 246); // gray-100
+      background: rgba(255 255 255 / 0.05);
+    }
+
+    &.active {
+      color: rgb(52 211 153); // emerald-400
+      background: rgba(16 185 129 / 0.1);
+      border-color: rgba(16 185 129 / 0.2);
+    }
+  }
+}
+
 // ── Icon action button ───────────────────────────────────────────────────────
 
 .icon-action-btn {
