@@ -132,9 +132,10 @@ export class AppComponent implements OnInit {
   private buildSubMenuItems(urlParts: string[]): MenuItem[] {
     let currentPath = 'packages';
     return urlParts.map((part, index) => {
-      currentPath += `/${part}`;
+      const decoded = decodeURIComponent(part);
+      currentPath += `/${decoded}`;
       return {
-        label: part.replace(/_/g, ' ').replace(/%20/g, '-'),
+        label: decoded.replace(/_/g, ' '),
         icon: PrimeIcons.FOLDER,
         routerLink: currentPath
       };
@@ -143,7 +144,7 @@ export class AppComponent implements OnInit {
 
   isRouteActive(item: MenuItem): boolean {
     if (item.routerLink) {
-      return this.currentRoute.startsWith('/' + item.routerLink);
+      return decodeURIComponent(this.currentRoute).startsWith('/' + item.routerLink);
     }
     if (item.items) {
       return item.items.some((subItem: MenuItem) => this.isRouteActive(subItem));

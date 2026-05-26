@@ -57,7 +57,7 @@ def prepare_environment(v1: client.CoreV1Api,
     tar_file_path = os.path.join(venv_path, "venv.tar.gz")
     if not os.path.exists(tar_file_path):
         PodManager.create_pod(v1, namespace, task_id,
-                              package_info.package_entity.python_version, [], task_logger, [],
+                              package_info.package_entity.python_version, list(package_config.environment), task_logger, [],
                               package_config.image, RuntimeType.PYTHON, False)
         asyncio.run(pod_api_wrapper.wait_for_pod_running(v1, namespace, task_id, task_logger))
         PodFileOperations.copy_files_to_pod(namespace, task_id, str(package_info.package_dir), "/app")

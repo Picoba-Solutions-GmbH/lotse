@@ -13,7 +13,7 @@ export class ExecutionService {
 
   async executePackageAsync(request: PackageRequest): Promise<SyncPackageResponse | AsyncPackageResponse> {
     return await firstValueFromAsync(
-      this.http.post<SyncPackageResponse | AsyncPackageResponse>(`${environment.url}/execute`, request),
+      this.http.post<SyncPackageResponse | AsyncPackageResponse>(`${environment.url}/execute/`, request),
     );
   }
 
