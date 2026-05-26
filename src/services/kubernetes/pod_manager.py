@@ -76,6 +76,9 @@ class PodManager:
             if os.environ.get(env_var):
                 env_vars.append(Environment(env_var, os.environ[env_var]))
 
+        if os.environ.get('PIP_INDEX_URL'):
+            env_vars.append(Environment('PIP_INDEX_URL', os.environ['PIP_INDEX_URL']))
+
         env_var_list = [{"name": env_var.name, "value": env_var.value} for env_var in env_vars]
 
         volume_mounts = [
