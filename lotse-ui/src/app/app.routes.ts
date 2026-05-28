@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { ClusterComponent } from './components/cluster/cluster.component';
 import { NamespaceResourcesComponent } from './components/cluster/namespace-resources/namespace-resources.component';
+import { LogsComponent } from './components/logs/logs.component';
 import { PackageExecutionComponent } from './components/package/package-execution/package-execution.component';
 import { PackageInstanceComponent } from './components/package/package-instance/package-instance.component';
 import { PackageLiveCodeComponent } from './components/package/package-live-code/package-live-code.component';
@@ -40,5 +41,9 @@ export const routes: Routes = [
     {
         path: 'cluster/:namespace/pods',
         component: NamespaceResourcesComponent,
+    },
+    {
+        path: 'logs',
+        component: LogsComponent,
     }
 ];

@@ -1,0 +1,154 @@
+<div class="space-y-4">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Logs</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                Application log output (in-memory, last 500 entries)
+            </p>
+        </div>
+        <p-button icon="pi pi-refresh" label="Refresh" severity="secondary" [outlined]="true" size="small"
+            (onClick)="loadLogs()" [loading]="loading" />
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+
+            <!-- Level -->
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Level</label>
+                <p-select [options]="levelOptions" [(ngModel)]="selectedLevel" optionLabel="label" optionValue="value"
+                    placeholder="All levels" styleClass="w-full" />
+            </div>
+
+            <!-- Search -->
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Search</label>
+                <input pInputText type="text" [(ngModel)]="search" placeholder="Message or logger…" class="w-full"
+                    (keyup.enter)="applyFilters()" />
+            </div>
+
+            <!-- From date -->
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">From date</label>
+                <p-datepicker [(ngModel)]="fromDate" [showTime]="true" [showSeconds]="true"
+                    placeholder="Start date/time" styleClass="w-full" dateFormat="yy-mm-dd" />
+            </div>
+
+            <!-- To date -->
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">To date</label>
+                <p-datepicker [(ngModel)]="toDate" [showTime]="true" [showSeconds]="true" placeholder="End date/time"
+                    styleClass="w-full" dateFormat="yy-mm-dd" />
+            </div>
+
+        </div>
+
+        <div class="flex items-center gap-2 mt-3 flex-wrap">
+
+            <!-- Limit -->
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Show</label>
+                <p-inputnumber [(ngModel)]="limit" [min]="1" [max]="500" [showButtons]="false"
+                    inputStyleClass="w-20 text-sm" (onInput)="offset = 0" />
+                <span class="text-xs text-gray-500 dark:text-gray-400">entries</span>
+            </div>
+
+            <div class="flex-1"></div>
+
+            <p-button label="Clear" severity="secondary" [outlined]="true" size="small" icon="pi pi-times"
+                (onClick)="clearFilters()" />
+            <p-button label="Apply" size="small" icon="pi pi-filter" (onClick)="applyFilters()" />
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+        <p-table [value]="logs" [loading]="loading" [scrollable]="true" scrollHeight="calc(100vh - 420px)"
+            styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th class="w-44">Timestamp</th>
+                    <th class="w-24">Level</th>
+                    <th class="w-44">Logger</th>
+                    <th>Message</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-entry>
+                <tr>
+                    <td class="font-mono text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {{ entry.timestamp | date:'yyyy-MM-dd HH:mm:ss' : 'UTC' }}
+                    </td>
+                    <td>
+                        <p-tag [value]="entry.level" [severity]="levelSeverity(entry.level)"
+                            styleClass="text-xs font-mono" />
+                    </td>
+                    <td class="font-mono text-xs text-gray-600 dark:text-gray-400 max-w-44 truncate"
+                        [pTooltip]="entry.logger" tooltipPosition="top">
+                        {{ entry.logger }}
+                    </td>
+                    <td class="text-gray-700 dark:text-gray-300 font-mono text-xs">
+                        <div class="flex items-start gap-1">
+                            <span class="break-all whitespace-pre-wrap">{{ truncateMessage(entry.message) }}</span>
+                            @if (isLong(entry.message)) {
+                            <button
+                                class="shrink-0 mt-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                (click)="openDialog(entry)" pTooltip="Show full message" tooltipPosition="left">
+                                <i class="pi pi-expand text-xs"></i>
+                            </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="4" class="text-center text-gray-400 dark:text-gray-500 py-12">
+                        <i class="pi pi-inbox text-3xl block mb-2"></i>
+                        No log entries found
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+
+        <!-- Pagination footer -->
+        <div
+            class="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400">
+            <span>
+                @if (total > 0) {
+                Showing {{ offset + 1 }}–{{ showingEnd }} of {{ total }} entries
+                } @else {
+                No entries
+                }
+            </span>
+            <div class="flex items-center gap-2">
+                <p-button icon="pi pi-chevron-left" severity="secondary" [outlined]="true" size="small"
+                    [disabled]="offset === 0" (onClick)="prevPage()" [pTooltip]="'Previous page'" />
+                <span class="text-xs">{{ currentPage }} / {{ totalPages }}</span>
+                <p-button icon="pi pi-chevron-right" severity="secondary" [outlined]="true" size="small"
+                    [disabled]="offset + limit >= total" (onClick)="nextPage()" [pTooltip]="'Next page'" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full message dialog -->
+<p-dialog [(visible)]="dialogVisible" [modal]="true" [dismissableMask]="true"
+    [style]="{ width: '720px', maxWidth: '95vw' }" header="Log entry">
+    @if (expandedEntry) {
+    <div class="space-y-3">
+        <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="font-mono">{{ expandedEntry.timestamp | date:'yyyy-MM-dd HH:mm:ss' : 'UTC' }}</span>
+            <p-tag [value]="expandedEntry.level" [severity]="levelSeverity(expandedEntry.level)"
+                styleClass="text-xs font-mono" />
+            <span class="font-mono truncate">{{ expandedEntry.logger }}</span>
+        </div>
+        <pre
+            class="bg-gray-100 dark:bg-gray-800 rounded-md p-3 text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all overflow-auto max-h-[60vh]">{{ expandedEntry.message }}</pre>
+    </div>
+    }
+</p-dialog>

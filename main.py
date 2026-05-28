@@ -6,25 +6,25 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 import src.utils.service_registry as service_registry
 from src.database import seed_users
 from src.database.database_access import get_db_session, init_db
-from src.routes import (authentication, cluster, execute, feature_flag, package, package_live,
-                        pod_terminal, proxy, status, task, volume, websocket)
+from src.routes import (authentication, cluster, execute, feature_flag, logs,
+                        package, package_live, pod_terminal, proxy, status,
+                        task, volume, websocket)
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
+from src.utils.log_store import setup_log_handler
 from src.utils.singleton_meta import get_service_instance
-from fastapi.staticfiles import StaticFiles
-from fastapi.openapi.docs import (
-    get_redoc_html,
-    get_swagger_ui_html
-)
 
 logger = logging.getLogger(__name__)
+setup_log_handler()
 
 
 @asynccontextmanager
@@ -66,6 +66,7 @@ app.include_router(authentication.router)
 app.include_router(cluster.router)
 app.include_router(feature_flag.router)
 app.include_router(execute.router)
+app.include_router(logs.router)
 app.include_router(package.router)
 app.include_router(pod_terminal.router)
 app.include_router(proxy.router)
@@ -108,15 +109,27 @@ async def redoc_html():
     )
 
 
+_SILENT_PATHS = {"/liveness", "/health", "/status", "/metrics"}
+
+
 async def tracking_middleware(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
-    duration = time.time() - start_time
 
-    duration_text = f"{duration:.2f}s"
-    logger.info(f"{request.method} {request.url} {response.status_code} {duration_text}",
-                extra={'method': request.method, 'url': request.url, 'statusCode': response.status_code,
-                       'duration': duration_text, 'msgType': 'Request'})
+    path = request.url.path.rstrip("/") or "/"
+    if path not in _SILENT_PATHS:
+        duration = time.time() - start_time
+        duration_text = f"{duration:.2f}s"
+        logger.info(
+            f"{request.method} {request.url} {response.status_code} {duration_text}",
+            extra={
+                "method": request.method,
+                "url": str(request.url),
+                "statusCode": response.status_code,
+                "duration": duration_text,
+                "msgType": "Request",
+            },
+        )
 
     return response
 

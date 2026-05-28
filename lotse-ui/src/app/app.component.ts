@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -9,13 +9,15 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
 import { filter, firstValueFrom as firstValueFromAsync } from 'rxjs';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { Role } from './misc/Role';
 import { AuthService } from './services/auth.service';
+import { FeatureFlagService } from './services/feature-flag.service';
+import { StatusService } from './services/status.service';
 import { ThemeService } from './services/theme.service';
 import './utils/global-functions';
-import { FeatureFlagService } from './services/feature-flag.service';
 
 @Component({
   selector: 'app-root',
@@ -28,6 +30,7 @@ import { FeatureFlagService } from './services/feature-flag.service';
     RouterModule,
     ButtonModule,
     ConfirmDialogModule,
+    TooltipModule,
     NgIcon
   ],
   providers: [provideIcons({ svglKubernetes })],
@@ -48,6 +51,11 @@ export class AppComponent implements OnInit {
 
   sidebarOpen = false;
   sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+  private readonly statusService = inject(StatusService);
+  serverReachable$ = this.statusService.serverReachable$;
+  activemqEnabled$ = this.statusService.activemqEnabled$;
+  activemqConnected$ = this.statusService.activemqConnected$;
 
   toggleCollapse(): void {
     this.sidebarCollapsed = !this.sidebarCollapsed;
@@ -74,6 +82,11 @@ export class AppComponent implements OnInit {
       label: 'Cluster',
       icon: svglKubernetes,
       routerLink: 'cluster'
+    },
+    {
+      label: 'Logs',
+      icon: PrimeIcons.LIST,
+      routerLink: 'logs'
     }
   ];
 

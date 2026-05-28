@@ -10,8 +10,7 @@
 
   <!-- Sidebar -->
   <aside class="sidebar bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800"
-    [class.is-open]="sidebarOpen"
-    [class.is-collapsed]="sidebarCollapsed">
+    [class.is-open]="sidebarOpen" [class.is-collapsed]="sidebarCollapsed">
 
     <!-- Brand + collapse toggle -->
     <div class="flex items-center h-14 border-b border-gray-200 dark:border-gray-800 shrink-0 gap-2 px-3">
@@ -21,7 +20,8 @@
           <img src="lotse.webp" alt="Lotse" class="w-5 h-5" />
         </div>
         <div class="overflow-hidden">
-          <span class="text-sm font-semibold text-gray-900 dark:text-white tracking-tight leading-none block">Lotse</span>
+          <span
+            class="text-sm font-semibold text-gray-900 dark:text-white tracking-tight leading-none block">Lotse</span>
           <span class="text-[10px] text-gray-400 dark:text-gray-500 leading-none block mt-0.5">Management UI</span>
         </div>
       </div>
@@ -42,8 +42,7 @@
       @for (item of items; track item.label) {
       <a [routerLink]="'/' + item.routerLink"
         class="sidebar-nav-item flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-100 cursor-pointer no-underline"
-        [class.justify-center]="sidebarCollapsed"
-        [class.active]="isRouteActive(item)"
+        [class.justify-center]="sidebarCollapsed" [class.active]="isRouteActive(item)"
         [title]="sidebarCollapsed ? (item.label || '') : ''">
         @if (item.icon?.startsWith('pi')) {
         <i [class]="item.icon + ' shrink-0 text-sm'"></i>
@@ -59,11 +58,39 @@
 
     <!-- Footer -->
     <div class="px-2 py-3 border-t border-gray-200 dark:border-gray-800 space-y-0.5 shrink-0">
-      <button
-        (click)="isDarkMode ? themeService.setDarkMode(false) : themeService.setDarkMode(true)"
+
+      <!-- Status indicators -->
+      <div class="flex items-center gap-2 px-3 py-2 rounded-md" [class.justify-center]="sidebarCollapsed"
+        pTooltip="{{ sidebarCollapsed ? 'Server' + ((activemqEnabled$ | async) ? ' · ActiveMQ' : '') : '' }}"
+        tooltipPosition="right">
+        <!-- Server -->
+        <span class="shrink-0 w-2.5 h-2.5 rounded-full inline-block"
+          [class.bg-green-500]="(serverReachable$ | async) === true"
+          [class.bg-red-500]="(serverReachable$ | async) === false"
+          [class.bg-gray-400]="(serverReachable$ | async) === null"
+          [pTooltip]="'Server: ' + ((serverReachable$ | async) === true ? 'reachable' : (serverReachable$ | async) === false ? 'unreachable' : 'checking…')"
+          tooltipPosition="top"></span>
+        @if (!sidebarCollapsed) {
+        <span class="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">Lotse API</span>
+        }
+
+        <!-- ActiveMQ (only if enabled) -->
+        @if (activemqEnabled$ | async) {
+        <span class="shrink-0 w-2.5 h-2.5 rounded-full inline-block"
+          [class.bg-green-500]="(activemqConnected$ | async) === true"
+          [class.bg-red-500]="(activemqConnected$ | async) === false"
+          [class.bg-gray-400]="(activemqConnected$ | async) === null"
+          [pTooltip]="'ActiveMQ: ' + ((activemqConnected$ | async) === true ? 'connected' : (activemqConnected$ | async) === false ? 'disconnected' : 'checking…')"
+          tooltipPosition="top"></span>
+        @if (!sidebarCollapsed) {
+        <span class="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">ActiveMQ</span>
+        }
+        }
+      </div>
+
+      <button (click)="isDarkMode ? themeService.setDarkMode(false) : themeService.setDarkMode(true)"
         class="sidebar-nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left transition-all duration-100 cursor-pointer"
-        [class.justify-center]="sidebarCollapsed"
-        [title]="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        [class.justify-center]="sidebarCollapsed" [title]="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
         <i [class]="'shrink-0 text-sm ' + (isDarkMode ? 'pi pi-sun' : 'pi pi-moon')"></i>
         @if (!sidebarCollapsed) {
         <span>{{ isDarkMode ? 'Light mode' : 'Dark mode' }}</span>
@@ -72,8 +99,7 @@
       @if (isAuthEnabled) {
       <button (click)="isLoggedIn ? logout() : openLoginDialog()"
         class="sidebar-nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left transition-all duration-100 cursor-pointer"
-        [class.justify-center]="sidebarCollapsed"
-        [title]="isLoggedIn ? 'Sign out' : 'Sign in'">
+        [class.justify-center]="sidebarCollapsed" [title]="isLoggedIn ? 'Sign out' : 'Sign in'">
         <i [class]="'shrink-0 text-sm ' + (isLoggedIn ? 'pi pi-sign-out' : 'pi pi-sign-in')"></i>
         @if (!sidebarCollapsed) {
         <span>{{ isLoggedIn ? 'Sign out' : 'Sign in' }}</span>
@@ -88,8 +114,10 @@
   <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
     <!-- Mobile topbar -->
-    <header class="md:hidden flex items-center gap-3 h-14 px-4 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shrink-0">
-      <button (click)="sidebarOpen = true" class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors p-0.5">
+    <header
+      class="md:hidden flex items-center gap-3 h-14 px-4 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shrink-0">
+      <button (click)="sidebarOpen = true"
+        class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors p-0.5">
         <i class="pi pi-bars text-base"></i>
       </button>
       <div class="flex items-center gap-2">
