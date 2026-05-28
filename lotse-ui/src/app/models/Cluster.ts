@@ -118,3 +118,10 @@ export interface KubernetesPersistentVolume {
   claim: string | null;
   creationTimestamp: string;
 }
+
+export interface KubernetesSecret {
+  name: string;
+  namespace: string;
+  type: string;
+  creationTimestamp: string;
+}

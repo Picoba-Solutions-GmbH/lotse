@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { KubernetesConfigMap, KubernetesDeployment, KubernetesIngress, KubernetesNamespace, KubernetesPersistentVolumeClaim, KubernetesPod, KubernetesService, KubernetesStatefulSet, PodMetrics, KubernetesNode, KubernetesPersistentVolume } from '../models/Cluster';
+import { KubernetesConfigMap, KubernetesDeployment, KubernetesIngress, KubernetesNamespace, KubernetesNode, KubernetesPersistentVolume, KubernetesPersistentVolumeClaim, KubernetesPod, KubernetesSecret, KubernetesService, KubernetesStatefulSet } from '../models/Cluster';
 
 
 @Injectable({
@@ -109,6 +109,10 @@ export class ClusterService {
 
   async getPersistentVolumesAsync(): Promise<KubernetesPersistentVolume[]> {
     return await firstValueFrom(this.http.get<KubernetesPersistentVolume[]>(`${environment.url}/cluster/persistentvolumes`));
+  }
+
+  async getSecretsForNamespaceAsync(namespace: string): Promise<KubernetesSecret[]> {
+    return await firstValueFrom(this.http.get<KubernetesSecret[]>(`${environment.url}/cluster/namespaces/${namespace}/secrets`));
   }
 
   async getNodeYAML(nodeName: string): Promise<{ yaml: string }> {

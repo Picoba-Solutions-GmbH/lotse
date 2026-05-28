@@ -14,8 +14,8 @@ import src.utils.service_registry as service_registry
 from src.database import seed_users
 from src.database.database_access import get_db_session, init_db
 from src.routes import (authentication, cluster, execute, feature_flag, logs,
-                        package, package_live, pod_terminal, proxy, status,
-                        task, volume, websocket)
+                        network_share, package, package_live, pod_terminal,
+                        proxy, status, task, volume, websocket)
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
 from src.services.task_manager_service import TaskManagerService
@@ -73,6 +73,7 @@ app.include_router(proxy.router)
 app.include_router(status.router)
 app.include_router(task.router)
 app.include_router(volume.router)
+app.include_router(network_share.router)
 app.include_router(websocket.router)
 
 if config.LIVE_CODING_ENABLED:

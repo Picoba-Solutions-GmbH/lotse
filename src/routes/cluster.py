@@ -451,6 +451,24 @@ async def get_nodes(_=Depends(authentication.require_admin)):
     return result
 
 
+@router.get("/namespaces/{namespace}/secrets")
+@handle_k8s_errors
+async def get_secrets_for_namespace(namespace: str, _=Depends(authentication.require_admin)):
+    v1 = client.CoreV1Api()
+    secrets = v1.list_namespaced_secret(namespace=namespace)
+    result = []
+    for secret in secrets.items:
+        result.append({
+            "name": secret.metadata.name,
+            "namespace": secret.metadata.namespace,
+            "type": secret.type,
+            "creationTimestamp": secret.metadata.creation_timestamp.isoformat()
+            if secret.metadata.creation_timestamp
+            else ""
+        })
+    return result
+
+
 @router.get("/persistentvolumes", response_model=list[KubernetesPersistentVolume])
 @handle_k8s_errors
 async def get_persistent_volumes(_=Depends(authentication.require_admin)):

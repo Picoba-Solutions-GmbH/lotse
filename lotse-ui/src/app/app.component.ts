@@ -84,6 +84,11 @@ export class AppComponent implements OnInit {
       routerLink: 'cluster'
     },
     {
+      label: 'Network Shares',
+      icon: PrimeIcons.SERVER,
+      routerLink: 'network-shares'
+    },
+    {
       label: 'Logs',
       icon: PrimeIcons.LIST,
       routerLink: 'logs'
@@ -130,7 +135,7 @@ export class AppComponent implements OnInit {
   private updateMenuItems(): void {
     const isAdmin = this.authService.getRole() === Role.ADMIN;
     this.items = this.original_items.filter(item => {
-      if (item.routerLink === 'cluster') {
+      if (item.routerLink === 'cluster' || item.routerLink === 'network-shares' || item.routerLink === 'logs') {
         return isAdmin;
       }
       if (item.routerLink === 'live-coding') {

@@ -1,0 +1,310 @@
+<ng-container *hasRole="[Role.ADMIN]">
+    <div class="flex flex-col w-full min-h-full">
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">Network Shares</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Provision SMB/CIFS network shares as Kubernetes PV/PVC and register them for use in packages.
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadShares()" size="small"
+                    severity="secondary" />
+                <p-button icon="pi pi-plus" label="Add Network Share" (onClick)="openProvisionDialog()" size="small" />
+            </div>
+        </div>
+        <div
+            class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+            <p-table [value]="shares" [loading]="sharesLoading" [paginator]="true" [rows]="10"
+                styleClass="p-datatable-sm" [rowsPerPageOptions]="[10, 25, 50]">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>PVC Name</th>
+                        <th class="text-right"></th>
+                    </tr>
+                </ng-template>
+
+                <ng-template pTemplate="body" let-share>
+                    <tr>
+                        <td class="font-semibold cursor-pointer hover:text-blue-500" (click)="openDetail(share)">
+                            {{ share.name }}
+                        </td>
+                        <td>
+                            <code
+                                class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{{ share.pvc_name }}</code>
+                        </td>
+                        <td class="text-right">
+                            <div class="flex justify-end gap-1">
+                                <p-button icon="pi pi-info-circle" [text]="true" size="small" pTooltip="View details"
+                                    tooltipPosition="left" (onClick)="openDetail(share)" />
+                                <p-button icon="pi pi-pencil" [text]="true" size="small" pTooltip="Edit"
+                                    tooltipPosition="left" (onClick)="openEditDialog(share)" />
+                                <p-button icon="pi pi-trash" severity="danger" [text]="true" size="small"
+                                    pTooltip="Delete" tooltipPosition="left" (onClick)="confirmDelete(share)" />
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="3">
+                            <div class="flex flex-col items-center py-12 text-center">
+                                @if (sharesLoading) {
+                                <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-gray-500">Loading…</p>
+                                } @else {
+                                <i class="pi pi-server text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No network shares
+                                    configured</p>
+                                <p class="text-xs text-gray-400 mt-1">Click "Add Network Share" to provision one.</p>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <p-dialog [(visible)]="showDetailDialog" header="Network Share Details" [modal]="true" [style]="{ width: '600px' }"
+        [closable]="!testRunning">
+
+        @if (detailLoading) {
+        <div class="flex items-center justify-center py-10">
+            <i class="pi pi-spin pi-spinner text-2xl text-gray-400"></i>
+        </div>
+        } @else if (detail) {
+        <div class="flex flex-col gap-4 pt-2">
+            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Name</p>
+                    <p class="font-medium">{{ detail.name }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">PVC Name</p>
+                    <code
+                        class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{{ detail.pvc_name }}</code>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">PV Name</p>
+                    <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{{ detail.pv_name }}</code>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Namespace</p>
+                    <p class="font-medium">{{ detail.namespace }}</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Share Path (UNC)</p>
+                    <code
+                        class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded break-all">{{ detail.share_path }}</code>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Storage Size</p>
+                    <p class="font-medium">{{ detail.storage_size }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Access Modes</p>
+                    <p class="font-medium">{{ detail.access_modes.join(', ') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">PV Status</p>
+                    <p-tag [value]="detail.pv_status" [severity]="pvStatusSeverity(detail.pv_status)" />
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">PVC Status</p>
+                    <p-tag [value]="detail.pvc_status" [severity]="pvStatusSeverity(detail.pvc_status)" />
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Secret</p>
+                    <code
+                        class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{{ detail.secret_name }}</code>
+                    <span class="text-xs text-gray-400 ml-1">({{ detail.secret_namespace }})</span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Mount Options</p>
+                    <code
+                        class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded whitespace-pre">{{ detail.mount_options.join('\n') }}</code>
+                </div>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700" />
+
+            <!-- Connectivity test -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Connectivity Test</p>
+                    <p-button icon="pi pi-play" label="Run Test" size="small" [loading]="testRunning"
+                        (onClick)="runTest()" />
+                </div>
+                <p class="text-xs text-gray-400 mb-3">
+                    Creates a temporary probe pod that mounts the PVC and lists the share root.
+                    Timeout: 90 s.
+                </p>
+
+                @if (testRunning) {
+                <div class="flex items-center gap-2 text-sm text-gray-500">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span>Running probe pod… this may take up to 90 s</span>
+                </div>
+                } @else if (testResult) {
+                <div class="rounded-lg border px-4 py-3 text-sm" [class.border-green-300]="testResult.success"
+                    [class.bg-green-50]="testResult.success" [class.dark:bg-green-950]="testResult.success"
+                    [class.border-red-300]="!testResult.success" [class.bg-red-50]="!testResult.success"
+                    [class.dark:bg-red-950]="!testResult.success">
+                    <div class="flex items-center gap-2 font-medium mb-1" [class.text-green-700]="testResult.success"
+                        [class.dark:text-green-300]="testResult.success" [class.text-red-700]="!testResult.success"
+                        [class.dark:text-red-300]="!testResult.success">
+                        <i [class]="testResult.success ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+                        {{ testResult.message }}
+                    </div>
+                    @if (testResult.output) {
+                    <pre
+                        class="text-xs font-mono text-gray-600 dark:text-gray-400 mt-2 whitespace-pre-wrap">{{ testResult.output }}</pre>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <ng-template pTemplate="footer">
+            <p-button label="Edit" icon="pi pi-pencil" severity="secondary" [text]="true"
+                (onClick)="showDetailDialog = false; openEditDialog({ id: detail!.id, name: detail!.name, pvc_name: detail!.pvc_name })"
+                [disabled]="!detail || testRunning" />
+            <p-button label="Close" (onClick)="showDetailDialog = false" [disabled]="testRunning" />
+        </ng-template>
+    </p-dialog>
+
+    <p-dialog [(visible)]="showFormDialog" [header]="formDialogHeader" [modal]="true" [style]="{ width: '580px' }"
+        [closable]="!saving">
+        <div class="flex flex-col gap-4 pt-2">
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Name <span class="text-red-500">*</span>
+                </label>
+                <input pInputText [(ngModel)]="form.name" placeholder="e.g. my-package" class="w-full text-sm"
+                    [disabled]="saving" />
+                <span class="text-xs text-gray-400">Used in package configs to reference this share.</span>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Share Path (UNC) <span class="text-red-500">*</span>
+                </label>
+                <input pInputText [(ngModel)]="form.share_path" placeholder="//10.10.2.1/share-name"
+                    class="w-full text-sm font-mono" [disabled]="saving" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Storage Size</label>
+                    <input pInputText [(ngModel)]="form.storage_size" placeholder="100Gi" class="w-full text-sm"
+                        [disabled]="saving" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PVC Namespace</label>
+                    <p-dropdown [options]="availableNamespaces" [(ngModel)]="form.namespace"
+                        placeholder="(default from config)" [loading]="namespacesLoading" [disabled]="saving"
+                        [editable]="true" appendTo="body" styleClass="w-full text-sm" />
+                </div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Mount Options <span class="text-xs text-gray-400">(one per line)</span>
+                </label>
+                <textarea pTextarea [(ngModel)]="mountOptionsText" rows="2" class="w-full text-sm font-mono"
+                    placeholder="dir_mode=0777&#10;file_mode=0777" [disabled]="saving"></textarea>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700" />
+            <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Credentials</p>
+                <div class="flex gap-5 mb-3 flex-wrap">
+                    @if (showKeepOption) {
+                    <div class="flex items-center gap-2">
+                        <p-radioButton name="secretMode" value="keep" [(ngModel)]="secretMode"
+                            (ngModelChange)="onSecretModeChange()" inputId="mode-keep" />
+                        <label for="mode-keep" class="text-sm cursor-pointer">Keep current</label>
+                    </div>
+                    }
+                    <div class="flex items-center gap-2">
+                        <p-radioButton name="secretMode" value="new" [(ngModel)]="secretMode"
+                            (ngModelChange)="onSecretModeChange()" inputId="mode-new" />
+                        <label for="mode-new" class="text-sm cursor-pointer">Create new secret</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <p-radioButton name="secretMode" value="existing" [(ngModel)]="secretMode"
+                            (ngModelChange)="onSecretModeChange()" inputId="mode-existing" />
+                        <label for="mode-existing" class="text-sm cursor-pointer">Use existing secret</label>
+                    </div>
+                </div>
+
+                @if (secretMode === 'keep') {
+                <p class="text-xs text-gray-400">
+                    The K8s secret currently referenced by the PV will be reused.
+                </p>
+                } @else if (secretMode === 'new') {
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Username <span class="text-red-500">*</span>
+                        </label>
+                        <input pInputText [(ngModel)]="form.username" placeholder="domain\\user" class="w-full text-sm"
+                            [disabled]="saving" />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Password <span class="text-red-500">*</span>
+                        </label>
+                        <p-password [(ngModel)]="form.password" [feedback]="false" [toggleMask]="true"
+                            styleClass="w-full" inputStyleClass="w-full text-sm" placeholder="••••••••"
+                            [disabled]="saving" />
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1.5">
+                    A K8s secret <code>cifscreds-{{'{'}}name{{'}'}}</code> will be created in the
+                    <code>default</code> namespace.
+                </p>
+                } @else {
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Namespace</label>
+                        <div class="flex gap-1">
+                            <p-dropdown [options]="availableNamespaces" [ngModel]="secretNamespaceForLookup"
+                                (ngModelChange)="onSecretNamespaceChange($event)" placeholder="default"
+                                [loading]="namespacesLoading" [disabled]="saving || secretsLoading" [editable]="true"
+                                styleClass="flex-1 text-sm" appendTo="body" />
+                            <p-button icon="pi pi-refresh" [text]="true" size="small" pTooltip="Load secrets"
+                                [loading]="secretsLoading" (onClick)="loadSecrets()" [disabled]="saving" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Secret <span class="text-red-500">*</span>
+                        </label>
+                        <p-dropdown [options]="availableSecrets" [(ngModel)]="form.secret_name" optionLabel="label"
+                            optionValue="value" placeholder="Select secret…" [loading]="secretsLoading"
+                            [disabled]="saving" styleClass="w-full" appendTo="body"
+                            emptyMessage="No secrets found — change namespace or click refresh" />
+                    </div>
+                </div>
+                @if (availableSecrets.length === 0 && !secretsLoading) {
+                <p class="text-xs text-amber-500 mt-1.5">
+                    No secrets loaded yet. Click the refresh button to fetch secrets for the selected namespace.
+                </p>
+                }
+                }
+            </div>
+        </div>
+
+        <ng-template pTemplate="footer">
+            <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="showFormDialog = false"
+                [disabled]="saving" />
+            <p-button [label]="formMode === 'edit' ? 'Save Changes' : 'Provision'" icon="pi pi-check" (onClick)="save()"
+                [loading]="saving" />
+        </ng-template>
+    </p-dialog>
+
+    <p-toast />
+    <p-confirmDialog />
+</ng-container>
