@@ -1,0 +1,155 @@
+<p-dialog header="Create config.yaml" [(visible)]="showDialog" [modal]="true" [style]="{ width: '720px' }"
+    [draggable]="false" styleClass="config-creator-dialog">
+    <div class="flex gap-4 pt-1 h-full" style="min-height: 420px;">
+
+        <!-- Left: Form -->
+        <div class="flex-1 space-y-4 overflow-y-auto pr-2" style="max-height: 560px;">
+
+            <!-- Basic -->
+            <section>
+                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Basic
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Package Name <span
+                                class="text-red-500">*</span></label>
+                        <input pInputText [(ngModel)]="packageName" placeholder="my-package" class="w-full text-sm" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Version <span
+                                class="text-red-500">*</span></label>
+                        <input pInputText [(ngModel)]="version" placeholder="1.0.0" class="w-full text-sm" />
+                    </div>
+                    <div class="space-y-1 col-span-2">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Description</label>
+                        <input pInputText [(ngModel)]="description" placeholder="Short description"
+                            class="w-full text-sm" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Runtime</label>
+                        <p-select [options]="runtimeOptions" [(ngModel)]="runtime" optionLabel="label"
+                            optionValue="value" styleClass="w-full text-sm" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Timeout (seconds)</label>
+                        <p-inputNumber [(ngModel)]="timeout" [min]="0" placeholder="Optional"
+                            styleClass="w-full text-sm" />
+                    </div>
+                </div>
+            </section>
+
+            <!-- Runtime-specific -->
+            <section>
+                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Runtime
+                    Options</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    @if (runtime !== Runtime.CONTAINER) {
+                    <div class="space-y-1" [class.col-span-2]="runtime !== Runtime.PYTHON">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Entrypoint</label>
+                        <input pInputText [(ngModel)]="entrypoint" placeholder="e.g. main or MyApp.exe"
+                            class="w-full text-sm" />
+                    </div>
+                    }
+                    @if (runtime === Runtime.PYTHON) {
+                    <div class="space-y-1">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Python Version</label>
+                        <input pInputText [(ngModel)]="pythonVersion" placeholder="e.g. 3.11" class="w-full text-sm" />
+                    </div>
+                    }
+                    @if (runtime === Runtime.CONTAINER || runtime === Runtime.BINARY) {
+                    <div class="space-y-1 col-span-2">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Image</label>
+                        <input pInputText [(ngModel)]="image"
+                            placeholder="e.g. nginx:latest or mcr.microsoft.com/dotnet/aspnet:9.0"
+                            class="w-full text-sm" />
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <!-- Arguments -->
+            <section>
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Arguments</h3>
+                    <p-button label="Add" [icon]="PrimeIcons.PLUS" (onClick)="addArg()" size="small" [text]="true"
+                        severity="secondary" />
+                </div>
+                @if (args.length === 0) {
+                <p class="text-xs text-gray-400 dark:text-gray-600 italic">No arguments defined.</p>
+                }
+                @for (arg of args; track $index) {
+                <div class="flex gap-2 items-center mb-2">
+                    <input pInputText [(ngModel)]="arg.name" placeholder="Name" class="text-sm flex-1" />
+                    <input pInputText [(ngModel)]="arg.defaultvalue" placeholder="Default value"
+                        class="text-sm flex-1" />
+                    <button class="icon-action-btn text-red-400 shrink-0" (click)="removeArg($index)" pTooltip="Remove">
+                        <i class="pi pi-trash text-xs"></i>
+                    </button>
+                </div>
+                }
+            </section>
+
+            <!-- Environment Variables -->
+            <section>
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Environment Variables</h3>
+                    <p-button label="Add" [icon]="PrimeIcons.PLUS" (onClick)="addEnv()" size="small" [text]="true"
+                        severity="secondary" />
+                </div>
+                @if (environment.length === 0) {
+                <p class="text-xs text-gray-400 dark:text-gray-600 italic">No environment variables defined.</p>
+                }
+                @for (env of environment; track $index) {
+                <div class="flex gap-2 items-center mb-2">
+                    <input pInputText [(ngModel)]="env.name" placeholder="Name" class="text-sm flex-1" />
+                    <input pInputText [(ngModel)]="env.value" placeholder="Value" class="text-sm flex-1" />
+                    <button class="icon-action-btn text-red-400 shrink-0" (click)="removeEnv($index)" pTooltip="Remove">
+                        <i class="pi pi-trash text-xs"></i>
+                    </button>
+                </div>
+                }
+            </section>
+
+            <!-- Volumes -->
+            <section>
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Volumes
+                    </h3>
+                    <p-button label="Add" [icon]="PrimeIcons.PLUS" (onClick)="addVolume()" size="small" [text]="true"
+                        severity="secondary" />
+                </div>
+                @if (volumes.length === 0) {
+                <p class="text-xs text-gray-400 dark:text-gray-600 italic">No volumes defined.</p>
+                }
+                @for (vol of volumes; track $index) {
+                <div class="flex gap-2 items-center mb-2">
+                    <input pInputText [(ngModel)]="vol.name" placeholder="Name" class="text-sm flex-1" />
+                    <input pInputText [(ngModel)]="vol.path" placeholder="Mount path" class="text-sm flex-1" />
+                    <button class="icon-action-btn text-red-400 shrink-0" (click)="removeVolume($index)"
+                        pTooltip="Remove">
+                        <i class="pi pi-trash text-xs"></i>
+                    </button>
+                </div>
+                }
+            </section>
+
+        </div>
+
+        <!-- Right: Preview -->
+        <div class="w-56 shrink-0 flex flex-col gap-2">
+            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Preview</h3>
+            <pre class="flex-1 text-xs font-mono p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 overflow-auto whitespace-pre-wrap"
+                style="max-height: 530px;">{{ previewYaml }}</pre>
+        </div>
+
+    </div>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" (onClick)="showDialog = false" [text]="true" severity="secondary" />
+        <p-button label="Download" [icon]="PrimeIcons.DOWNLOAD" (onClick)="download()" severity="secondary"
+            [outlined]="true" [disabled]="!isValid" />
+        <p-button label="Use in Deploy" [icon]="PrimeIcons.CHECK" (onClick)="generate()" [disabled]="!isValid" />
+    </ng-template>
+</p-dialog>

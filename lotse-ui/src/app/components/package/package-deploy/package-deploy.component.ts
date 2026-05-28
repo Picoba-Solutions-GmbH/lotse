@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService, PrimeIcons } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -12,6 +12,7 @@ import { TagModule } from 'primeng/tag';
 import YAML from 'yaml';
 import { Runtime } from '../../../misc/Runtime';
 import { PackageService } from '../../../services/package.service';
+import { ConfigCreatorComponent } from './config-creator/config-creator.component';
 
 interface PackageConfig {
     package_name: string;
@@ -28,7 +29,8 @@ interface PackageConfig {
         FileUploadModule,
         CheckboxModule,
         TagModule,
-        InputTextModule
+        InputTextModule,
+        ConfigCreatorComponent
     ],
     selector: 'app-package-deploy',
     templateUrl: './package-deploy.component.html',
@@ -48,6 +50,8 @@ export class PackageDeployComponent {
     detectedVersion: string | null = null;
     sameVersionError: boolean = false;
     notSameNameError: boolean = false;
+
+    @ViewChild(ConfigCreatorComponent) configCreator!: ConfigCreatorComponent;
 
     showDeployDialog = false;
     zipFile: File | null = null;
@@ -79,6 +83,15 @@ export class PackageDeployComponent {
         this.setAsDefault = false;
         this.deletePreviousVersions = false;
         this.sameVersionError = false;
+    }
+
+    openConfigCreator(): void {
+        this.configCreator.open(this.packageName ?? undefined);
+    }
+
+    async onConfigCreated(file: File): Promise<void> {
+        this.configFile = file;
+        await this.parseConfigFile(file);
     }
 
     onZipFileSelect(event: any): void {

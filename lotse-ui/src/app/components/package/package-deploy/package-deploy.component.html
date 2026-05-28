@@ -38,8 +38,13 @@
         </div>
         }
         <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Config YAML
-                File</label>
+            <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Config
+                    YAML
+                    File</label>
+                <p-button label="Create config.yaml" [icon]="PrimeIcons.SPARKLES" size="small" [text]="true"
+                    severity="secondary" (onClick)="openConfigCreator()" pTooltip="Open the config.yaml wizard" />
+            </div>
             <p-fileUpload mode="basic" chooseLabel="Choose YAML File" chooseIcon="pi pi-file" [auto]="true"
                 accept=".yaml,.yml" (onSelect)="onConfigFileSelect($event)" [showUploadButton]="false"
                 styleClass="w-full" [chooseButtonProps]="{ outlined: true, severity: 'secondary' }" />
@@ -116,3 +121,5 @@
             [disabled]="!containerImageName || !containerPackageName" />
     </ng-template>
 </p-dialog>
+
+<app-config-creator [prefillPackageName]="packageName" (configCreated)="onConfigCreated($event)" />
