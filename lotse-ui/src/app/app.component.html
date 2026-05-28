@@ -38,21 +38,45 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-      @for (item of items; track item.label) {
-      <a [routerLink]="'/' + item.routerLink"
-        class="sidebar-nav-item flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-100 cursor-pointer no-underline"
-        [class.justify-center]="sidebarCollapsed" [class.active]="isRouteActive(item)"
-        [title]="sidebarCollapsed ? (item.label || '') : ''">
-        @if (item.icon?.startsWith('pi')) {
-        <i [class]="item.icon + ' shrink-0 text-sm'"></i>
-        } @else {
-        <ng-icon [svg]="item.icon!" class="shrink-0" style="width:14px;height:14px;display:block" />
+    <nav class="flex-1 overflow-y-auto px-2 py-3 flex flex-col">
+      <div class="space-y-0.5">
+        @for (item of items; track item.label) {
+        <a [routerLink]="'/' + item.routerLink"
+          class="sidebar-nav-item flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-100 cursor-pointer no-underline"
+          [class.justify-center]="sidebarCollapsed" [class.active]="isRouteActive(item)"
+          [title]="sidebarCollapsed ? (item.label || '') : ''">
+          @if (item.icon?.startsWith('pi')) {
+          <i [class]="item.icon + ' shrink-0 text-sm'"></i>
+          } @else {
+          <ng-icon [svg]="item.icon!" class="shrink-0" style="width:14px;height:14px;display:block" />
+          }
+          @if (!sidebarCollapsed) {
+          <span class="truncate">{{ item.label }}</span>
+          }
+        </a>
         }
-        @if (!sidebarCollapsed) {
-        <span class="truncate">{{ item.label }}</span>
+      </div>
+
+      <div class="flex-1"></div>
+
+      @if (bottomItems.length > 0) {
+      <div class="space-y-0.5 border-t border-gray-200 dark:border-gray-800 pt-2 mt-2">
+        @for (item of bottomItems; track item.label) {
+        <a [routerLink]="'/' + item.routerLink"
+          class="sidebar-nav-item flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-100 cursor-pointer no-underline"
+          [class.justify-center]="sidebarCollapsed" [class.active]="isRouteActive(item)"
+          [title]="sidebarCollapsed ? (item.label || '') : ''">
+          @if (item.icon?.startsWith('pi')) {
+          <i [class]="item.icon + ' shrink-0 text-sm'"></i>
+          } @else {
+          <ng-icon [svg]="item.icon!" class="shrink-0" style="width:14px;height:14px;display:block" />
+          }
+          @if (!sidebarCollapsed) {
+          <span class="truncate">{{ item.label }}</span>
+          }
+        </a>
         }
-      </a>
+      </div>
       }
     </nav>
 

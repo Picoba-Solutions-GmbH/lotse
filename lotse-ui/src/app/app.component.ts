@@ -95,7 +95,10 @@ export class AppComponent implements OnInit {
     }
   ];
 
-  items: MenuItem[] = [...this.original_items];
+  private readonly bottomRoutes = new Set(['cluster', 'network-shares', 'logs']);
+
+  items: MenuItem[] = [];
+  bottomItems: MenuItem[] = [];
 
   constructor(
     private router: Router,
@@ -134,8 +137,8 @@ export class AppComponent implements OnInit {
 
   private updateMenuItems(): void {
     const isAdmin = this.authService.getRole() === Role.ADMIN;
-    this.items = this.original_items.filter(item => {
-      if (item.routerLink === 'cluster' || item.routerLink === 'network-shares' || item.routerLink === 'logs') {
+    const filtered = this.original_items.filter(item => {
+      if (this.bottomRoutes.has(item.routerLink!)) {
         return isAdmin;
       }
       if (item.routerLink === 'live-coding') {
@@ -143,6 +146,9 @@ export class AppComponent implements OnInit {
       }
       return true;
     });
+
+    this.items = filtered.filter(item => !this.bottomRoutes.has(item.routerLink!));
+    this.bottomItems = filtered.filter(item => this.bottomRoutes.has(item.routerLink!));
 
     const urlParts = this.currentRoute.split('/').filter(part => part);
     if (urlParts[0] === 'packages' && urlParts.length > 1) {
