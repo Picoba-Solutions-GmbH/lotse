@@ -3,6 +3,8 @@ import threading
 from collections import deque
 from datetime import datetime, timezone
 
+_ACCESS_LOGGERS = {"uvicorn.access", "uvicorn.error", "starlette.access"}
+
 
 class InMemoryLogHandler(logging.Handler):
     def __init__(self, maxlen: int):
@@ -12,6 +14,9 @@ class InMemoryLogHandler(logging.Handler):
         self.setFormatter(logging.Formatter("%(message)s"))
 
     def emit(self, record: logging.LogRecord) -> None:
+        if record.name in _ACCESS_LOGGERS or getattr(record, "msgType", None) == "Request":
+            return
+
         try:
             msg = self.format(record)
             if record.exc_info:

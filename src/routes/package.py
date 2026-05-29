@@ -253,7 +253,7 @@ async def get_package_by_stage(
             name=package_name,
             status=package_status,
             instances=tasks_count,
-            creation_date=datetime.now(),
+            creation_date=package.deployed_at,
             version=package.version,
             is_default=package.active
         )
