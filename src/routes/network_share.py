@@ -54,7 +54,21 @@ async def list_network_shares(
     db: Session = Depends(get_db_session),
     _=Depends(authentication.require_admin),
 ):
-    return VolumeRepository.list_volumes(db)
+    volumes = VolumeRepository.list_volumes(db)
+    v1 = client.CoreV1Api()
+    share_paths = pv_pvc.list_pv_share_paths(v1)
+
+    result = []
+    for vol in volumes:
+        pv_n = pv_pvc.pv_name(pv_pvc.safe_k8s_name(vol.name))
+        result.append(dtos.NetworkShareVolumeResponse(
+            id=vol.id,
+            name=vol.name,
+            pvc_name=vol.pvc_name,
+            share_path=share_paths.get(pv_n, ""),
+        ))
+
+    return result
 
 
 @router.get("/{volume_id}", response_model=dtos.NetworkShareDetailResponse)
@@ -118,11 +132,13 @@ async def update_network_share(
         pv = pv_pvc.read_pv(v1, volume.name)
         if not pv or not pv.spec.csi or not pv.spec.csi.node_stage_secret_ref:
             raise HTTPException(status_code=400, detail="Cannot keep current secret: PV not found in cluster")
+
         secret_name = pv.spec.csi.node_stage_secret_ref.name or ""
         secret_namespace = pv.spec.csi.node_stage_secret_ref.namespace or "default"
     elif request.secret_mode == "existing":
         if not request.secret_name:
             raise HTTPException(status_code=400, detail="secret_name required when secret_mode is 'existing'")
+
         secret_name, secret_namespace = request.secret_name, request.secret_namespace
     else:
         new_safe = pv_pvc.safe_k8s_name(request.name)

@@ -55,6 +55,7 @@ def resolve_or_create_secret(
             "password": base64.b64encode(password.encode()).decode(),
         },
     )
+
     try:
         v1.create_namespaced_secret(namespace=secret_namespace, body=secret_body)
     except ApiException as e:
@@ -98,6 +99,7 @@ def create_pv(
             volume_mode="Filesystem",
         ),
     )
+
     try:
         v1.create_persistent_volume(body=pv_body)
     except ApiException as e:
@@ -124,6 +126,7 @@ def create_pvc(
             volume_mode="Filesystem",
         ),
     )
+
     try:
         v1.create_namespaced_persistent_volume_claim(namespace=namespace, body=pvc_body)
     except ApiException as e:
@@ -133,23 +136,42 @@ def create_pvc(
 
 def read_pv(v1: client.CoreV1Api, volume_name: str) -> Any:
     pv_n = pv_name(safe_k8s_name(volume_name))
+
     try:
         return v1.read_persistent_volume(name=pv_n)
     except ApiException as e:
         if e.status == 404:
             return None
+
         raise HTTPException(status_code=500, detail=f"K8s error reading PV: {e.reason}")
+
+
+def list_pv_share_paths(v1: client.CoreV1Api) -> dict[str, str]:
+    try:
+        pvs = v1.list_persistent_volume().items
+
+        result: dict[str, str] = {}
+        for pv in pvs:
+            csi = pv.spec.csi if pv.spec else None
+            path = csi.volume_attributes.get("source", "") if csi and csi.volume_attributes else ""
+            result[pv.metadata.name] = path
+
+        return result
+    except Exception:
+        return {}
 
 
 def pvc_info_from_pv(v1: client.CoreV1Api, pv: Any) -> tuple[str, str, str]:
     if pv.spec.claim_ref:
         ns = pv.spec.claim_ref.namespace or config.K8S_NAMESPACE
         name = pv.spec.claim_ref.name or ""
+
         try:
             pvc: Any = v1.read_namespaced_persistent_volume_claim(name=name, namespace=ns)
             return name, ns, pvc.status.phase or "Unknown"
         except ApiException:
             return name, ns, "Unknown"
+
     return "", config.K8S_NAMESPACE, "Unknown"
 
 

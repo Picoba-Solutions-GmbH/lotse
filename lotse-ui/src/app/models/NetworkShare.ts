@@ -38,6 +38,7 @@ export interface NetworkShareVolume {
   id: string;
   name: string;
   pvc_name: string;
+  share_path: string;
 }
 
 export interface NetworkShareDetail {

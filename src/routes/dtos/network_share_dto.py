@@ -41,6 +41,7 @@ class NetworkShareVolumeResponse(BaseModel):
     id: str
     name: str
     pvc_name: str
+    share_path: str = ""
 
     class Config:
         from_attributes = True
