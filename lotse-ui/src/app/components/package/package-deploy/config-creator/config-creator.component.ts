@@ -11,6 +11,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 import YAML from 'yaml';
 import { Runtime } from '../../../../misc/Runtime';
+import { NetworkShareVolume } from '../../../../models/NetworkShare';
+import { NetworkShareService } from '../../../../services/network-share.service';
 
 interface ArgEntry {
     name: string;
@@ -48,6 +50,8 @@ export class ConfigCreatorComponent {
     PrimeIcons = PrimeIcons;
     Runtime = Runtime;
 
+    constructor(private networkShareService: NetworkShareService) { }
+
     @Input() set prefillPackageName(value: string | null) {
         if (value) {
             this.packageName = value;
@@ -76,11 +80,22 @@ export class ConfigCreatorComponent {
     environment: EnvEntry[] = [];
     volumes: VolumeEntry[] = [];
 
+    availableVolumes: NetworkShareVolume[] = [];
+
     open(prefillName?: string): void {
         if (prefillName) {
             this.packageName = prefillName;
         }
         this.showDialog = true;
+        this.loadAvailableVolumes();
+    }
+
+    private async loadAvailableVolumes(): Promise<void> {
+        try {
+            this.availableVolumes = await this.networkShareService.listNetworkShares();
+        } catch {
+            this.availableVolumes = [];
+        }
     }
 
     get previewYaml(): string {
