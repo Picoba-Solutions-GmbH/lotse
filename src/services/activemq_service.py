@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 _RECONNECT_INTERVAL = 5
 _POLL_INTERVAL = 5
+_HEARTBEAT_MS = 10_000
 
 
 class ActiveMQService(metaclass=SingletonMeta):
@@ -29,7 +30,7 @@ class ActiveMQService(metaclass=SingletonMeta):
         self._connected: bool = False
 
     def setup_connection(self):
-        conn = stomp.Connection([(self.host, self.port)])
+        conn = stomp.Connection([(self.host, self.port)], heartbeats=(_HEARTBEAT_MS, _HEARTBEAT_MS), keepalive=True)
         conn.set_listener('', PackageExecutionListenerService(self.k8s_manager_service, self.message_parser))
         conn.connect(self.user, self.password, wait=True)
         conn.subscribe(destination=self.queue_name, id=1, ack='auto')
