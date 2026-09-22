@@ -148,6 +148,7 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
 
     const request: PackageRequest = {
       package_name: this.selectedPackage.package_name,
+      version: this.selectedPackage.version,
       arguments: args,
       wait_for_completion: this.waitForCompletion,
     };

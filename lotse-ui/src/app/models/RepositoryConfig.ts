@@ -3,6 +3,7 @@ import { Runtime } from "../misc/Runtime";
 
 export interface RepositoryConfig {
   package_name: string;
+  version?: string;
   python_version: string;
   runtime?: Runtime;
   env_content?: string;
