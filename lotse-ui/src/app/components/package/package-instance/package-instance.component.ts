@@ -249,6 +249,22 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
     }
   }
 
+  onReplayTask(task: TaskInfo): void {
+    const predefinedNames = new Set(this.packageInstance.package_arguments?.map(arg => arg.name) ?? []);
+    this.predefinedArgs = {};
+    this.customArgs = [];
+
+    for (const arg of task.arguments ?? []) {
+      if (predefinedNames.has(arg.name)) {
+        this.predefinedArgs[arg.name] = arg.value;
+      } else {
+        this.customArgs.push({ name: arg.name, value: arg.value });
+      }
+    }
+
+    this.showArgumentsDialog = true;
+  }
+
   onStartEmptyInstance(): void {
     this.executePackageAsync(true);
   }

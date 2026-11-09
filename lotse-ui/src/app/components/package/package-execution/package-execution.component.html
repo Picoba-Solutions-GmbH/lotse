@@ -136,7 +136,7 @@
             <th>Started</th>
             <th>Package</th>
             <th>Status</th>
-            <th class="w-20">Actions</th>
+            <th class="w-28">Actions</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-task>
@@ -163,6 +163,9 @@
                 <button (click)="loadTaskLogsAsync(task.task_id)" class="icon-action-btn" title="View logs"
                   [class.text-blue-400]="selectedLogTaskId === task.task_id">
                   <i class="pi pi-list" style="font-size:11px"></i>
+                </button>
+                <button (click)="replayTask(task)" class="icon-action-btn" title="Replay with same arguments">
+                  <i class="pi pi-replay" style="font-size:11px"></i>
                 </button>
                 <button (click)="cancelTaskAsync(task.task_id)" class="icon-action-btn"
                   [disabled]="task.status !== 'running'" title="Cancel task">

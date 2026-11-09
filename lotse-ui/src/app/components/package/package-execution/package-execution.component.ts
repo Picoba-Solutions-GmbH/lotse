@@ -176,6 +176,36 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
     }
   }
 
+  replayTask(task: TaskInfo): void {
+    let pkg = this.repositories.find(
+      p => p.package_name === task.package_name && p.version === task.package_version
+    );
+
+    if (!pkg) {
+      const current = this.repositories.find(p => p.package_name === task.package_name);
+      if (!current) {
+        this.showError(`Package ${task.package_name} is not available for execution`);
+        return;
+      }
+
+      pkg = { ...current, version: task.package_version };
+      this.repositories = [...this.repositories, pkg];
+    }
+
+    this.selectedPackage = pkg;
+    const predefinedNames = new Set(pkg.package_arguments?.map(arg => arg.name) ?? []);
+    this.predefinedArgs = {};
+    this.customArgs = [];
+
+    for (const arg of task.arguments ?? []) {
+      if (predefinedNames.has(arg.name)) {
+        this.predefinedArgs[arg.name] = arg.value;
+      } else {
+        this.customArgs.push({ name: arg.name, value: arg.value });
+      }
+    }
+  }
+
   async cancelTaskAsync(taskId: string): Promise<void> {
     try {
       await this.taskService.cancelTaskAsync(taskId);
