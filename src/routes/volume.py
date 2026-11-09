@@ -47,7 +47,8 @@ async def create_volume(
 
 @router.get("/", response_model=list[VolumeResponse])
 async def list_volumes(
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_user)
 ):
     return VolumeRepository.list_volumes(db)
 
@@ -55,7 +56,8 @@ async def list_volumes(
 @router.get("/{volume_id}", response_model=VolumeResponse)
 async def get_volume(
     volume_id: str,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    _=Depends(authentication.require_user)
 ):
     volume = VolumeRepository.get_volume(db, volume_id)
     if not volume:

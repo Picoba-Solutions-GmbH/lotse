@@ -10,9 +10,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { filter, firstValueFrom as firstValueFromAsync } from 'rxjs';
+import { filter } from 'rxjs';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
-import { Role } from './misc/Role';
 import { AuthService } from './services/auth.service';
 import { FeatureFlagService } from './services/feature-flag.service';
 import { StatusService } from './services/status.service';
@@ -92,10 +91,17 @@ export class AppComponent implements OnInit {
       label: 'Logs',
       icon: PrimeIcons.LIST,
       routerLink: 'logs'
+    },
+    {
+      label: 'Users',
+      icon: PrimeIcons.USERS,
+      routerLink: 'users'
     }
   ];
 
-  private readonly bottomRoutes = new Set(['cluster', 'network-shares', 'logs']);
+  private readonly bottomRoutes = new Set(['cluster', 'network-shares', 'logs', 'users']);
+  private loginDialogRef: DynamicDialogRef | null = null;
+  username: string | null = null;
 
   items: MenuItem[] = [];
   bottomItems: MenuItem[] = [];
@@ -121,22 +127,35 @@ export class AppComponent implements OnInit {
 
     this.isAuthEnabled = await this.featureFlagService.isAuthenticationEnabled();
     this.isLiveCodingEnabled = await this.featureFlagService.isLiveCodingEnabled();
-    this.updateMenuItems();
-    if (this.isAuthEnabled) {
-      const login = this.authService.getLogin();
-      if (login) {
-        const { username, password } = JSON.parse(login);
-        await this.loginAsync(username, password, true);
-      }
-    }
+    this.updateAuthState();
 
-    this.authService.authStateChanged.subscribe(() => {
-      this.updateMenuItems();
+    this.authService.authStateChanged.subscribe(() => this.updateAuthState());
+    this.authService.loginRequired.subscribe(() => {
+      if (this.isAuthEnabled) {
+        this.openLoginDialog();
+      }
     });
+
+    if (this.isAuthEnabled && !this.authService.isLoggedIn()) {
+      this.openLoginDialog();
+    }
+  }
+
+  private updateAuthState(): void {
+    this.isLoggedIn = this.authService.isLoggedIn();
+    this.username = this.authService.getUsername();
+    this.updateMenuItems();
+  }
+
+  /** Reload the current page so it fetches the data visible to the (new) user. */
+  private reloadCurrentRoute(): void {
+    const url = this.router.url;
+    this.router.navigateByUrl('/', { skipLocationChange: true })
+      .then(() => this.router.navigateByUrl(url));
   }
 
   private updateMenuItems(): void {
-    const isAdmin = this.authService.getRole() === Role.ADMIN;
+    const isAdmin = !this.isAuthEnabled || this.authService.isAdmin();
     const filtered = this.original_items.filter(item => {
       if (this.bottomRoutes.has(item.routerLink!)) {
         return isAdmin;
@@ -184,59 +203,39 @@ export class AppComponent implements OnInit {
   }
 
   openLoginDialog(): void {
-    const ref: DynamicDialogRef = this.dialogService.open(LoginDialogComponent, {
-      header: 'Login',
-      width: '300px',
-    });
-
-    ref.onClose.subscribe((result: boolean | undefined) => {
-      if (result) {
-        this.isLoggedIn = true;
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Logged in successfully',
-          life: 3000,
-        });
-      }
-    });
-  }
-
-  async loginAsync(username: string, password: string, isInit: boolean = false): Promise<void> {
-    try {
-      await firstValueFromAsync(this.authService.login(username, password));
-      this.isLoggedIn = true;
-
-      if (!isInit) {
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Logged in successfully',
-          life: 3000,
-        });
-      }
-    } catch (error) {
-      if (!isInit) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Invalid credentials',
-          life: 5000,
-        });
-      } else {
-        console.error('Invalid credentials');
-      }
+    if (this.loginDialogRef) {
+      return;
     }
+
+    this.loginDialogRef = this.dialogService.open(LoginDialogComponent, {
+      header: 'Sign in',
+      width: '340px',
+    });
+
+    this.loginDialogRef.onClose.subscribe((result: boolean | undefined) => {
+      this.loginDialogRef = null;
+      if (result) {
+        this.updateAuthState();
+        this.reloadCurrentRoute();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `Signed in as ${this.username}`,
+          life: 3000,
+        });
+      }
+    });
   }
 
   logout(): void {
     this.authService.logout();
-    this.isLoggedIn = false;
+    this.router.navigateByUrl('/package-execution');
     this.messageService.add({
       severity: 'info',
       summary: 'Logged out',
       detail: 'You have been logged out successfully',
       life: 3000,
     });
+    this.openLoginDialog();
   }
 }

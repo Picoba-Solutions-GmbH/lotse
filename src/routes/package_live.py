@@ -9,14 +9,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, update
 from sqlalchemy.orm import Session
 
+from src.authentication.schemas_authentication import CurrentUser
 from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
 from src.database.repositories.task_repository import TaskRepository
 from src.models.async_execution_response import AsyncExecutionResponse
+from src.models.package_permissions import Permission
 from src.models.live_package import LivePackage, LivePackageArgument, LivePackageInfo, LiveRunRequest
 from src.models.sync_execution_response import SyncExecutionResponse
 from src.routes import authentication
 from src.routes.execute import execute_package
+from src.services import package_access_service as access
 from src.services.task_manager_service import TaskManagerService
 from src.utils.path_manager import PathManager
 from src.utils.singleton_meta import get_service
@@ -62,17 +65,20 @@ def _find_entity(db_session: Session, name: str) -> PackageEntity | None:
 
 
 @router.get("", response_model=list[LivePackageInfo])
-async def list_live_packages(db_session: Session = Depends(get_db_session)):
-    entities = (
-        db_session.query(PackageEntity)
-        .filter(
-            and_(
-                PackageEntity.version == LIVE_VERSION,
-                PackageEntity.deleted.is_(False),
-            )
+async def list_live_packages(
+    db_session: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user),
+):
+    query = db_session.query(PackageEntity).filter(
+        and_(
+            PackageEntity.version == LIVE_VERSION,
+            PackageEntity.deleted.is_(False),
         )
-        .all()
     )
+    visible_names = access.visible_package_names(db_session, user)
+    if visible_names is not None:
+        query = query.filter(PackageEntity.package_name.in_(visible_names))
+    entities = query.all()
     return [
         LivePackageInfo(
             package_name=e.package_name,
@@ -84,7 +90,12 @@ async def list_live_packages(db_session: Session = Depends(get_db_session)):
 
 
 @router.get("/{name}", response_model=LivePackage)
-async def get_live_package(name: str, db_session: Session = Depends(get_db_session)):
+async def get_live_package(
+    name: str,
+    db_session: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user),
+):
+    access.require(db_session, user, name, Permission.VIEW)
     entity = _find_entity(db_session, name)
     if not entity:
         raise HTTPException(status_code=404, detail=f"Live package '{name}' not found")
@@ -118,8 +129,9 @@ async def get_live_package(name: str, db_session: Session = Depends(get_db_sessi
 async def save_live_package(
     pkg: LivePackage,
     db_session: Session = Depends(get_db_session),
-    _=Depends(authentication.require_operator_or_admin),
+    user: CurrentUser = Depends(authentication.require_user),
 ):
+    access.claim_or_check_deploy(db_session, user, pkg.package_name)
     package_dir = _get_live_dir(pkg.package_name)
     os.makedirs(package_dir, exist_ok=True)
 
@@ -186,8 +198,9 @@ async def save_live_package(
 async def delete_live_package(
     name: str,
     db_session: Session = Depends(get_db_session),
-    _=Depends(authentication.require_operator_or_admin),
+    user: CurrentUser = Depends(authentication.require_user),
 ):
+    access.require(db_session, user, name, Permission.EDIT)
     entity = _find_entity(db_session, name)
     if not entity:
         raise HTTPException(status_code=404, detail=f"Live package '{name}' not found")
@@ -212,7 +225,8 @@ async def run_live_package(
     run_request: LiveRunRequest,
     task_manager: TaskRepository = get_service(TaskRepository),
     k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
-    _=Depends(authentication.require_operator_or_admin),
+    user: CurrentUser = Depends(authentication.require_user),
+    db_session: Session = Depends(get_db_session),
 ):
     return await execute_package(
         package_name=name,
@@ -223,4 +237,6 @@ async def run_live_package(
         task_manager=task_manager,
         k8s_manager_service=k8s_manager_service,
         empty_instance=False,
+        user=user,
+        db=db_session,
     )

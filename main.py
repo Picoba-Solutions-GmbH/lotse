@@ -14,8 +14,9 @@ import src.utils.service_registry as service_registry
 from src.database import seed_users
 from src.database.database_access import get_db_session, init_db
 from src.routes import (authentication, cluster, execute, feature_flag, logs,
-                        network_share, package, package_live, pod_terminal,
-                        proxy, status, task, volume, websocket)
+                        network_share, package, package_access, package_live,
+                        pod_terminal, proxy, status, task, users, volume,
+                        websocket)
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
 from src.services.task_manager_service import TaskManagerService
@@ -31,21 +32,24 @@ setup_log_handler()
 async def lifespan(_: FastAPI):
     logger.info("Initializing database...")
     init_db()
+    # Close the session right after seeding. Keeping it open for the app's lifetime leaves an
+    # "idle in transaction" connection that blocks schema migrations of other instances.
     db_session = next(get_db_session())
     try:
         seed_users.seed_default_users(db_session)
-        logger.info("Database initialized")
-        service_registry.initialize_registry()
-
-        k8s_manager_service = get_service_instance(TaskManagerService)
-        await k8s_manager_service.check_and_initialize_pods()
-
-        if config.ACTIVEMQ_ACTIVE:
-            logger.info("Starting ActiveMQ listener...")
-            threading.Thread(target=get_service_instance(ActiveMQService).start_listener, daemon=True).start()
-        yield
     finally:
         db_session.close()
+    logger.info("Database initialized")
+
+    service_registry.initialize_registry()
+
+    k8s_manager_service = get_service_instance(TaskManagerService)
+    await k8s_manager_service.check_and_initialize_pods()
+
+    if config.ACTIVEMQ_ACTIVE:
+        logger.info("Starting ActiveMQ listener...")
+        threading.Thread(target=get_service_instance(ActiveMQService).start_listener, daemon=True).start()
+    yield
 
 
 app = FastAPI(title=config.APP_NAME, root_path=config.OPENAPI_PREFIX_PATH,
@@ -68,10 +72,12 @@ app.include_router(feature_flag.router)
 app.include_router(execute.router)
 app.include_router(logs.router)
 app.include_router(package.router)
+app.include_router(package_access.router)
 app.include_router(pod_terminal.router)
 app.include_router(proxy.router)
 app.include_router(status.router)
 app.include_router(task.router)
+app.include_router(users.router)
 app.include_router(volume.router)
 app.include_router(network_share.router)
 app.include_router(websocket.router)

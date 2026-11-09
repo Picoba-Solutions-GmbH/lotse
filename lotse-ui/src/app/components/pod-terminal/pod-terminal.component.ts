@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, inject, Input, OnDestroy, Output, ViewChild } from '@angular/core';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-pod-terminal',
@@ -20,6 +21,7 @@ export class PodTerminalComponent implements AfterViewInit, OnDestroy {
   private terminal!: Terminal;
   private fitAddon!: FitAddon;
   private socket: WebSocket | null = null;
+  private readonly authService = inject(AuthService);
 
   ngAfterViewInit() {
     this.initializeTerminal();
@@ -91,7 +93,9 @@ export class PodTerminalComponent implements AfterViewInit, OnDestroy {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = environment.url;
     const urlWithoutProtocol = url.substring(url.indexOf('://') + 3);
-    const wsUrl = `${wsProtocol}//${urlWithoutProtocol}/pod-terminal/${this.namespace}/${this.podName}`;
+    const token = this.authService.getToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
+    const wsUrl = `${wsProtocol}//${urlWithoutProtocol}/pod-terminal/${this.namespace}/${this.podName}${query}`;
 
     this.socket = new WebSocket(wsUrl);
 

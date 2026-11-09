@@ -5,10 +5,14 @@ from typing import Any, Dict, Set
 from fastapi import APIRouter, WebSocket
 from fastapi.encoders import jsonable_encoder
 
+from src.authentication.schemas_authentication import CurrentUser
 from src.database.database_access import get_db_session
 from src.database.repositories.task_repository import TaskRepository
+from src.models.package_permissions import Permission
+from src.routes import authentication
 from src.routes.package import get_package_by_version
 from src.routes.task import get_task_logs
+from src.services import package_access_service as access
 from src.services.task_manager_service import TaskManagerService
 from src.utils.singleton_meta import get_service_instance
 
@@ -16,6 +20,14 @@ from . import cluster
 
 router = APIRouter(prefix="/ws", tags=["websocket"])
 logger = logging.getLogger(__name__)
+
+
+async def _authorize(websocket: WebSocket, admin_only: bool = False) -> CurrentUser | None:
+    user = authentication.authenticate_connection(websocket)
+    if user is None or (admin_only and not user.is_admin):
+        await websocket.close(code=1008, reason="Not authorized")
+        return None
+    return user
 
 
 class ConnectionManager:
@@ -100,6 +112,9 @@ async def get_cluster_data():
 
 @router.websocket("/cluster")
 async def websocket_cluster_endpoint(websocket: WebSocket):
+    if await _authorize(websocket, admin_only=True) is None:
+        return
+
     client_type = "cluster"
     await manager.connect(websocket, client_type)
     try:
@@ -125,6 +140,9 @@ async def websocket_namespace_resource_endpoint(
     namespace: str,
     resource_type: str
 ):
+    if await _authorize(websocket, admin_only=True) is None:
+        return
+
     client_type = f"namespace_{namespace}_{resource_type}"
     await manager.connect(websocket, client_type)
 
@@ -162,15 +180,24 @@ async def websocket_namespace_resource_endpoint(
 
 @router.websocket("/task/{task_id}")
 async def websocket_task_endpoint(websocket: WebSocket, task_id: str):
+    user = await _authorize(websocket)
+    if user is None:
+        return
+
+    if not access.can_access_task(user, task_id, Permission.VIEW):
+        await websocket.close(code=1008, reason="Task not found")
+        return
+
     client_type = f"task_{task_id}"
     await manager.connect(websocket, client_type)
+    session = next(get_db_session())
     try:
-        task_repository: TaskRepository = get_service_instance(TaskRepository)
         task_manager_service: TaskManagerService = get_service_instance(TaskManagerService)
 
         while True:
             try:
-                task_logs = await get_task_logs(task_id, task_repository, task_manager_service)
+                task_logs = await get_task_logs(task_id, task_manager_service, user, session)
+                session.rollback()  # end the read transaction, don't hold table locks between polls
                 data = {**task_logs}
                 if not await manager.broadcast(data, client_type):
                     break
@@ -180,11 +207,20 @@ async def websocket_task_endpoint(websocket: WebSocket, task_id: str):
                 logger.error(f"Error in task websocket: {str(e)}")
                 break
     finally:
+        session.close()
         manager.disconnect(websocket, client_type)
 
 
 @router.websocket("/{package_name}/{version}")
 async def websocket_package_instance_endpoint(websocket: WebSocket, package_name: str, version: str):
+    user = await _authorize(websocket)
+    if user is None:
+        return
+
+    if not access.can_access_package(user, package_name, Permission.VIEW):
+        await websocket.close(code=1008, reason="Package not found")
+        return
+
     client_type = f"{package_name}_{version}"
     await manager.connect(websocket, client_type)
     session = next(get_db_session())
@@ -195,7 +231,8 @@ async def websocket_package_instance_endpoint(websocket: WebSocket, package_name
         while True:
             try:
                 package_instance = await get_package_by_version(
-                    package_name, version, session, task_repository, task_manager_service)
+                    package_name, version, session, task_repository, task_manager_service, user)
+                session.rollback()  # end the read transaction, don't hold table locks between polls
                 data = {"tasks": package_instance.tasks}
                 if not await manager.broadcast(data, client_type):
                     break

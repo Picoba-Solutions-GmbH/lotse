@@ -15,8 +15,21 @@
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">{{ packageName }}</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Manage and monitor Versions for {{ packageName }}</p>
         </div>
-        <p-button label="Deploy New Version" [icon]="PrimeIcons.UPLOAD" (onClick)="showDeployPackageDialog()"
-            size="small" *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+        <div class="flex items-center gap-2">
+            @if (isAuthenticationEnabled && access) {
+            <span class="text-xs text-gray-500 dark:text-gray-400 mr-2">
+                <i class="pi pi-user text-xs mr-1"></i>{{ access.owner ? (access.owner.display_name || access.owner.name) : 'Unowned' }}
+            </span>
+            }
+            @if (isAuthenticationEnabled && permissions.manage) {
+            <p-button label="Share" icon="pi pi-share-alt" (onClick)="showShareDialog = true" size="small"
+                severity="secondary" />
+            }
+            @if (permissions.edit) {
+            <p-button label="Deploy New Version" [icon]="PrimeIcons.UPLOAD" (onClick)="showDeployPackageDialog()"
+                size="small" />
+            }
+        </div>
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -137,20 +150,18 @@
                     </td>
                     <td>
                         <div class="flex gap-1" (click)="$event.stopPropagation()">
-                            @if (!package.is_default) {
-                            <ng-container *hasRole="[Role.ADMIN, Role.OPERATOR]">
-                                <button class="icon-action-btn text-blue-400" pTooltip="Set as default"
-                                    (click)="setAsDefaultVersion(package)">
-                                    <i class="pi pi-star text-xs"></i>
-                                </button>
-                            </ng-container>
+                            @if (!package.is_default && permissions.edit) {
+                            <button class="icon-action-btn text-blue-400" pTooltip="Set as default"
+                                (click)="setAsDefaultVersion(package)">
+                                <i class="pi pi-star text-xs"></i>
+                            </button>
                             }
-                            <ng-container *hasRole="[Role.ADMIN]">
-                                <button class="icon-action-btn text-red-400" pTooltip="Delete version"
-                                    (click)="deletePackageVersion(package)">
-                                    <i class="pi pi-trash text-xs"></i>
-                                </button>
-                            </ng-container>
+                            @if (permissions.edit) {
+                            <button class="icon-action-btn text-red-400" pTooltip="Delete version"
+                                (click)="deletePackageVersion(package)">
+                                <i class="pi pi-trash text-xs"></i>
+                            </button>
+                            }
                         </div>
                     </td>
                 </tr>
@@ -176,4 +187,6 @@
 
     <app-package-deploy #packageDeploy [packageName]="packageName" (packageDeployed)="onPackageDeployed()"
         [setAsDefault]="packages.length === 0" [availablePackageVersions]="availablePackageVersions" />
+    <app-package-share-dialog [(visible)]="showShareDialog" [packageName]="packageName"
+        (changed)="loadAccess()" />
 </div>

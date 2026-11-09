@@ -1,5 +1,4 @@
 export enum Role {
-    UNAUTHORIZED = 'Unauthorized',
-    OPERATOR = 'Operator',
+    USER = 'User',
     ADMIN = 'Admin'
 }

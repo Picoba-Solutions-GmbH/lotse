@@ -219,7 +219,8 @@ class TaskManagerService(metaclass=SingletonMeta):
                                     package_name: str,
                                     version: str | None,
                                     arguments: list[PackageRequestArgument],
-                                    empty_instance: bool) -> str:
+                                    empty_instance: bool,
+                                    started_by: str | None = None) -> str:
 
         package_info = PackageService.get_package_info(package_name, version)
         if package_info is None:
@@ -227,7 +228,7 @@ class TaskManagerService(metaclass=SingletonMeta):
 
         task_id = generate_name(package_name)
 
-        self.task_manager.add_task(task_id, package_info.package_entity.deployment_id, arguments)
+        self.task_manager.add_task(task_id, package_info.package_entity.deployment_id, arguments, started_by)
         parsed_config = parse_config(package_info.package_entity.config)
         if parsed_config is None:
             raise FileNotFoundError(f"Package {package_name} ({version}) not found")

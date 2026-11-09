@@ -7,6 +7,7 @@ import psutil
 from sqlalchemy.orm import joinedload
 
 from src.database.database_access import get_db_session
+from src.database.models.package_entity import PackageEntity
 from src.database.models.task_entity import TaskEntity
 from src.misc.task_status import TaskStatus
 from src.models.package_request_argument import PackageRequestArgument
@@ -37,7 +38,8 @@ def map_task_entity_to_task_info(task: TaskEntity, message: str | None) -> TaskI
         vscode_port=task.vscode_port,
         original_ui_port=task.original_ui_port,
         metrics=None,
-        arguments=arguments
+        arguments=arguments,
+        started_by=task.started_by
     )
 
 
@@ -65,7 +67,8 @@ class TaskRepository(metaclass=SingletonMeta):
         finally:
             db.close()
 
-    def add_task(self, task_id: str, deployment_id: str, arguments: list[PackageRequestArgument]) -> None:
+    def add_task(self, task_id: str, deployment_id: str, arguments: list[PackageRequestArgument],
+                 started_by: str | None = None) -> None:
         db = self._get_db_session()
         try:
             task = TaskEntity(
@@ -77,7 +80,8 @@ class TaskRepository(metaclass=SingletonMeta):
                 pid=None,
                 arguments=[arg.model_dump() for arg in arguments],
                 hostname=self.hostname,
-                ip_address=self.ip_address
+                ip_address=self.ip_address,
+                started_by=started_by
             )
             db.add(task)
             db.commit()
@@ -184,12 +188,13 @@ class TaskRepository(metaclass=SingletonMeta):
             response_message
         )
 
-    def list_tasks(self) -> list[TaskInfo]:
+    def list_tasks(self, package_names: set[str] | None = None) -> list[TaskInfo]:
         db = self._get_db_session()
         try:
-            tasks: list[TaskEntity] = (db.query(TaskEntity)
-                                       .options(joinedload(TaskEntity.package))
-                                       .all())
+            query = db.query(TaskEntity).options(joinedload(TaskEntity.package))
+            if package_names is not None:
+                query = query.join(TaskEntity.package).filter(PackageEntity.package_name.in_(package_names))
+            tasks: list[TaskEntity] = query.all()
 
             return [
                 map_task_entity_to_task_info(

@@ -1,15 +1,8 @@
-from typing import Union
-
 from pydantic import BaseModel
 
+from src.authentication.roles_type import RoleType
 
-class User(BaseModel):
-    username: str
-    role: str
-
-
-class UserInDB(User):
-    hashed_password: str
+SYSTEM_USER_ID = "system"
 
 
 class Token(BaseModel):
@@ -17,6 +10,19 @@ class Token(BaseModel):
     token_type: str
 
 
-class TokenData(BaseModel):
-    username: Union[str, None] = None
-    role: Union[str, None] = None
+class CurrentUser(BaseModel):
+    id: str
+    username: str
+    role: RoleType
+    display_name: str | None = None
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == RoleType.ADMIN
+
+    @property
+    def is_system(self) -> bool:
+        return self.id == SYSTEM_USER_ID
+
+
+SYSTEM_ADMIN = CurrentUser(id=SYSTEM_USER_ID, username="admin", role=RoleType.ADMIN, display_name="Admin")

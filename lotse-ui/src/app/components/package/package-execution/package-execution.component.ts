@@ -95,7 +95,9 @@ export class PackageExecutionComponent implements OnInit, OnDestroy {
 
   async loadPackagesAsync(): Promise<void> {
     try {
-      this.repositories = await this.packageService.getPackagesAsync();
+      // Only offer packages the user is allowed to run.
+      const packages = await this.packageService.getPackagesAsync();
+      this.repositories = packages.filter(p => p.can_execute !== false);
     } catch (error) {
       this.showError('Failed to load packages');
     }

@@ -40,7 +40,7 @@ export class HasRoleDirective implements OnInit, OnDestroy {
     private async updateView(): Promise<void> {
         const isAuthEnabled = await this.featureFlagService.isAuthenticationEnabled();
         const currentRole = this.authService.getRole();
-        const isAllowed = this.allowedRoles.includes(currentRole);
+        const isAllowed = currentRole !== null && this.allowedRoles.includes(currentRole);
 
         if ((isAllowed || !isAuthEnabled) && !this.hasView) {
             this.viewContainer.createEmbeddedView(this.templateRef);

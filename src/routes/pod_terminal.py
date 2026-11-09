@@ -7,7 +7,11 @@ from fastapi.websockets import WebSocketState
 from kubernetes import client
 from kubernetes.stream import stream
 
+from src.models.package_permissions import Permission
+from src.routes import authentication
+from src.services import package_access_service as access
 from src.services.kubernetes.pod_executor import PodExecutor
+from src.utils import config
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,18 @@ async def pod_terminal_websocket(
     namespace: str,
     pod_name: str
 ):
+    # Admins may open a terminal in any pod. Users only in task pods of packages they may execute.
+    user = authentication.authenticate_connection(websocket)
+    is_allowed = user is not None and (
+        user.is_admin or (
+            namespace == config.K8S_NAMESPACE
+            and access.can_access_task(user, pod_name, Permission.EXECUTE)
+        )
+    )
+    if not is_allowed:
+        await websocket.close(code=1008, reason="Not authorized")
+        return
+
     resp = None
     output_task = None
 

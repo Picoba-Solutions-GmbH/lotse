@@ -17,11 +17,12 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { HasRoleDirective } from '../../../directives/has-role.directive';
 import { VisualStudioCodeComponent } from "../../../icons/svg-VisualStudioCode.component";
-import { Role } from '../../../misc/Role';
 import { TaskStatus } from '../../../misc/TaskStatus';
 import { PackageInstance } from '../../../models/Package';
+import { PackagePermissions } from '../../../models/PackageAccess';
+
+const NO_PERMISSIONS: PackagePermissions = { view: false, execute: false, edit: false, manage: false };
 import { PackageEnvironment } from '../../../models/PackageEnvironment';
 import { TaskInfo } from '../../../models/TaskInfo';
 import { DurationPipe } from "../../../pipes/duration.pipe";
@@ -57,8 +58,7 @@ import { PodTerminalComponent } from '../../pod-terminal/pod-terminal.component'
     PodTerminalComponent,
     VisualStudioCodeComponent,
     UtcToLocalPipe,
-    AccordionModule,
-    HasRoleDirective
+    AccordionModule
   ],
   templateUrl: './package-instance.component.html',
   styleUrl: './package-instance.component.scss'
@@ -66,7 +66,9 @@ import { PodTerminalComponent } from '../../pod-terminal/pod-terminal.component'
 export class PackageInstanceComponent implements OnInit, OnDestroy {
   TaskStatus = TaskStatus;
   PrimeIcons = PrimeIcons;
-  Role = Role;
+  get permissions(): PackagePermissions {
+    return this.packageInstance.permissions ?? NO_PERMISSIONS;
+  }
 
   packageInstance: PackageInstance = {
     name: '',

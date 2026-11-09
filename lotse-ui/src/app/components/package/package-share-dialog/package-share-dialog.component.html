@@ -1,0 +1,110 @@
+<p-dialog [visible]="visible" (visibleChange)="visible = $event; visibleChange.emit($event)" (onShow)="onShow()"
+  [header]="'Share ' + packageName" [modal]="true" [style]="{ width: '640px' }" [closable]="!saving">
+
+  @if (loading && !access) {
+  <div class="flex items-center justify-center py-10">
+    <i class="pi pi-spin pi-spinner text-2xl text-gray-400"></i>
+  </div>
+  } @else if (access) {
+  <div class="flex flex-col gap-5 pt-2">
+
+    <!-- Owner -->
+    <div class="flex flex-col gap-1.5">
+      <p class="text-xs text-gray-400 uppercase tracking-wide m-0">Owner</p>
+      <div class="flex items-center gap-2">
+        @if (access.owner) {
+        <i class="pi pi-user text-gray-400"></i>
+        <span class="font-medium text-sm">{{ displayName(access.owner) }}</span>
+        } @else {
+        <p-tag severity="warn" value="Unowned" />
+        <span class="text-xs text-gray-400">Only admins can see this package until an owner is assigned.</span>
+        }
+      </div>
+      <div class="flex items-center gap-2 mt-1">
+        <p-autocomplete [(ngModel)]="newOwner" [suggestions]="suggestions" (completeMethod)="searchOwners($event)"
+          optionLabel="name" [forceSelection]="true" placeholder="Transfer ownership to..." appendTo="body"
+          class="flex-1" [inputStyle]="{ width: '100%' }" [style]="{ width: '100%' }" [disabled]="saving">
+          <ng-template let-user #item>
+            <span>{{ displayName(user) }}</span>
+          </ng-template>
+        </p-autocomplete>
+        <p-button label="Transfer" size="small" severity="secondary" [disabled]="!newOwner?.id || saving"
+          (onClick)="transferOwner()"
+          pTooltip="You keep execute and edit rights after transferring" tooltipPosition="top" />
+      </div>
+    </div>
+
+    <!-- Add share -->
+    <div class="flex flex-col gap-1.5">
+      <p class="text-xs text-gray-400 uppercase tracking-wide m-0">Share with user</p>
+      <div class="flex items-center gap-3 flex-wrap">
+        <p-autocomplete [(ngModel)]="newUser" [suggestions]="suggestions" (completeMethod)="searchUsers($event)"
+          optionLabel="name" [forceSelection]="true" placeholder="Search user..." appendTo="body" class="flex-1"
+          [inputStyle]="{ width: '100%' }" [style]="{ width: '100%' }" [disabled]="saving">
+          <ng-template let-user #item>
+            <span>{{ displayName(user) }}</span>
+          </ng-template>
+        </p-autocomplete>
+        <div class="flex items-center gap-1.5">
+          <p-checkbox inputId="newExecute" [(ngModel)]="newCanExecute" [binary]="true" [disabled]="saving" />
+          <label for="newExecute" class="text-sm">Execute</label>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <p-checkbox inputId="newEdit" [(ngModel)]="newCanEdit" [binary]="true" [disabled]="saving" />
+          <label for="newEdit" class="text-sm">Edit</label>
+        </div>
+        <p-button label="Share" icon="pi pi-share-alt" size="small" [disabled]="!newUser?.id || saving"
+          [loading]="saving" (onClick)="addShare()" />
+      </div>
+      <span class="text-xs text-gray-400">
+        Shared users can always view the package. Execute allows running it, edit allows deploying versions,
+        setting the default version and deleting versions.
+      </span>
+    </div>
+
+    <!-- Existing shares -->
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <p-table [value]="access.shares" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>User</th>
+            <th class="text-center w-16">View</th>
+            <th class="text-center w-20">Execute</th>
+            <th class="text-center w-16">Edit</th>
+            <th class="w-12"></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-share>
+          <tr>
+            <td class="text-sm">{{ displayName(share.user) }}</td>
+            <td class="text-center">
+              <p-checkbox [ngModel]="true" [binary]="true" [disabled]="true" />
+            </td>
+            <td class="text-center">
+              <p-checkbox [(ngModel)]="share.can_execute" [binary]="true" [disabled]="saving"
+                (onChange)="updateShare(share)" />
+            </td>
+            <td class="text-center">
+              <p-checkbox [(ngModel)]="share.can_edit" [binary]="true" [disabled]="saving"
+                (onChange)="updateShare(share)" />
+            </td>
+            <td>
+              <p-button icon="pi pi-times" [text]="true" severity="danger" size="small" [disabled]="saving"
+                pTooltip="Remove access" tooltipPosition="top" (onClick)="removeShare(share)" />
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="text-center text-sm text-gray-400 py-6">Not shared with anyone yet</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <p-button label="Close" [text]="true" severity="secondary" (onClick)="close()" [disabled]="saving" />
+  </ng-template>
+</p-dialog>

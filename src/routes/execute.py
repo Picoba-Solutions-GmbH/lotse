@@ -1,15 +1,22 @@
 import asyncio
 from typing import Union
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from sqlalchemy.orm import Session
+
+from src.authentication.schemas_authentication import CurrentUser
+from src.database.database_access import get_db_session
 from src.database.repositories.task_repository import TaskRepository
 from src.misc.task_status import TaskStatus
 from src.models.async_execution_response import AsyncExecutionResponse
 from src.models.execution_request import ExecutionRequest
+from src.models.package_permissions import Permission
 from src.models.package_request_argument import PackageRequestArgument
 from src.models.sync_execution_response import SyncExecutionResponse
+from src.routes import authentication
+from src.services import package_access_service as access
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
 from src.utils.singleton_meta import get_service
@@ -22,9 +29,14 @@ async def execute_package(package_name: str, version: str | None, arguments: lis
                           redirect_to_ui: bool,
                           task_manager: TaskRepository,
                           k8s_manager_service: TaskManagerService,
-                          empty_instance: bool
+                          empty_instance: bool,
+                          user: CurrentUser,
+                          db: Session
                           ) -> Union[SyncExecutionResponse, AsyncExecutionResponse, RedirectResponse]:
-    task_id = await k8s_manager_service.execute_package_async(package_name, version, arguments, empty_instance)
+    access.require(db, user, package_name, Permission.EXECUTE)
+    task_id = await k8s_manager_service.execute_package_async(
+        package_name, version, arguments, empty_instance,
+        started_by=None if user.is_system else user.username)
 
     if wait_for_completion:
         while True:
@@ -84,7 +96,9 @@ async def execute_package_get(
         task_manager: TaskRepository = get_service(TaskRepository),
         k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
         wait_for_completion: bool = False,
-        redirect_to_ui: bool = False):
+        redirect_to_ui: bool = False,
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
     query_params = dict(request.query_params)
     arguments = [PackageRequestArgument(name=key, value=value) for key, value in query_params.items()
                  if key not in ["wait_for_completion", "redirect_to_ui"]]
@@ -96,7 +110,9 @@ async def execute_package_get(
         redirect_to_ui=redirect_to_ui,
         task_manager=task_manager,
         k8s_manager_service=k8s_manager_service,
-        empty_instance=False
+        empty_instance=False,
+        user=user,
+        db=db
     )
 
 
@@ -109,7 +125,9 @@ async def execute_versioned_package_get(
         task_manager: TaskRepository = get_service(TaskRepository),
         k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
         wait_for_completion: bool = False,
-        redirect_to_ui: bool = False):
+        redirect_to_ui: bool = False,
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
     query_params = dict(request.query_params)
     arguments = [PackageRequestArgument(name=key, value=value) for key, value in query_params.items()
                  if key not in ["wait_for_completion", "redirect_to_ui"]]
@@ -121,7 +139,9 @@ async def execute_versioned_package_get(
         redirect_to_ui=redirect_to_ui,
         task_manager=task_manager,
         k8s_manager_service=k8s_manager_service,
-        empty_instance=False
+        empty_instance=False,
+        user=user,
+        db=db
     )
 
 
@@ -129,7 +149,9 @@ async def execute_versioned_package_get(
 async def execute_package_post(
         request: ExecutionRequest,
         k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
-        task_manager: TaskRepository = get_service(TaskRepository)):
+        task_manager: TaskRepository = get_service(TaskRepository),
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
     return await execute_package(
         package_name=request.package_name,
         version=request.version,
@@ -138,7 +160,9 @@ async def execute_package_post(
         redirect_to_ui=False,
         task_manager=task_manager,
         k8s_manager_service=k8s_manager_service,
-        empty_instance=False
+        empty_instance=False,
+        user=user,
+        db=db
     )
 
 
@@ -146,7 +170,9 @@ async def execute_package_post(
 async def execute_empty_instance(
         request: ExecutionRequest,
         k8s_manager_service: TaskManagerService = get_service(TaskManagerService),
-        task_manager: TaskRepository = get_service(TaskRepository)):
+        task_manager: TaskRepository = get_service(TaskRepository),
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
     return await execute_package(
         package_name=request.package_name,
         version=request.version,
@@ -155,5 +181,7 @@ async def execute_empty_instance(
         redirect_to_ui=False,
         task_manager=task_manager,
         k8s_manager_service=k8s_manager_service,
-        empty_instance=True
+        empty_instance=True,
+        user=user,
+        db=db
     )

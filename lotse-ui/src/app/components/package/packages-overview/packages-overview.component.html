@@ -17,9 +17,9 @@
     </div>
     <div class="flex gap-2">
       <p-button label="Deploy Package" [icon]="PrimeIcons.UPLOAD" (onClick)="showDeployPackageDialog()" size="small"
-        *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+        *hasRole="[Role.ADMIN, Role.USER]" />
       <p-button label="Deploy Container" [icon]="PrimeIcons.SERVER" (onClick)="showDeployContainerDialog()" size="small"
-        severity="secondary" *hasRole="[Role.ADMIN, Role.OPERATOR]" />
+        severity="secondary" *hasRole="[Role.ADMIN, Role.USER]" />
     </div>
   </div>
 
@@ -96,8 +96,9 @@
           <th pSortableColumn="name">Name <p-sortIcon field="name" /></th>
           <th pSortableColumn="status">Status <p-sortIcon field="status" /></th>
           <th pSortableColumn="instances">Instances <p-sortIcon field="instances" /></th>
+          <th pSortableColumn="owner">Owner <p-sortIcon field="owner" /></th>
           <th pSortableColumn="creation_date">Created <p-sortIcon field="creation_date" /></th>
-          <th class="w-8"></th>
+          <th class="w-20"></th>
         </tr>
       </ng-template>
 
@@ -119,18 +120,36 @@
             <span class="text-gray-700 dark:text-gray-300">{{ package.instances }}</span>
           </td>
           <td>
+            @if (package.owner) {
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-700 dark:text-gray-300">{{ package.owner }}</span>
+              @if (isAuthenticationEnabled && package.owner !== currentUsername && !isAdmin) {
+              <p-tag severity="info" value="Shared" />
+              }
+            </div>
+            } @else {
+            <p-tag severity="warn" value="Unowned" />
+            }
+          </td>
+          <td>
             <span class="text-xs text-gray-400 dark:text-gray-500">{{ package.creation_date | date: "dd MMM yy, HH:mm"
               }}</span>
           </td>
           <td>
-            <i class="pi pi-chevron-right text-xs text-gray-300 dark:text-gray-600"></i>
+            <div class="flex items-center justify-end gap-1">
+              @if (isAuthenticationEnabled && package.permissions?.manage) {
+              <p-button icon="pi pi-share-alt" [text]="true" size="small" severity="secondary" pTooltip="Share"
+                tooltipPosition="top" (onClick)="openShareDialog(package, $event)" />
+              }
+              <i class="pi pi-chevron-right text-xs text-gray-300 dark:text-gray-600"></i>
+            </div>
           </td>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="5">
+          <td colspan="6">
             <div class="flex flex-col items-center py-16 text-center">
               <div class="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
                 <i class="pi pi-inbox text-2xl text-gray-400 dark:text-gray-500"></i>
@@ -146,4 +165,6 @@
   </div>
 
   <app-package-deploy #packageDeploy (packageDeployed)="onPackageDeployed()" />
+  <app-package-share-dialog [(visible)]="showShareDialog" [packageName]="sharePackageName"
+    (changed)="loadPackages()" />
 </div>

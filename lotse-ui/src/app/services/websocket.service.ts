@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { delay, retryWhen, tap } from 'rxjs/operators';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +15,7 @@ export class WebSocketService {
   private taskLogsSocket$: WebSocketSubject<any> | null = null;
   private baseUrl = environment.wsApiUrl;
 
-  constructor() { }
+  constructor(private authService: AuthService) { }
 
   public connectToCluster(): Observable<any> {
     if (!this.clusterSocket$ || this.clusterSocket$.closed) {
@@ -76,8 +77,11 @@ export class WebSocketService {
   }
 
   private createWebSocket(path: string): WebSocketSubject<any> {
+    // Browsers cannot send an Authorization header for websockets, so the token goes into the query.
+    const token = this.authService.getToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
     return webSocket({
-      url: `${this.baseUrl}${path}`,
+      url: `${this.baseUrl}${path}${query}`,
       openObserver: {
         next: () => {
           console.log('WebSocket connected to', path);

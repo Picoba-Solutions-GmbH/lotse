@@ -99,11 +99,15 @@ class PackageRepository:
     def list_packages(
         db_session: Session,
         package_name: str | None = None,
-        version: str | None = None
+        version: str | None = None,
+        package_names: set[str] | None = None
     ) -> list[PackageEntity]:
         query = db_session.query(PackageEntity).filter(
             PackageEntity.deleted.is_(False)
         )
+
+        if package_names is not None:
+            query = query.filter(PackageEntity.package_name.in_(package_names))
 
         if package_name:
             query = query.filter(PackageEntity.package_name == package_name)

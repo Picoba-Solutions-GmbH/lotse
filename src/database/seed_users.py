@@ -9,13 +9,14 @@ def seed_default_users(db: Session):
     users = UserRepository.list_users(db)
     if len(users) > 0:
         print("Users already exist in the database, skipping seeding.")
+        db.rollback()  # end the read transaction, the caller closes the session
         return
 
     try:
         default_users = [
             {"name": "admin", "password": "admin123", "role": RoleType.ADMIN},
-            {"name": "operator", "password": "operator123", "role": RoleType.OPERATOR},
-            {"name": "user", "password": "user123", "role": RoleType.UNAOTHORIZED},
+            {"name": "operator", "password": "operator123", "role": RoleType.USER},
+            {"name": "user", "password": "user123", "role": RoleType.USER},
         ]
 
         for user in default_users:
@@ -34,6 +35,5 @@ def seed_default_users(db: Session):
 
         print("Default users seeded successfully!")
     except Exception as e:
+        db.rollback()
         print(f"Error seeding users: {str(e)}")
-    finally:
-        db.close()

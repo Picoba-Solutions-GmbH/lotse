@@ -12,15 +12,16 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { HasRoleDirective } from '../../../directives/has-role.directive';
 import { PackageStatus } from '../../../misc/PackageStatus';
-import { Role } from '../../../misc/Role';
 import { PackageDetail } from '../../../models/Package';
+import { PackageAccess, PackagePermissions } from '../../../models/PackageAccess';
 import { PackageCountByStatePipe } from "../../../pipes/package-count-by-state.pipe";
 import { PackageStatusToSeverityPipe } from "../../../pipes/package-status.pipe";
 import { FeatureFlagService } from '../../../services/feature-flag.service';
+import { PackageAccessService } from '../../../services/package-access.service';
 import { PackageService } from '../../../services/package.service';
 import { PackageDeployComponent } from '../package-deploy/package-deploy.component';
+import { PackageShareDialogComponent } from '../package-share-dialog/package-share-dialog.component';
 
 @Component({
   selector: 'app-package-management',
@@ -38,8 +39,8 @@ import { PackageDeployComponent } from '../package-deploy/package-deploy.compone
     ToastModule,
     PackageStatusToSeverityPipe,
     PackageCountByStatePipe,
-    HasRoleDirective,
-    PackageDeployComponent
+    PackageDeployComponent,
+    PackageShareDialogComponent
   ],
   templateUrl: './package-management.component.html',
   styleUrl: './package-management.component.scss'
@@ -52,8 +53,10 @@ export class PackageManagementComponent implements OnInit {
   loading: boolean = true;
   PackageStatus = PackageStatus;
   PrimeIcons = PrimeIcons;
-  Role = Role;
   isAuthenticationEnabled: boolean = false;
+  access: PackageAccess | null = null;
+  permissions: PackagePermissions = { view: false, execute: false, edit: false, manage: false };
+  showShareDialog = false;
 
   @ViewChild(PackageDeployComponent) packageDeploy!: PackageDeployComponent;
 
@@ -63,13 +66,24 @@ export class PackageManagementComponent implements OnInit {
     private router: Router,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
-    private featureFlagService: FeatureFlagService
+    private featureFlagService: FeatureFlagService,
+    private packageAccessService: PackageAccessService
   ) { }
 
   async ngOnInit(): Promise<void> {
     this.packageName = this.route.snapshot.params['package_name'];
-    await this.loadPackages();
+    await Promise.all([this.loadPackages(), this.loadAccess()]);
     this.isAuthenticationEnabled = await this.featureFlagService.isAuthenticationEnabled();
+  }
+
+  async loadAccess(): Promise<void> {
+    try {
+      this.access = await this.packageAccessService.getAccessAsync(this.packageName);
+      this.permissions = this.access.permissions;
+    } catch {
+      this.access = null;
+      this.permissions = { view: false, execute: false, edit: false, manage: false };
+    }
   }
 
   async loadPackages(): Promise<void> {

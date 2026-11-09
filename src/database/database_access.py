@@ -33,15 +33,26 @@ def get_db_session() -> Generator[Session]:
         db.close()
 
 
+def import_models():
+    # pylint: disable=import-outside-toplevel,unused-import
+    from src.database.models import (package_access_entity,  # noqa: F401
+                                     package_entity, task_entity, user_entity,
+                                     volume_entity)
+
+
 def init_db(retries=5, delay=2):
+    # pylint: disable=import-outside-toplevel
+    from src.database.migrator import migrate_database
+
+    import_models()
     for attempt in range(retries):
         try:
-            logger.info("Creating database tables...")
-            Base.metadata.create_all(bind=engine)
-            logger.info("Database tables created successfully")
+            logger.info("Applying database migrations...")
+            migrate_database()
             return True
         except OperationalError as e:
-            if attempt == retries - 1:
+            # Only retry connection problems. A lock timeout is logged by the migrator and won't fix itself.
+            if "lock timeout" in str(e).lower() or attempt == retries - 1:
                 logger.error(f"Failed to initialize database after {retries} attempts: {str(e)}")
                 raise
             logger.warning(f"Database connection attempt {attempt + 1} failed, retrying in {delay} seconds...")

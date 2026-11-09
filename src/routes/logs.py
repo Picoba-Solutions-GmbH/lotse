@@ -1,6 +1,8 @@
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+
+from src.routes import authentication
 
 from src.utils.log_store import get_log_handler
 
@@ -17,6 +19,7 @@ async def get_logs(
     from_date: Optional[str] = Query(None, description="ISO 8601 UTC start datetime, e.g. 2024-01-01T00:00:00Z"),
     to_date: Optional[str] = Query(None, description="ISO 8601 UTC end datetime, e.g. 2024-12-31T23:59:59Z"),
     search: Optional[str] = Query(None, description="Case-insensitive substring search in message/logger"),
+    _=Depends(authentication.require_admin),
 ):
     records = get_log_handler().get_records()
 

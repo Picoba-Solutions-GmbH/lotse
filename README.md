@@ -92,6 +92,31 @@ npm i
 npm run start
 ```
 
+## 🗄️ Database Migrations
+
+The database schema is managed with [Alembic](https://alembic.sqlalchemy.org/) migrations (similar to Entity Framework migrations).
+Migration files live in `migrations/versions/`. Pending migrations are applied automatically when Lotse starts.
+
+```bash
+# After changing an entity in src/database/models/, create a migration and review the generated file
+alembic revision --autogenerate -m "add column x to packages"
+
+# Apply / revert migrations manually (uses the POSTGRES_* variables from .env)
+alembic upgrade head
+alembic downgrade -1
+
+# Show all migrations and the current state of the database
+alembic history --verbose
+alembic current
+
+# Run against another database
+alembic -x url=postgresql://user:password@host:5432/lotse upgrade head
+```
+
+Every applied migration is recorded in the `migration_history` table (revision, operation and timestamp).
+`alembic_version` holds the current revision. Databases created before migrations were introduced are detected
+on startup and marked as being on the initial migration (`0001_initial`).
+
 ## 🔐 Authentication
 
 For demo purposes the authentication is diabled. You can enable it by setting the environment variable `ENABLE_AUTH` to `true`.

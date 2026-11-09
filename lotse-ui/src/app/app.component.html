@@ -120,6 +120,15 @@
         <span>{{ isDarkMode ? 'Light mode' : 'Dark mode' }}</span>
         }
       </button>
+      @if (isAuthEnabled && isLoggedIn && username) {
+      <div class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-500 dark:text-gray-400"
+        [class.justify-center]="sidebarCollapsed" [title]="'Signed in as ' + username">
+        <i class="pi pi-user shrink-0 text-sm"></i>
+        @if (!sidebarCollapsed) {
+        <span class="truncate">{{ username }}</span>
+        }
+      </div>
+      }
       @if (isAuthEnabled) {
       <button (click)="isLoggedIn ? logout() : openLoginDialog()"
         class="sidebar-nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-left transition-all duration-100 cursor-pointer"

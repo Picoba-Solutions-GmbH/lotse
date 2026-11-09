@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 from enum import Enum
 from typing import TypeVar
 
@@ -10,6 +11,9 @@ from fastapi.responses import StreamingResponse
 
 from src.database.models.task_entity import TaskEntity
 from src.database.repositories.task_repository import TaskRepository
+from src.models.package_permissions import Permission
+from src.routes import authentication
+from src.services import package_access_service as access
 from src.utils import config
 from src.utils.singleton_meta import get_service, get_service_instance
 
@@ -26,6 +30,43 @@ _proxy_task_id_cache = {}
 _vscode_task_id_cache = {}
 
 T = TypeVar('T')
+
+ACCESS_CACHE_SECONDS = 60
+_access_cache: dict[tuple[str, str], float] = {}
+
+
+def is_authorized_for_task(connection: Request | WebSocket, task_id: str) -> bool:
+    if not config.ENABLE_AUTH:
+        return True
+
+    token = authentication.extract_token(connection)
+    if not token:
+        return False
+
+    cache_key = (token, task_id)
+    now = time.monotonic()
+    if _access_cache.get(cache_key, 0) > now:
+        return True
+
+    user = authentication.authenticate_connection(connection)
+    if user is None or not access.can_access_task(user, task_id, Permission.EXECUTE):
+        return False
+
+    if len(_access_cache) > 10000:
+        _access_cache.clear()
+    _access_cache[cache_key] = now + ACCESS_CACHE_SECONDS
+    return True
+
+
+def _strip_lotse_token_cookie(headers: dict) -> None:
+    cookie_header = headers.pop(b'cookie', None)
+    if not cookie_header:
+        return
+
+    cookies = [c for c in cookie_header.decode().split(";")
+               if c.strip() and not c.strip().startswith(f"{authentication.TOKEN_COOKIE_NAME}=")]
+    if cookies:
+        headers[b'cookie'] = ";".join(cookies).strip().encode()
 
 
 def get_task_info(task_id: str, task_manager: TaskRepository, cache_type: ProxyCacheType) -> dict | None:
@@ -69,6 +110,9 @@ async def _handle_proxy_request(request: Request,
                                 task_manager: TaskRepository,
                                 proxy_type: ProxyCacheType):
     HTTP_SERVER = None
+    if not is_authorized_for_task(request, task_id):
+        return StreamingResponse(iter(["Not authorized"]), status_code=401)
+
     try:
         task_info = get_task_info(task_id, task_manager, proxy_type)
         if task_info is None:
@@ -90,10 +134,12 @@ async def _handle_proxy_request(request: Request,
                 os.environ["no_proxy"] = ",".join(no_proxy)
 
         base_url = f"http://{address}:{port}/"
-        HTTP_SERVER = httpx.AsyncClient(base_url=base_url, cookies=request.cookies,
+        forwarded_cookies = {k: v for k, v in request.cookies.items() if k != authentication.TOKEN_COOKIE_NAME}
+        HTTP_SERVER = httpx.AsyncClient(base_url=base_url, cookies=forwarded_cookies,
                                         follow_redirects=True)
 
         headers = dict(request.headers.raw)
+        _strip_lotse_token_cookie(headers)
         headers[b'X-Forwarded-Prefix'] = prefix.encode()
         reverse_proxy_request = HTTP_SERVER.build_request(
             request.method, url,
@@ -135,6 +181,10 @@ async def _vscode_proxy(task_id: str,
 async def _handle_websocket_proxy(websocket: WebSocket, task_id: str, path: str,
                                   task_manager: TaskRepository,
                                   cache_type: ProxyCacheType):
+    if not is_authorized_for_task(websocket, task_id):
+        await websocket.close(code=1008, reason="Not authorized")
+        return
+
     task_info = get_task_info(task_id, task_manager, cache_type)
     if task_info is None:
         await websocket.close(code=1008, reason="Task not found")

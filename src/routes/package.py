@@ -9,19 +9,25 @@ from fastapi.responses import JSONResponse
 from pipe import groupby
 from sqlalchemy.orm import Session
 
+from src.authentication.schemas_authentication import CurrentUser
 from src.database.database_access import get_db_session
 from src.database.models.package_entity import PackageEntity
 from src.database.repositories.package_repository import PackageRepository
+from src.database.repositories.package_share_repository import \
+    PackageShareRepository
 from src.database.repositories.task_repository import (
     TaskRepository, map_task_entity_to_task_info)
+from src.database.repositories.user_repository import UserRepository
 from src.database.repositories.volume_repository import VolumeRepository
 from src.misc.package_status import PackageStatus
 from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
+from src.models.package_permissions import Permission
 from src.models.task_info import TaskInfo
 from src.models.yaml_config import Environment, parse_config
 from src.routes import authentication
+from src.services import package_access_service as access
 from src.services.task_manager_service import TaskManagerService
 from src.utils.path_manager import PathManager
 from src.utils.singleton_meta import get_service
@@ -36,7 +42,7 @@ async def deploy_package(
     set_as_default: bool = Form(False),
     delete_previous_versions: bool = Form(False),
     db_session: Session = Depends(get_db_session),
-    _=Depends(authentication.require_operator_or_admin)
+    user: CurrentUser = Depends(authentication.require_user)
 ):
     config_yaml_bytes = await config_yaml.read()
     config_yaml_content = config_yaml_bytes.decode('utf-8')
@@ -71,6 +77,8 @@ async def deploy_package(
                 f"{"does" if non_existing_volumes_count == 1 else "do"} not exist in the system. "
             )
         )
+
+    access.claim_or_check_deploy(db_session, user, package_config.package_name)
 
     if package_config.runtime != RuntimeType.CONTAINER:
         package_dir = PathManager.get_package_path(package_config.package_name,
@@ -130,8 +138,9 @@ async def set_active_package(
     package_name: str = Form(...),
     version: str = Form(...),
     db: Session = Depends(get_db_session),
-    _=Depends(authentication.require_operator_or_admin)
+    user: CurrentUser = Depends(authentication.require_user)
 ):
+    access.require(db, user, package_name, Permission.EDIT)
     success = PackageRepository.set_active_package(db, package_name, version)
     if not success:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -142,9 +151,12 @@ async def set_active_package(
 @router.get("/list")
 async def list_packages(
     package_name: str | None = None,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
 ):
-    packages = PackageRepository.list_packages(db, package_name)
+    visible_names = access.visible_package_names(db, user)
+    packages = PackageRepository.list_packages(db, package_name, package_names=visible_names)
+    permissions = {} if user.is_admin else access.permissions_by_package(db, user)
 
     result = []
     for package in packages:
@@ -174,6 +186,7 @@ async def list_packages(
             "active": package.active,
             "environment": environment,
             "package_arguments": package_arguments,
+            "can_execute": user.is_admin or permissions[package.package_name].execute,
         })
 
     return result
@@ -184,8 +197,9 @@ async def delete_package(
     package_name: str,
     version: str,
     db: Session = Depends(get_db_session),
-    _=Depends(authentication.require_admin)
+    user: CurrentUser = Depends(authentication.require_user)
 ):
+    access.require(db, user, package_name, Permission.EDIT)
     package_dir = PathManager.get_package_path(package_name, version)
     venv_dir = PathManager.get_venv_path(package_name, version)
 
@@ -203,10 +217,15 @@ async def delete_package(
 @router.get("/")
 async def get_packages_by_stage(
     db: Session = Depends(get_db_session),
-    task_manager_service: TaskRepository = get_service(TaskRepository)
+    task_manager_service: TaskRepository = get_service(TaskRepository),
+    user: CurrentUser = Depends(authentication.require_user)
 ):
     package_infos: list[PackageInfo] = []
-    packages = PackageRepository.list_packages(db, None)
+    visible_names = access.visible_package_names(db, user)
+    packages = PackageRepository.list_packages(db, None, package_names=visible_names)
+    permissions = {} if user.is_admin else access.permissions_by_package(db, user)
+    owner_map = PackageShareRepository.get_owner_map(db)
+    user_names = {u.id: u.name for u in UserRepository.list_users(db)}
 
     # pylint: disable=E1120
     grouped_packages: list[tuple[str, list[PackageEntity]]] = packages | groupby(lambda x: x.package_name)
@@ -228,7 +247,9 @@ async def get_packages_by_stage(
             name=package_name,
             status=package_status,
             instances=running_instances,
-            creation_date=oldest_package
+            creation_date=oldest_package,
+            owner=user_names.get(owner_map.get(package_name)),  # type: ignore
+            permissions=access.ALL_PERMISSIONS if user.is_admin else permissions[package_name]
         )
         package_infos.append(package_info)
 
@@ -239,8 +260,10 @@ async def get_packages_by_stage(
 async def get_package_by_stage(
     package_name: str,
     db: Session = Depends(get_db_session),
-    task_manager_service: TaskRepository = get_service(TaskRepository)
+    task_manager_service: TaskRepository = get_service(TaskRepository),
+    user: CurrentUser = Depends(authentication.require_user)
 ):
+    access.require(db, user, package_name, Permission.VIEW)
     package_details: list[PackageDetail] = []
     packages = PackageRepository.list_packages(db, package_name)
 
@@ -268,8 +291,10 @@ async def get_package_by_version(
     version: str,
     db: Session = Depends(get_db_session),
     task_repository: TaskRepository = get_service(TaskRepository),
-    task_manager_service: TaskManagerService = get_service(TaskManagerService)
+    task_manager_service: TaskManagerService = get_service(TaskManagerService),
+    user: CurrentUser = Depends(authentication.require_user)
 ):
+    permissions = access.require(db, user, package_name, Permission.VIEW)
     package = PackageRepository.get_package(db, package_name, version)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -301,6 +326,7 @@ async def get_package_by_version(
         tasks=task_infos,
         package_arguments=package_arguments,
         is_default=package.active,
+        permissions=permissions,
     )
 
     return package_instance
@@ -311,8 +337,9 @@ async def get_package_environment(
     package_name: str,
     version: str,
     db: Session = Depends(get_db_session),
-    _=Depends(authentication.require_admin)
+    user: CurrentUser = Depends(authentication.require_user)
 ):
+    access.require(db, user, package_name, Permission.EDIT)
     package = PackageRepository.get_package(db, package_name, version)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -330,8 +357,9 @@ async def set_default_package(
     package_name: str,
     version: str,
     db: Session = Depends(get_db_session),
-    _=Depends(authentication.require_admin)
+    user: CurrentUser = Depends(authentication.require_user)
 ):
+    access.require(db, user, package_name, Permission.EDIT)
     package = PackageRepository.get_package(db, package_name, version)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")

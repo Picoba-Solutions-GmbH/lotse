@@ -11,3 +11,5 @@ class UserEntity(Base):
     hashed_password = Column(String, nullable=False)
     is_ldap = Column(Boolean, nullable=True, default=False)
     role = Column(String, nullable=False)
+    display_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)

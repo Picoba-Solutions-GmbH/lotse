@@ -22,3 +22,4 @@ class TaskInfo(BaseModel):
     vscode_port: int | None = None
     metrics: PodMetrics | None = None
     arguments: list[PackageRequestArgument] = []
+    started_by: str | None = None

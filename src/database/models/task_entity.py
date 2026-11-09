@@ -24,5 +24,6 @@ class TaskEntity(Base):
     original_ui_port = Column(Integer, nullable=True)
     vscode_port = Column(Integer, nullable=True)
     arguments = Column(JSON, nullable=True)
+    started_by = Column(String, nullable=True)
 
     package = relationship(PackageEntity, backref="tasks")

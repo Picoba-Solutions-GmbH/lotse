@@ -1,0 +1,141 @@
+<div class="mb-6 flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">Users</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Microsoft (AD) users are created automatically on their first sign-in. Admins can see and edit all packages.
+    </p>
+  </div>
+  <div class="flex gap-2">
+    <p-button icon="pi pi-refresh" [text]="true" size="small" severity="secondary" title="Refresh"
+      (onClick)="loadUsers()" />
+    <p-button label="Add local user" icon="pi pi-plus" size="small" (onClick)="openCreateDialog()" />
+  </div>
+</div>
+
+<div
+  class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+  <div
+    class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20">
+    <div class="relative">
+      <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+        style="font-size:11px"></i>
+      <input type="text" (input)="dt.filterGlobal($any($event.target).value, 'contains')" placeholder="Search users..."
+        class="pl-8 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 w-52 transition-all" />
+    </div>
+  </div>
+
+  <p-table #dt [value]="users" [loading]="loading" [globalFilterFields]="['name', 'display_name', 'email', 'role']"
+    styleClass="p-datatable-sm" [paginator]="true" [rows]="15" [showCurrentPageReport]="true"
+    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} users">
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="name">User <p-sortIcon field="name" /></th>
+        <th pSortableColumn="email">Email <p-sortIcon field="email" /></th>
+        <th pSortableColumn="is_ldap">Source <p-sortIcon field="is_ldap" /></th>
+        <th class="w-40">Role</th>
+        <th class="w-24"></th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-user>
+      <tr>
+        <td>
+          <div class="flex flex-col">
+            <span class="font-medium text-gray-900 dark:text-gray-100">
+              {{ user.display_name || user.name }}
+              @if (isCurrentUser(user)) {
+              <span class="text-xs text-gray-400 font-normal">(you)</span>
+              }
+            </span>
+            @if (user.display_name) {
+            <span class="text-xs text-gray-400">{{ user.name }}</span>
+            }
+          </div>
+        </td>
+        <td><span class="text-sm text-gray-600 dark:text-gray-300">{{ user.email || '—' }}</span></td>
+        <td>
+          @if (user.is_ldap) {
+          <p-tag severity="info" value="Microsoft AD" />
+          } @else {
+          <p-tag severity="secondary" value="Local" />
+          }
+        </td>
+        <td>
+          <p-select [options]="roleOptions" [ngModel]="user.role" (ngModelChange)="changeRole(user, $event)"
+            optionLabel="label" optionValue="value" appendTo="body" size="small" [disabled]="isCurrentUser(user)"
+            styleClass="w-full" />
+        </td>
+        <td>
+          <div class="flex justify-end gap-1">
+            @if (!user.is_ldap) {
+            <p-button icon="pi pi-key" [text]="true" size="small" severity="secondary" pTooltip="Set password"
+              tooltipPosition="top" (onClick)="openPasswordDialog(user)" />
+            }
+            <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" pTooltip="Delete user"
+              tooltipPosition="top" [disabled]="isCurrentUser(user)" (onClick)="deleteUser(user)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="5" class="text-center text-sm text-gray-400 py-10">No users found</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-dialog [(visible)]="showCreateDialog" header="Add local user" [modal]="true" [style]="{ width: '480px' }"
+  [closable]="!saving">
+  <div class="flex flex-col gap-4 pt-2">
+    <span class="text-xs text-gray-400">
+      Local users sign in with a Lotse password. Microsoft users don't need to be added, they are created on first
+      sign-in.
+    </span>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Username <span
+          class="text-red-500">*</span></label>
+      <input pInputText [(ngModel)]="createForm.name" class="w-full text-sm" [disabled]="saving" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Password <span
+          class="text-red-500">*</span></label>
+      <input pInputText type="password" [(ngModel)]="createForm.password" class="w-full text-sm" [disabled]="saving"
+        autocomplete="new-password" />
+      <span class="text-xs text-gray-400">At least 6 characters.</span>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Display name</label>
+      <input pInputText [(ngModel)]="createForm.display_name" class="w-full text-sm" [disabled]="saving" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+      <input pInputText [(ngModel)]="createForm.email" class="w-full text-sm" [disabled]="saving" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+      <p-select [options]="roleOptions" [(ngModel)]="createForm.role" optionLabel="label" optionValue="value"
+        appendTo="body" styleClass="w-full" [disabled]="saving" />
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="showCreateDialog = false"
+      [disabled]="saving" />
+    <p-button label="Create" [loading]="saving" (onClick)="createUser()"
+      [disabled]="!createForm.name.trim() || createForm.password.length < 6" />
+  </ng-template>
+</p-dialog>
+
+<p-dialog [(visible)]="showPasswordDialog" [header]="'Set password for ' + (passwordUser?.name || '')" [modal]="true"
+  [style]="{ width: '400px' }" [closable]="!saving">
+  <div class="flex flex-col gap-1.5 pt-2">
+    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">New password</label>
+    <input pInputText type="password" [(ngModel)]="newPassword" class="w-full text-sm" [disabled]="saving"
+      autocomplete="new-password" (keydown.enter)="resetPassword()" />
+    <span class="text-xs text-gray-400">At least 6 characters.</span>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="showPasswordDialog = false"
+      [disabled]="saving" />
+    <p-button label="Save" [loading]="saving" (onClick)="resetPassword()" [disabled]="newPassword.length < 6" />
+  </ng-template>
+</p-dialog>

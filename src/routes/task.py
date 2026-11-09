@@ -2,14 +2,20 @@ import logging
 
 import psutil
 from aiohttp import ClientSession
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
+                     Request)
+from sqlalchemy.orm import Session
 
+from src.authentication.schemas_authentication import CurrentUser
+from src.database.database_access import get_db_session
 from src.database.repositories.task_repository import TaskRepository
 from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.async_execution_response import AsyncExecutionResponse
+from src.models.package_permissions import Permission
 from src.models.yaml_config import parse_config
 from src.routes import authentication
+from src.services import package_access_service as access
 from src.services.task_manager_service import TaskManagerService
 from src.utils.singleton_meta import get_service
 from src.utils.task_logger import TaskLogger
@@ -23,10 +29,9 @@ router = APIRouter(prefix="/task", tags=["task"])
 @router.get("/status/{task_id}")
 async def get_task_status(
         task_id: str,
-        task_manager: TaskRepository = get_service(TaskRepository)):
-    task = task_manager.get_task(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
+    task = access.require_task(user, task_id, Permission.VIEW, db)
 
     task_is_not_running = task.status != TaskStatus.RUNNING and task.status != TaskStatus.INITIALIZING
     return task.result if task_is_not_running else AsyncExecutionResponse(
@@ -40,10 +45,9 @@ async def get_task_status(
 async def delete_task(
         task_id: str,
         task_manager: TaskRepository = get_service(TaskRepository),
-        _=Depends(authentication.require_operator_or_admin)):
-    task = task_manager.get_task(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
+    task = access.require_task(user, task_id, Permission.EXECUTE, db)
     if task.status == TaskStatus.RUNNING or task.status == TaskStatus.INITIALIZING:
         raise HTTPException(status_code=400, detail="Cannot delete running or initializing task")
     task_manager.delete_task(task_id)
@@ -53,13 +57,13 @@ async def delete_task(
 @router.post("/{task_id}/cancel")
 async def cancel_task(
         task_id: str,
+        request: Request,
         task_manager: TaskRepository = get_service(TaskRepository),
         k8s_manager_service=get_service(TaskManagerService),
-        _=Depends(authentication.require_operator_or_admin)):
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
     try:
-        task = task_manager.get_task(task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+        task = access.require_task(user, task_id, Permission.EXECUTE, db)
 
         if task.status != TaskStatus.RUNNING and task.status != TaskStatus.INITIALIZING:
             raise HTTPException(status_code=400, detail=f"Task cannot be cancelled (status: {task.status})")
@@ -69,7 +73,14 @@ async def cancel_task(
             return k8s_manager_service.cancel_task(task_id)
         else:
             try:
-                async with ClientSession() as session:
+                # Forward the caller's credentials so the other lotse instance can authorize the request.
+                headers = {}
+                token = authentication.extract_token(request)
+                if request.headers.get("Authorization"):
+                    headers["Authorization"] = request.headers["Authorization"]
+                elif token:
+                    headers["Authorization"] = f"Bearer {token}"
+                async with ClientSession(headers=headers) as session:
                     async with session.post(f"http://{task.ip_address}:8000/task/{task_id}/cancel") as response:
                         if response.status == 200:
                             return await response.json()
@@ -82,24 +93,30 @@ async def cancel_task(
                 return k8s_manager_service.cancel_task(task_id)
     except psutil.NoSuchProcess:
         pass
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error cancelling task: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to cancel task: {str(e)}")
 
 
 @router.get("s")
-async def list_tasks(task_manager: TaskRepository = get_service(TaskRepository)):
-    response = task_manager.list_tasks()
+async def list_tasks(
+        task_manager: TaskRepository = get_service(TaskRepository),
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
+    response = task_manager.list_tasks(access.visible_package_names(db, user))
     return response
 
 
 @router.get("/{task_id}/logs")
 async def get_task_logs(
     task_id: str,
-    task_repository: TaskRepository = get_service(TaskRepository),
-    task_manager_service: TaskManagerService = get_service(TaskManagerService)
+    task_manager_service: TaskManagerService = get_service(TaskManagerService),
+    user: CurrentUser = Depends(authentication.require_user),
+    db: Session = Depends(get_db_session)
 ):
-    task = task_repository.get_task(task_id)
+    task = access.require_task(user, task_id, Permission.VIEW, db)
     config_yaml_content = parse_config(task.package.config)  # type: ignore
     is_container_runtime = config_yaml_content.runtime == RuntimeType.CONTAINER
 
@@ -119,7 +136,9 @@ async def get_task_logs(
 async def install_ssh_server(
         task_id: str,
         k8s_service: TaskManagerService = get_service(TaskManagerService),
-        _=Depends(authentication.require_operator_or_admin)):
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
+    access.require_task(user, task_id, Permission.EXECUTE, db)
     tasks = BackgroundTasks()
     tasks.add_task(k8s_service.install_ssh_server, task_id)
     await tasks()
@@ -130,7 +149,9 @@ async def install_ssh_server(
 async def install_and_run_vscode_server(
         task_id: str,
         k8s_service: TaskManagerService = get_service(TaskManagerService),
-        _=Depends(authentication.require_operator_or_admin)):
+        user: CurrentUser = Depends(authentication.require_user),
+        db: Session = Depends(get_db_session)):
+    access.require_task(user, task_id, Permission.EXECUTE, db)
     tasks = BackgroundTasks()
     tasks.add_task(k8s_service.install_and_run_vscode_server, task_id)
     await tasks()

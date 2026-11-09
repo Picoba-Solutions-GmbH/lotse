@@ -15,4 +15,5 @@ export interface TaskInfo {
   metrics?: TaskMetric;
   arguments?: PackageRequestArguments[];
   duration?: string;
+  started_by?: string | null;
 }

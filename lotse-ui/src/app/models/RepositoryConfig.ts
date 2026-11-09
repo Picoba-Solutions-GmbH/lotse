@@ -8,4 +8,5 @@ export interface RepositoryConfig {
   runtime?: Runtime;
   env_content?: string;
   package_arguments?: PackageArgument[];
+  can_execute?: boolean;
 }

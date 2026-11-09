@@ -94,6 +94,12 @@ spec:
               value: "lotse"
             - name: ENABLE_AUTH
               value: "True"
+            - name: LDAP_SERVER
+              value: ""
+            - name: LDAP_DOMAIN
+              value: ""
+            - name: LDAP_ROOT_DN
+              value: ""
             - name: POD_NAME
               valueFrom:
                 fieldRef:
