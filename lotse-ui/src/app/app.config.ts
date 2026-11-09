@@ -9,6 +9,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import { routes } from './app.routes';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { AuthAwareMessageService } from './services/auth-aware-message.service';
 import { DialogService } from 'primeng/dynamicdialog';
 
 const lotseTheme = definePreset(Aura, {
@@ -690,7 +691,7 @@ export const appConfig: ApplicationConfig = {
             },
         }),
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
-        MessageService,
+        { provide: MessageService, useClass: AuthAwareMessageService },
         ConfirmationService,
         DialogService,
         provideMonacoEditor({ baseUrl: 'assets/monaco/vs' }),

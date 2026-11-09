@@ -27,6 +27,8 @@ export class AuthService {
   private token: string | null = null;
   private payload: TokenPayload | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set once the backend rejected a request with 401, i.e. authentication is enforced. */
+  private authEnforced = false;
 
   public authStateChanged = new EventEmitter<boolean>();
   /** Emitted when the backend rejected the token and the user has to log in again. */
@@ -71,6 +73,7 @@ export class AuthService {
 
   /** Called when the backend answers with 401. */
   sessionExpired(): void {
+    this.authEnforced = true;
     if (!this.token) {
       this.loginRequired.emit();
       return;
@@ -110,6 +113,10 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     return !!this.token;
+  }
+
+  isAuthEnforced(): boolean {
+    return this.authEnforced;
   }
 
   private setToken(token: string, emit: boolean): void {

@@ -214,7 +214,12 @@ export class AppComponent implements OnInit {
 
     this.loginDialogRef = this.dialogService.open(LoginDialogComponent, {
       header: 'Sign in',
-      width: '340px',
+      showHeader: false,
+      modal: true,
+      width: '380px',
+      breakpoints: { '480px': 'calc(100vw - 2rem)' },
+      styleClass: 'login-dialog',
+      maskStyleClass: 'login-dialog-mask',
     });
 
     this.loginDialogRef.onClose.subscribe((result: boolean | undefined) => {

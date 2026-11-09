@@ -1,21 +1,50 @@
-<div class="flex flex-col gap-5" (keydown.enter)="onLogin()">
-  <div class="flex flex-col gap-1.5">
-    <label for="username" class="text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-    <input id="username" type="text" pInputText class="w-full" [(ngModel)]="username" placeholder="e.g. mmustermann" autocomplete="username" autofocus />
+<div class="flex flex-col" (keydown.enter)="onLogin()">
+  <!-- Brand -->
+  <div class="flex flex-col items-center text-center pb-7">
+    <div class="login-logo">
+      <img src="lotse.webp" alt="Lotse" class="w-8 h-8" />
+    </div>
+    <h2 class="mt-4 mb-0 text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Welcome back</h2>
+    <p class="mt-1 mb-0 text-sm text-gray-500 dark:text-gray-400">Sign in to the Lotse Management UI</p>
   </div>
-  <div class="flex flex-col gap-1.5">
-    <label for="password" class="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-    <input id="password" type="password" pInputText class="w-full" [(ngModel)]="password" autocomplete="current-password" />
+
+  <!-- Fields -->
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <label for="username" class="text-xs font-medium text-gray-600 dark:text-gray-300">Username</label>
+      <p-iconfield>
+        <p-inputicon class="pi pi-user" />
+        <input id="username" type="text" pInputText class="w-full" [(ngModel)]="username"
+          placeholder="e.g. johndoe" autocomplete="username" autofocus />
+      </p-iconfield>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label for="password" class="text-xs font-medium text-gray-600 dark:text-gray-300">Password</label>
+      <p-iconfield>
+        <p-inputicon class="pi pi-lock" />
+        <input id="password" [type]="showPassword ? 'text' : 'password'" pInputText class="w-full"
+          [(ngModel)]="password" placeholder="Enter your password" autocomplete="current-password" />
+        <button type="button" class="p-inputicon password-toggle" (click)="showPassword = !showPassword"
+          (keydown.enter)="$event.stopPropagation()" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          [title]="showPassword ? 'Hide password' : 'Show password'">
+          <i [class]="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+        </button>
+      </p-iconfield>
+    </div>
+
+    @if (errorMessage) {
+    <div class="login-error flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50/80 dark:bg-red-900/25 border border-red-200 dark:border-red-800/60">
+      <i class="pi pi-exclamation-circle text-red-500" style="font-size:13px"></i>
+      <span class="text-xs text-red-600 dark:text-red-400">{{ errorMessage }}</span>
+    </div>
+    }
   </div>
-  @if (errorMessage) {
-  <div
-    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-    <i class="pi pi-exclamation-circle text-red-500" style="font-size:13px"></i>
-    <span class="text-xs text-red-600 dark:text-red-400">{{ errorMessage }}</span>
-  </div>
-  }
-  <div class="flex justify-end gap-3 pt-1">
-    <p-button label="Cancel" (onClick)="onCancel()" outlined [disabled]="isLoading" />
-    <p-button label="Login" (onClick)="onLogin()" [loading]="isLoading" />
+
+  <!-- Actions -->
+  <div class="flex flex-col gap-2 pt-6">
+    <p-button label="Sign in" icon="pi pi-arrow-right" iconPos="right" [fluid]="true" (onClick)="onLogin()"
+      [loading]="isLoading" [disabled]="!username || !password" />
+    <p-button label="Cancel" [fluid]="true" text severity="secondary" (onClick)="onCancel()" [disabled]="isLoading" />
   </div>
 </div>

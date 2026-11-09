@@ -224,3 +224,76 @@ html:not(.dark) {
   }
 }
 
+
+// ── Login dialog (glass) ─────────────────────────────────────────────────────
+
+// Frosted backdrop: blurs the app behind the dialog and tints it with soft
+// brand-colored glows so the glass panel has something to refract.
+.login-dialog-mask.p-overlay-mask {
+  background-color: rgba(15 23 42 / 0.28);
+  background-image:
+    radial-gradient(40rem 30rem at 18% 15%, rgba(16 185 129 / 0.22), transparent 70%),
+    radial-gradient(40rem 30rem at 82% 85%, rgba(39 59 180 / 0.25), transparent 70%);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  animation: login-mask-in 0.3s ease-out;
+
+  html.dark & {
+    background-color: rgba(0 0 0 / 0.5);
+    background-image:
+      radial-gradient(40rem 30rem at 18% 15%, rgba(16 185 129 / 0.16), transparent 70%),
+      radial-gradient(40rem 30rem at 82% 85%, rgba(80 96 194 / 0.2), transparent 70%);
+  }
+}
+
+@keyframes login-mask-in {
+  from {
+    background-color: transparent;
+    backdrop-filter: blur(0) saturate(100%);
+    -webkit-backdrop-filter: blur(0) saturate(100%);
+  }
+}
+
+// Translucent glass card.
+.login-dialog.p-dialog {
+  position: relative;
+  background: rgba(255 255 255 / 0.7);
+  border: 1px solid rgba(255 255 255 / 0.65);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 30px 60px -15px rgba(15 23 42 / 0.35),
+    0 0 0 1px rgba(15 23 42 / 0.04),
+    inset 0 1px 0 rgba(255 255 255 / 0.8);
+  overflow: hidden;
+
+  // Thin brand accent along the top edge.
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(16 185 129 / 0.7), rgba(39 59 180 / 0.7), transparent);
+    pointer-events: none;
+  }
+
+  .p-dialog-content {
+    background: transparent;
+    padding: 2rem 1.75rem 1.5rem;
+  }
+
+  .p-inputtext {
+    background: rgba(255 255 255 / 0.75);
+  }
+
+  html.dark & {
+    background: rgba(24 24 27 / 0.62);
+    border-color: rgba(255 255 255 / 0.09);
+    box-shadow:
+      0 30px 60px -15px rgba(0 0 0 / 0.7),
+      inset 0 1px 0 rgba(255 255 255 / 0.06);
+
+    .p-inputtext {
+      background: rgba(9 9 11 / 0.55);
+    }
+  }
+}

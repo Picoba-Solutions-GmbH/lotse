@@ -19,6 +19,7 @@ import { HasRoleDirective } from '../../directives/has-role.directive';
 import { Role } from '../../misc/Role';
 import { KubernetesNamespace, KubernetesNode, KubernetesPersistentVolume, KubernetesPod } from '../../models/Cluster';
 import { AgePipe } from '../../pipes/age.pipe';
+import { AuthAwareMessageService } from '../../services/auth-aware-message.service';
 import { ClusterService } from '../../services/cluster.service';
 import { WebSocketService } from '../../services/websocket.service';
 
@@ -44,7 +45,7 @@ import { WebSocketService } from '../../services/websocket.service';
   ],
   templateUrl: './cluster.component.html',
   styleUrl: './cluster.component.scss',
-  providers: [MessageService, ConfirmationService]
+  providers: [{ provide: MessageService, useClass: AuthAwareMessageService }, ConfirmationService]
 })
 export class ClusterComponent implements OnInit, OnDestroy {
   PrimeIcons = PrimeIcons;

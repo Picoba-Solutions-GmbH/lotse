@@ -18,6 +18,7 @@ import { HasRoleDirective } from '../../../directives/has-role.directive';
 import { Role } from '../../../misc/Role';
 import { KubernetesConfigMap, KubernetesDeployment, KubernetesIngress, KubernetesPersistentVolumeClaim, KubernetesPod, KubernetesService, KubernetesStatefulSet } from '../../../models/Cluster';
 import { AgePipe } from '../../../pipes/age.pipe';
+import { AuthAwareMessageService } from '../../../services/auth-aware-message.service';
 import { ClusterService } from '../../../services/cluster.service';
 import { WebSocketService } from '../../../services/websocket.service';
 import { PodTerminalComponent } from '../../pod-terminal/pod-terminal.component';
@@ -42,7 +43,7 @@ import { PodTerminalComponent } from '../../pod-terminal/pod-terminal.component'
     ],
     templateUrl: './namespace-resources.component.html',
     styleUrl: './namespace-resources.component.scss',
-    providers: [MessageService, ConfirmationService]
+    providers: [{ provide: MessageService, useClass: AuthAwareMessageService }, ConfirmationService]
 })
 export class NamespaceResourcesComponent implements OnInit, OnDestroy {
     PrimeIcons = PrimeIcons;

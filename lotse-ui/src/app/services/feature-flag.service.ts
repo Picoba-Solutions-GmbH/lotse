@@ -15,6 +15,11 @@ export class FeatureFlagService {
 
   constructor(private http: HttpClient) { }
 
+  /** Synchronous view of the authentication flag, `null` until the flags have been loaded. */
+  get authenticationEnabled(): boolean | null {
+    return this.flags?.authentication_enabled ?? null;
+  }
+
   private async fetchFlags(): Promise<FeatureFlags> {
     if (this.flags !== null) {
       return this.flags;

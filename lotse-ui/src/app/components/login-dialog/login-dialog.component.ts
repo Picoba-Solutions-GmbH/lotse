@@ -3,8 +3,9 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 
@@ -16,13 +17,15 @@ import { AuthService } from '../../services/auth.service';
     CommonModule,
     FormsModule,
     ButtonModule,
+    IconFieldModule,
+    InputIconModule,
     InputTextModule,
-    PasswordModule,
   ]
 })
 export class LoginDialogComponent {
   username: string = '';
   password: string = '';
+  showPassword = false;
   isLoading = false;
   errorMessage: string | null = null;
 

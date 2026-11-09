@@ -19,6 +19,7 @@ import { HasRoleDirective } from '../../directives/has-role.directive';
 import { Role } from '../../misc/Role';
 import { KubernetesSecret } from '../../models/Cluster';
 import { NetworkShareDetail, NetworkShareProvisionRequest, NetworkShareTestResult, NetworkShareUpdateRequest, NetworkShareVolume } from '../../models/NetworkShare';
+import { AuthAwareMessageService } from '../../services/auth-aware-message.service';
 import { ClusterService } from '../../services/cluster.service';
 import { NetworkShareService } from '../../services/network-share.service';
 
@@ -49,7 +50,7 @@ type SecretMode = 'new' | 'existing' | 'keep';
     ],
     templateUrl: './network-shares.component.html',
     styleUrl: './network-shares.component.scss',
-    providers: [MessageService, ConfirmationService],
+    providers: [{ provide: MessageService, useClass: AuthAwareMessageService }, ConfirmationService],
 })
 export class NetworkSharesComponent implements OnInit {
     PrimeIcons = PrimeIcons;
