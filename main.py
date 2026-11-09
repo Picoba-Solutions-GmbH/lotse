@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 import src.utils.service_registry as service_registry
 from src.database import seed_users
 from src.database.database_access import get_db_session, init_db
-from src.routes import (authentication, cluster, execute, feature_flag, logs,
+from src.routes import (authentication, backup, cluster, execute, feature_flag, logs,
                         network_share, package, package_access, package_live,
                         pod_terminal, proxy, status, task, users, volume,
                         websocket)
@@ -64,9 +64,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(authentication.router)
+app.include_router(backup.router)
 app.include_router(cluster.router)
 app.include_router(feature_flag.router)
 app.include_router(execute.router)

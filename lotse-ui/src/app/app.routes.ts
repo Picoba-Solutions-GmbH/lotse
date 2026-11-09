@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { BackupComponent } from './components/backup/backup.component';
 import { ClusterComponent } from './components/cluster/cluster.component';
 import { NamespaceResourcesComponent } from './components/cluster/namespace-resources/namespace-resources.component';
 import { LogsComponent } from './components/logs/logs.component';
@@ -61,5 +62,10 @@ export const routes: Routes = [
         path: 'users',
         canActivate: [adminGuard],
         component: UsersComponent,
+    },
+    {
+        path: 'backup',
+        canActivate: [adminGuard],
+        component: BackupComponent,
     }
 ];

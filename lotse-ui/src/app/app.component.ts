@@ -96,10 +96,15 @@ export class AppComponent implements OnInit {
       label: 'Users',
       icon: PrimeIcons.USERS,
       routerLink: 'users'
+    },
+    {
+      label: 'Backup',
+      icon: PrimeIcons.CLOUD_DOWNLOAD,
+      routerLink: 'backup'
     }
   ];
 
-  private readonly bottomRoutes = new Set(['cluster', 'network-shares', 'logs', 'users']);
+  private readonly bottomRoutes = new Set(['cluster', 'network-shares', 'logs', 'users', 'backup']);
   private loginDialogRef: DynamicDialogRef | null = null;
   username: string | null = null;
 

@@ -1,0 +1,416 @@
+<div class="mb-6 flex justify-between items-start gap-4 flex-wrap">
+  <div>
+    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">Backup &amp; Storage</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Where deployed packages are stored, and how to download them as zip archives.
+    </p>
+  </div>
+  <div class="flex gap-2">
+    <p-button icon="pi pi-refresh" [text]="true" size="small" severity="secondary" title="Refresh"
+      [loading]="loading" (onClick)="loadAsync()" />
+    <p-button label="Download all" icon="pi pi-download" size="small"
+      [disabled]="!overview || overview.totals.versions === 0" (onClick)="openDownload({ kind: 'all' })" />
+  </div>
+</div>
+
+@if (loading && !overview) {
+<div class="flex items-center justify-center py-20 text-gray-400">
+  <i class="pi pi-spin pi-spinner text-2xl"></i>
+</div>
+}
+
+@if (overview; as ov) {
+<!-- Storage locations -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+  <!-- Package store -->
+  <div
+    class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-box text-emerald-500"></i>
+      <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Package store</span>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-xs text-gray-400">Packages</span>
+      <div class="flex items-center gap-1 min-w-0">
+        <code class="text-xs text-gray-700 dark:text-gray-200 truncate" [title]="ov.location.packages_root">{{
+          ov.location.packages_root }}</code>
+        <p-button icon="pi pi-copy" [text]="true" size="small" severity="secondary" pTooltip="Copy path"
+          tooltipPosition="top" (onClick)="copyAsync(ov.location.packages_root)" />
+      </div>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-xs text-gray-400">Python environments (cache)</span>
+      <div class="flex items-center gap-1 min-w-0">
+        <code class="text-xs text-gray-700 dark:text-gray-200 truncate" [title]="ov.location.venvs_root">{{
+          ov.location.venvs_root }}</code>
+        <p-button icon="pi pi-copy" [text]="true" size="small" severity="secondary" pTooltip="Copy path"
+          tooltipPosition="top" (onClick)="copyAsync(ov.location.venvs_root)" />
+      </div>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-xs text-gray-400">Host</span>
+      <span class="text-sm text-gray-700 dark:text-gray-200">{{ ov.location.hostname }}</span>
+    </div>
+    @if (ov.location.disk; as disk) {
+    <div class="flex flex-col gap-1.5 mt-auto">
+      <div class="flex justify-between text-xs text-gray-400">
+        <span>Disk usage</span>
+        <span>{{ disk.used_bytes | fileSize }} of {{ disk.total_bytes | fileSize }} · {{ disk.free_bytes | fileSize
+          }} free</span>
+      </div>
+      <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+        <div class="h-full rounded-full" [style.width.%]="diskUsagePercent"
+          [class.bg-emerald-500]="diskUsagePercent < 75" [class.bg-amber-500]="diskUsagePercent >= 75 && diskUsagePercent < 90"
+          [class.bg-red-500]="diskUsagePercent >= 90"></div>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Kubernetes volume -->
+  <div
+    class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-database text-emerald-500"></i>
+      <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Persistent storage</span>
+    </div>
+    @if (ov.location.kubernetes; as k8s) {
+    <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+      <span class="text-xs text-gray-400 self-center">Lotse pod</span>
+      <span class="text-gray-700 dark:text-gray-200 truncate" [title]="k8s.pod_name">{{ k8s.pod_name }}</span>
+      <span class="text-xs text-gray-400 self-center">Namespace</span>
+      <span class="text-gray-700 dark:text-gray-200">{{ k8s.namespace || '—' }}</span>
+      @if (k8s.node_name) {
+      <span class="text-xs text-gray-400 self-center">Node</span>
+      <span class="text-gray-700 dark:text-gray-200 truncate" [title]="k8s.node_name">{{ k8s.node_name }}</span>
+      }
+      @if (k8s.volume; as volume) {
+      <span class="text-xs text-gray-400 self-center">Mount</span>
+      <code class="text-xs text-gray-700 dark:text-gray-200 truncate" [title]="volume.mount_path">{{ volume.mount_path
+        }}</code>
+      @if (volume.pvc_name) {
+      <span class="text-xs text-gray-400 self-center">Claim (PVC)</span>
+      <span class="text-gray-700 dark:text-gray-200 truncate">
+        {{ volume.pvc_name }}
+        @if (volume.phase) {
+        <span class="text-xs text-gray-400">({{ volume.phase }})</span>
+        }
+      </span>
+      <span class="text-xs text-gray-400 self-center">Capacity</span>
+      <span class="text-gray-700 dark:text-gray-200">
+        {{ volume.capacity || '—' }}
+        @if (volume.access_modes?.length) {
+        <span class="text-xs text-gray-400">· {{ volume.access_modes!.join(', ') }}</span>
+        }
+      </span>
+      <span class="text-xs text-gray-400 self-center">Storage class</span>
+      <span class="text-gray-700 dark:text-gray-200">{{ volume.storage_class || '—' }}</span>
+      }
+      @if (volume.persistent_volume; as pv) {
+      <span class="text-xs text-gray-400 self-center">Volume (PV)</span>
+      <span class="text-gray-700 dark:text-gray-200 truncate" [title]="pv.pv_name">{{ pv.pv_name }}</span>
+      @if (pv.source) {
+      <span class="text-xs text-gray-400 self-center">Backed by</span>
+      <span class="text-gray-700 dark:text-gray-200 truncate" [title]="pv.source.location">
+        <span class="text-xs text-gray-400">{{ pv.source.type }}</span> {{ pv.source.location }}
+      </span>
+      }
+      @if (pv.nodes?.length) {
+      <span class="text-xs text-gray-400 self-center">Pinned to node</span>
+      <span class="text-gray-700 dark:text-gray-200 truncate">{{ pv.nodes!.join(', ') }}</span>
+      }
+      @if (pv.reclaim_policy) {
+      <span class="text-xs text-gray-400 self-center">Reclaim policy</span>
+      <span class="text-gray-700 dark:text-gray-200">
+        {{ pv.reclaim_policy }}
+        @if (pv.reclaim_policy === 'Delete') {
+        <i class="pi pi-exclamation-triangle text-amber-500 text-xs ml-1"
+          pTooltip="Deleting the claim deletes the volume and every stored package. Keep a backup."
+          tooltipPosition="top"></i>
+        }
+      </span>
+      }
+      }
+      @if (volume.host_path) {
+      <span class="text-xs text-gray-400 self-center">Host path</span>
+      <code class="text-xs text-gray-700 dark:text-gray-200 truncate">{{ volume.host_path }}</code>
+      }
+      }
+    </div>
+    @if (k8s.volume?.empty_dir) {
+    <div class="text-xs text-amber-600 dark:text-amber-400 flex gap-1.5">
+      <i class="pi pi-exclamation-triangle mt-0.5"></i>
+      <span>The package store is an emptyDir. Packages are lost when the Lotse pod restarts.</span>
+    </div>
+    }
+    @if (!k8s.volume) {
+    <div class="text-xs text-amber-600 dark:text-amber-400 flex gap-1.5">
+      <i class="pi pi-exclamation-triangle mt-0.5"></i>
+      <span>No volume is mounted for {{ ov.location.home_path }}. Packages live in the container file system.</span>
+    </div>
+    }
+    @if (k8s.error) {
+    <span class="text-xs text-gray-400">Volume details unavailable: {{ k8s.error }}</span>
+    }
+    } @else {
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Lotse is not running inside a cluster. Packages are stored on the local disk of
+      <span class="font-medium text-gray-700 dark:text-gray-200">{{ ov.location.hostname }}</span>.
+    </p>
+    }
+  </div>
+
+  <!-- Execution -->
+  <div
+    class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-play-circle text-emerald-500"></i>
+      <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Execution</span>
+    </div>
+    <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+      Every run starts a task pod in namespace
+      <span class="font-medium text-gray-700 dark:text-gray-200">{{ ov.location.execution_namespace }}</span>
+      and copies the package files to <code class="text-xs">{{ ov.location.execution_workdir }}</code>.
+      Task pods are temporary. The package store is the only persistent copy.
+    </p>
+    <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+      Python environments are built once per version and cached. They can be rebuilt from
+      <code class="text-xs">requirements.txt</code>, so backups leave them out.
+    </p>
+    <div class="grid grid-cols-2 gap-3 mt-auto">
+      <div class="rounded-lg bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
+        <div class="text-xs text-gray-400">Packages · versions</div>
+        <div class="text-lg font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
+          {{ ov.totals.packages }} · {{ ov.totals.versions }}
+        </div>
+      </div>
+      <div class="rounded-lg bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
+        <div class="text-xs text-gray-400">Stored · venv cache</div>
+        <div class="text-lg font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
+          {{ ov.totals.size_bytes | fileSize }} <span class="text-xs font-normal text-gray-400">· {{
+            ov.totals.venv_size_bytes | fileSize }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Packages -->
+<div
+  class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+  <div
+    class="flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20">
+    <div class="flex items-center gap-3">
+      <p-checkbox [binary]="true" [ngModel]="allVisibleSelected" [indeterminate]="someVisibleSelected"
+        (onChange)="toggleAllVisible()" [disabled]="filteredPackages.length === 0" pTooltip="Select all shown"
+        tooltipPosition="top" />
+      <div class="relative">
+        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          style="font-size:11px"></i>
+        <input type="text" [(ngModel)]="filter" placeholder="Search packages..."
+          class="pl-8 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 w-52 transition-all" />
+      </div>
+    </div>
+    @if (selected.size > 0) {
+    <div class="flex items-center gap-2">
+      <span class="text-sm text-gray-500 dark:text-gray-400">{{ selected.size }} version(s) selected</span>
+      <p-button label="Clear" [text]="true" size="small" severity="secondary" (onClick)="clearSelection()" />
+      <p-button label="Download selected" icon="pi pi-download" size="small"
+        (onClick)="openDownload({ kind: 'selection' })" />
+    </div>
+    }
+  </div>
+
+  @for (pkg of filteredPackages; track pkg.package_name) {
+  <div class="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+    <!-- Package row -->
+    <div class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+      <p-checkbox [binary]="true" [ngModel]="isPackageFullySelected(pkg)"
+        [indeterminate]="isPackagePartiallySelected(pkg)" (onChange)="togglePackage(pkg)" />
+      <button (click)="toggleExpand(pkg)"
+        class="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer bg-transparent border-0 p-0">
+        <i class="pi text-xs text-gray-400 w-3" [class.pi-chevron-right]="!isExpanded(pkg)"
+          [class.pi-chevron-down]="isExpanded(pkg)"></i>
+        <div class="flex flex-col min-w-0">
+          <span class="font-medium text-gray-900 dark:text-gray-100 truncate">{{ pkg.package_name }}</span>
+          <code class="text-[11px] text-gray-400 truncate" [title]="pkg.path">{{ pkg.path }}</code>
+        </div>
+      </button>
+      <span class="hidden md:block text-sm text-gray-500 dark:text-gray-400 w-32 truncate"
+        [title]="pkg.owner || 'No owner'">
+        <i class="pi pi-user text-xs mr-1"></i>{{ pkg.owner || '—' }}
+      </span>
+      <span class="text-sm text-gray-500 dark:text-gray-400 w-24 text-right tabular-nums">
+        {{ pkg.versions.length }} {{ pkg.versions.length === 1 ? 'version' : 'versions' }}
+      </span>
+      <span class="text-sm text-gray-700 dark:text-gray-200 w-20 text-right tabular-nums">{{ pkg.size_bytes | fileSize
+        }}</span>
+      <p-button icon="pi pi-download" [text]="true" size="small" severity="secondary"
+        pTooltip="Download all versions" tooltipPosition="top" (onClick)="openDownload({ kind: 'package', pkg })" />
+    </div>
+
+    <!-- Versions -->
+    @if (isExpanded(pkg)) {
+    <div class="bg-gray-50/60 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-800">
+      @for (version of pkg.versions; track version.deployment_id) {
+      <div class="flex items-center gap-3 pl-10 pr-4 py-2 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+        <p-checkbox [binary]="true" [ngModel]="isVersionSelected(version)" (onChange)="toggleVersion(version)" />
+        <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+          <div class="flex items-center gap-2 flex-wrap">
+            @if (version.is_live) {
+            <span class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ version.version }}</span>
+            } @else {
+            <a [routerLink]="['/packages', version.package_name, version.version]"
+              class="font-medium text-sm text-gray-900 dark:text-gray-100 hover:text-emerald-600 no-underline">{{
+              version.version }}</a>
+            }
+            @if (version.active) {
+            <p-tag severity="success" value="Default" />
+            }
+            @if (version.is_live) {
+            <p-tag severity="info" value="Live coding" />
+            }
+            @if (version.runtime) {
+            <p-tag severity="secondary" [value]="version.runtime" />
+            }
+            @if (!version.exists && version.runtime !== 'container') {
+            <p-tag severity="danger" value="Files missing"
+              pTooltip="The version is deployed but its directory does not exist. Only the config.yaml can be backed up."
+              tooltipPosition="top" />
+            }
+            <span class="text-xs text-gray-400" [title]="version.deployed_at || ''">
+              deployed {{ version.deployed_at ? (version.deployed_at | age) + ' ago' : '—' }}
+            </span>
+          </div>
+          @if (version.runtime === 'container') {
+          <span class="text-[11px] text-gray-400 truncate">
+            Image <code>{{ version.image || '—' }}</code> · no files stored, backup contains the config.yaml
+          </span>
+          } @else {
+          <div class="flex items-center gap-1 min-w-0">
+            <code class="text-[11px] text-gray-400 truncate" [title]="version.path">{{ version.path }}</code>
+            <button (click)="copyAsync(version.path)" title="Copy path"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 bg-transparent border-0 p-0 cursor-pointer">
+              <i class="pi pi-copy" style="font-size:10px"></i>
+            </button>
+          </div>
+          }
+        </div>
+        <div class="hidden lg:flex flex-col items-end text-[11px] text-gray-400 w-40">
+          <span>{{ version.file_count }} files{{ version.has_archive ? ' · .7z ' + (version.archive_size_bytes |
+            fileSize) : '' }}</span>
+          @if (version.venv_exists) {
+          <span>venv cached · {{ version.venv_size_bytes | fileSize }}</span>
+          }
+        </div>
+        <span class="text-sm text-gray-700 dark:text-gray-200 w-20 text-right tabular-nums">{{ version.size_bytes |
+          fileSize }}</span>
+        <p-button icon="pi pi-download" [text]="true" size="small" severity="secondary"
+          pTooltip="Download this version" tooltipPosition="top"
+          (onClick)="openDownload({ kind: 'version', version })" />
+      </div>
+      }
+    </div>
+    }
+  </div>
+  } @empty {
+  <div class="text-center text-sm text-gray-400 py-10">
+    {{ filter ? 'No packages match the search' : 'No packages deployed' }}
+  </div>
+  }
+</div>
+
+<!-- Orphaned directories -->
+@if (ov.orphans.length > 0) {
+<div
+  class="mt-4 bg-[var(--p-content-background)] border border-amber-200 dark:border-amber-900/60 rounded-xl overflow-hidden shadow-sm">
+  <div class="px-4 py-3 border-b border-amber-100 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-900/10">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-exclamation-triangle text-amber-500"></i>
+      <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Unreferenced directories</span>
+      <span class="text-xs text-gray-400">{{ ov.orphans.length }} · {{ ov.totals.orphan_size_bytes | fileSize }}</span>
+    </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      These directories are in the package store but don't belong to a deployed version, for example
+      after a failed deployment. Backups leave them out.
+    </p>
+  </div>
+  @for (orphan of ov.orphans; track orphan.path) {
+  <div class="flex items-center gap-3 px-4 py-2 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+    <span class="text-sm text-gray-700 dark:text-gray-200 flex-1 min-w-0 truncate">{{ orphan.directory }}</span>
+    <code class="hidden md:block text-[11px] text-gray-400 truncate max-w-md" [title]="orphan.path">{{ orphan.path
+      }}</code>
+    <span class="text-xs text-gray-400 w-16 text-right">{{ orphan.file_count }} files</span>
+    <span class="text-sm text-gray-700 dark:text-gray-200 w-20 text-right tabular-nums">{{ orphan.size_bytes |
+      fileSize }}</span>
+  </div>
+  }
+</div>
+}
+}
+
+<!-- Download dialog -->
+<p-dialog [(visible)]="showDownloadDialog" [header]="scopeTitle" [modal]="true" [style]="{ width: '520px' }"
+  [breakpoints]="{ '640px': '95vw' }" [closable]="!downloading">
+  <div class="flex flex-col gap-5 pt-2">
+    <div class="flex flex-col gap-1.5">
+      <p class="text-sm text-gray-600 dark:text-gray-300">
+        Each version is backed up as its originally uploaded <code class="text-xs">.7z</code> archive. Together with
+        the config.yaml it can be redeployed as is.
+      </p>
+      @if (scopeVersionsWithoutArchive > 0) {
+      <span class="text-xs text-amber-600 dark:text-amber-400">
+        {{ scopeVersionsWithoutArchive }} version(s) have no uploaded archive, for example live coding packages.
+        Their files are included instead.
+      </span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <div class="flex items-start gap-2">
+        <p-checkbox [(ngModel)]="options.include_config" [binary]="true" inputId="includeConfig"
+          [disabled]="downloading" />
+        <label for="includeConfig" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          Include config.yaml
+          <span class="block text-xs text-gray-400">The deployed configuration of each version, with entrypoint,
+            arguments, environment and volumes.</span>
+        </label>
+      </div>
+      @if (canFilterActive) {
+      <div class="flex items-start gap-2">
+        <p-checkbox [(ngModel)]="options.only_active" [binary]="true" inputId="onlyActive" [disabled]="downloading" />
+        <label for="onlyActive" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          Only default versions
+          <span class="block text-xs text-gray-400">Skip versions that are not set as default.</span>
+        </label>
+      </div>
+      }
+    </div>
+
+    @if (scopeContainerVersions > 0 && !options.include_config) {
+    <span class="text-xs text-amber-600 dark:text-amber-400">
+      {{ scopeContainerVersions }} container version(s) store no files. Without the config.yaml they are only listed in
+      manifest.json.
+    </span>
+    }
+
+    <div class="rounded-lg bg-gray-50 dark:bg-gray-800/40 px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
+      @if (scopeVersions.length === 0) {
+      <span class="text-amber-600 dark:text-amber-400">No versions match these options.</span>
+      } @else {
+      <div class="flex justify-between">
+        <span>{{ scopeVersions.length }} version(s)</span>
+        <span class="tabular-nums">≈ {{ estimatedSize | fileSize }}</span>
+      </div>
+      <code class="block text-[11px] text-gray-400 mt-1.5 whitespace-pre-line">{{ zipLayout }}</code>
+      }
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="showDownloadDialog = false"
+      [disabled]="downloading" />
+    <p-button label="Download zip" icon="pi pi-download" [loading]="downloading"
+      [disabled]="scopeVersions.length === 0" (onClick)="confirmDownloadAsync()" />
+  </ng-template>
+</p-dialog>
