@@ -56,15 +56,18 @@ def prepare_environment(v1: client.CoreV1Api,
 
     tar_file_path = os.path.join(venv_path, "venv.tar.gz")
     if not os.path.exists(tar_file_path):
-        PodManager.create_pod(v1, namespace, task_id,
-                              package_info.package_entity.python_version, list(package_config.environment), task_logger, [],
-                              package_config.image, RuntimeType.PYTHON, False)
-        asyncio.run(pod_api_wrapper.wait_for_pod_running(v1, namespace, task_id, task_logger))
-        PodFileOperations.copy_files_to_pod(namespace, task_id, str(package_info.package_dir), "/app")
-        setup_venv(v1, namespace, task_id, "/app/requirements.txt", task_logger)
-        PodFileOperations.copy_file_from_pod(v1, namespace, task_id, "/app/venv",
-                                             tar_file_path)
-        PodManager.delete_pod(v1, namespace, task_id, task_logger)
+        setup_pod_name = f"{task_id}-setup"
+        PodManager.create_pod(v1, namespace, setup_pod_name,
+                              package_info.package_entity.python_version, list(package_config.environment),
+                              task_logger, [], package_config.image, RuntimeType.PYTHON, False)
+        try:
+            asyncio.run(pod_api_wrapper.wait_for_pod_running(v1, namespace, setup_pod_name, task_logger))
+            PodFileOperations.copy_files_to_pod(namespace, setup_pod_name, str(package_info.package_dir), "/app")
+            setup_venv(v1, namespace, setup_pod_name, "/app/requirements.txt", task_logger)
+            PodFileOperations.copy_file_from_pod(v1, namespace, setup_pod_name, "/app/venv",
+                                                 tar_file_path)
+        finally:
+            PodManager.delete_pod(v1, namespace, setup_pod_name, task_logger)
 
 
 def prepare_runtime(v1: client.CoreV1Api,
