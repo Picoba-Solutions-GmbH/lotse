@@ -17,6 +17,8 @@ import { NetworkShareService } from '../../../../services/network-share.service'
 interface ArgEntry {
     name: string;
     defaultvalue: string;
+    /** Comma-separated list of allowed values; rendered as a dropdown when executing. */
+    options: string;
 }
 
 interface EnvEntry {
@@ -107,7 +109,7 @@ export class ConfigCreatorComponent {
     }
 
     addArg(): void {
-        this.args.push({ name: '', defaultvalue: '' });
+        this.args.push({ name: '', defaultvalue: '', options: '' });
     }
 
     removeArg(index: number): void {
@@ -159,7 +161,14 @@ export class ConfigCreatorComponent {
 
         const validArgs = this.args.filter((a) => a.name.trim());
         if (validArgs.length > 0) {
-            doc['args'] = validArgs.map((a) => ({ name: a.name, defaultvalue: a.defaultvalue }));
+            doc['args'] = validArgs.map((a) => {
+                const entry: Record<string, unknown> = { name: a.name, defaultvalue: a.defaultvalue };
+                const options = a.options.split(',').map((o) => o.trim()).filter((o) => o);
+                if (options.length > 0) {
+                    entry['options'] = options;
+                }
+                return entry;
+            });
         }
 
         const validEnv = this.environment.filter((e) => e.name.trim());

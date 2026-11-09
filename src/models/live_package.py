@@ -11,6 +11,7 @@ class LiveCodeFile(BaseModel):
 class LivePackageArgument(BaseModel):
     name: str
     default: str = ""
+    options: list[str] | None = None
 
 
 class LivePackage(BaseModel):

@@ -8,7 +8,22 @@ from src.misc.runtime_type import RuntimeType
 @dataclass
 class Argument:
     name: str
-    defaultvalue: str
+    defaultvalue: str = ''
+    options: list[str] | None = None
+
+
+def _parse_argument(raw: dict) -> Argument:
+    options = raw.get('options')
+    if options is not None:
+        if not isinstance(options, list):
+            raise ValueError(f"Argument '{raw.get('name')}': 'options' must be a list")
+        options = [str(o) for o in options]
+    default = raw.get('defaultvalue', '')
+    return Argument(
+        name=str(raw['name']),
+        defaultvalue='' if default is None else str(default),
+        options=options or None,
+    )
 
 
 @dataclass
@@ -41,7 +56,7 @@ class PackageConfig:
 def parse_config(yaml_content: str) -> PackageConfig:
     data = yaml.safe_load(yaml_content)
 
-    args = [Argument(**arg) for arg in data.get('args', [])]
+    args = [_parse_argument(arg) for arg in data.get('args') or []]
     env = [Environment(**env) for env in data.get('environment', [])]
     volumes = [Volume(**volume) for volume in data.get('volumes', [])]
     package_name = data.get('package_name', '')

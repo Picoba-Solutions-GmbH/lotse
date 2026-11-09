@@ -411,6 +411,11 @@ export class PackageLiveCodeComponent implements OnInit, OnDestroy {
     this.showRunDialog = true;
   }
 
+  optionsForArg(name: string): string[] | null {
+    const options = this.currentPackage?.package_arguments?.find(a => a.name === name)?.options;
+    return options?.length ? options : null;
+  }
+
   addRunArg(): void {
     this.runArgs.push({ name: '', value: '' });
   }

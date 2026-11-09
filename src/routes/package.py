@@ -173,7 +173,8 @@ async def list_packages(
         for arg in config_yaml_content.args:
             package_arguments.append({
                 "name": arg.name,
-                "default": arg.defaultvalue
+                "default": arg.defaultvalue,
+                "options": arg.options,
             })
 
         result.append({
@@ -317,7 +318,8 @@ async def get_package_by_version(
     for arg in config_yaml_content.args:
         package_arguments.append({
             "name": arg.name,
-            "default": arg.defaultvalue
+            "default": arg.defaultvalue,
+            "options": arg.options,
         })
 
     package_instance = PackageInstance(

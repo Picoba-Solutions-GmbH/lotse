@@ -210,7 +210,12 @@
         <div class="flex gap-2 items-center">
           <input pInputText [(ngModel)]="arg.name" placeholder="name" class="flex-1 text-sm" />
           <span class="text-gray-400 text-sm">=</span>
-          <input pInputText [(ngModel)]="arg.value" placeholder="value" class="flex-1 text-sm" />
+          @if (optionsForArg(arg.name); as opts) {
+            <p-dropdown [options]="opts" [(ngModel)]="arg.value" placeholder="value" appendTo="body"
+              styleClass="flex-1 text-sm" />
+          } @else {
+            <input pInputText [(ngModel)]="arg.value" placeholder="value" class="flex-1 text-sm" />
+          }
           <button (click)="removeRunArg(i)"
             class="text-red-400 hover:text-red-600 transition-colors p-1">
             <i class="pi pi-times text-xs"></i>

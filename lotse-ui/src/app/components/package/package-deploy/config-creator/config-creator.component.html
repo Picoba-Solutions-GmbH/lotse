@@ -79,7 +79,7 @@
                         <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             Arguments</h3>
                         <i class="pi pi-info-circle text-gray-400 dark:text-gray-500 text-xs cursor-default"
-                            pTooltip="Named parameters passed to the package at runtime. Each argument has a name and an optional default value. Users can override these when executing the package."
+                            pTooltip="Named parameters passed to the package at runtime. Each argument has a name, an optional default value and an optional comma-separated list of options. Arguments with options are shown as a dropdown when executing the package."
                             tooltipPosition="right"></i>
                     </div>
                     <p-button label="Add" [icon]="PrimeIcons.PLUS" (onClick)="addArg()" size="small" [text]="true"
@@ -93,6 +93,9 @@
                     <input pInputText [(ngModel)]="arg.name" placeholder="Name" class="text-sm flex-1" />
                     <input pInputText [(ngModel)]="arg.defaultvalue" placeholder="Default value"
                         class="text-sm flex-1" />
+                    <input pInputText [(ngModel)]="arg.options" placeholder="Options (a, b, c)"
+                        pTooltip="Optional comma-separated list of allowed values. Shown as a dropdown when executing."
+                        tooltipPosition="top" class="text-sm flex-1" />
                     <button class="icon-action-btn text-red-400 shrink-0" (click)="removeArg($index)" pTooltip="Remove">
                         <i class="pi pi-trash text-xs"></i>
                     </button>

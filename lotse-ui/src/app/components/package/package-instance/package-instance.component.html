@@ -346,9 +346,16 @@
                             class="col-span-4 text-xs font-medium text-gray-600 dark:text-gray-400 truncate"
                             [title]="arg.name">{{ arg.name }}</label>
                         <div class="col-span-8">
+                            @if (arg.options?.length) {
+                            <p-dropdown [inputId]="'dia-' + arg.name" [options]="arg.options!"
+                                [(ngModel)]="predefinedArgs[arg.name]"
+                                [placeholder]="arg.default?.toString() || 'Select a value'" [showClear]="true"
+                                appendTo="body" styleClass="w-full" />
+                            } @else {
                             <input [id]="'dia-' + arg.name" type="text" pInputText
                                 [(ngModel)]="predefinedArgs[arg.name]" [placeholder]="arg.default?.toString() || ''"
                                 class="w-full" [attr.autofocus]="$first ? '' : null" />
+                            }
                         </div>
                     </div>
                     }

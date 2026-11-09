@@ -34,7 +34,12 @@ def _get_live_dir(package_name: str) -> str:
 
 
 def _generate_config_yaml(pkg: LivePackage) -> str:
-    args = [{"name": a.name, "defaultvalue": a.default} for a in pkg.package_arguments]
+    args = []
+    for a in pkg.package_arguments:
+        arg = {"name": a.name, "defaultvalue": a.default}
+        if a.options:
+            arg["options"] = a.options
+        args.append(arg)
     return yaml.dump(
         {
             "package_name": pkg.package_name,
@@ -114,7 +119,11 @@ async def get_live_package(
 
     config_data = yaml.safe_load(entity.config) if entity.config else {}
     args = [
-        LivePackageArgument(name=a["name"], default=a.get("defaultvalue", ""))
+        LivePackageArgument(
+            name=a["name"],
+            default=str(a.get("defaultvalue") or ""),
+            options=[str(o) for o in a["options"]] if isinstance(a.get("options"), list) else None,
+        )
         for a in config_data.get("args", [])
     ]
     return LivePackage(
