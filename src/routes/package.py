@@ -26,9 +26,10 @@ from src.models.package_info import (PackageDetail, PackageInfo,
                                      PackageInstance, PackageModifications)
 from src.models.package_permissions import Permission
 from src.models.task_info import TaskInfo
-from src.models.yaml_config import Argument, Environment, parse_config
+from src.models.yaml_config import Argument, parse_config
 from src.routes import authentication
 from src.routes.dtos.package_edit_dto import (EnvironmentVariableDto,
+                                              EnvironmentVariableViewDto,
                                               PackageArgumentDto,
                                               PackageFileContentDto,
                                               PackageFileDto,
@@ -171,12 +172,7 @@ async def list_packages(
     for package in packages:
         config_yaml_content = parse_config(package.config)
 
-        environment = []
-        for env in config_yaml_content.environment:
-            environment.append({
-                "name": env.name,
-                "value": env.value
-            })
+        environment = [edit.to_public_environment(env) for env in config_yaml_content.environment]
 
         package_arguments = []
         for arg in config_yaml_content.args:
@@ -355,18 +351,11 @@ async def get_package_environment(
     version: str,
     db: Session = Depends(get_db_session),
     user: CurrentUser = Depends(authentication.require_user)
-):
+) -> list[EnvironmentVariableViewDto]:
     access.require(db, user, package_name, Permission.EDIT)
-    package = PackageRepository.get_package(db, package_name, version)
-    if not package:
-        raise HTTPException(status_code=404, detail="Package not found")
-
-    config_yaml_content = parse_config(package.config)
-    environment: list[Environment] = []
-    for env in config_yaml_content.environment:
-        environment.append(Environment(name=env.name, value=env.value))
-
-    return environment
+    package = _get_package_or_404(db, package_name, version)
+    return [EnvironmentVariableViewDto(**edit.to_public_environment(env))
+            for env in parse_config(package.config).environment]  # type: ignore
 
 
 @router.post("/{package_name}/{version}/default")
@@ -414,7 +403,8 @@ async def update_package_environment(
     package = _get_package_or_404(db, package_name, version)
 
     config = edit.build_config_with_environment(
-        package, [Environment(name=env.name, value=env.value) for env in environment])
+        package, [edit.EnvironmentUpdate(name=env.name, value=env.value, secret=env.secret,
+                                         previous_name=env.previous_name) for env in environment])
     PackageRepository.update_config(db, package, config)
     return _modifications_of(package)
 

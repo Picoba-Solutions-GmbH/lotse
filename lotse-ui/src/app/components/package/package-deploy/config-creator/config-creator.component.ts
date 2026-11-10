@@ -12,6 +12,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import YAML from 'yaml';
 import { Runtime } from '../../../../misc/Runtime';
 import { NetworkShareVolume } from '../../../../models/NetworkShare';
+import { looksSensitive } from '../../../../models/PackageEnvironment';
 import { NetworkShareService } from '../../../../services/network-share.service';
 
 interface ArgEntry {
@@ -24,6 +25,9 @@ interface ArgEntry {
 interface EnvEntry {
     name: string;
     value: string;
+    secret: boolean;
+    /** set once the user clicked the lock, stops the automatic detection by name */
+    secretTouched?: boolean;
 }
 
 interface VolumeEntry {
@@ -117,7 +121,18 @@ export class ConfigCreatorComponent {
     }
 
     addEnv(): void {
-        this.environment.push({ name: '', value: '' });
+        this.environment.push({ name: '', value: '', secret: false });
+    }
+
+    onEnvNameChange(env: EnvEntry): void {
+        if (!env.secretTouched) {
+            env.secret = looksSensitive(env.name);
+        }
+    }
+
+    toggleEnvSecret(env: EnvEntry): void {
+        env.secretTouched = true;
+        env.secret = !env.secret;
     }
 
     removeEnv(index: number): void {
@@ -173,7 +188,9 @@ export class ConfigCreatorComponent {
 
         const validEnv = this.environment.filter((e) => e.name.trim());
         if (validEnv.length > 0) {
-            doc['environment'] = validEnv.map((e) => ({ name: e.name, value: e.value }));
+            doc['environment'] = validEnv.map((e) => (e.secret
+                ? { name: e.name, value: e.value, secret: true }
+                : { name: e.name, value: e.value }));
         }
 
         const validVolumes = this.volumes.filter((v) => v.name.trim() && v.path.trim());

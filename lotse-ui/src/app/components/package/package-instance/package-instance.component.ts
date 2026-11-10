@@ -24,7 +24,7 @@ import { PackageFile, PackageInstance, PackageModifications } from '../../../mod
 import { PackagePermissions } from '../../../models/PackageAccess';
 
 const NO_PERMISSIONS: PackagePermissions = { view: false, execute: false, edit: false, manage: false };
-import { PackageEnvironment } from '../../../models/PackageEnvironment';
+import { looksSensitive, PackageEnvironment } from '../../../models/PackageEnvironment';
 import { TaskInfo } from '../../../models/TaskInfo';
 import { DurationPipe } from "../../../pipes/duration.pipe";
 import { FileSizePipe } from "../../../pipes/file-size.pipe";
@@ -103,6 +103,7 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
 
   showEnvironmentDialog = false;
   packageEnvironmentVariables: PackageEnvironment[] = [];
+  private secretToggledManually = new WeakSet<PackageEnvironment>();
   isSavingEnvironment = false;
 
   showArgumentsEditDialog = false;
@@ -422,16 +423,47 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   // ---------------------------------------------------------------- environment variables
 
   addEnvironmentVariable(): void {
-    this.packageEnvironmentVariables = [...this.packageEnvironmentVariables, { name: '', value: '' }];
+    this.packageEnvironmentVariables = [...this.packageEnvironmentVariables, { name: '', value: '', secret: false }];
   }
 
   removeEnvironmentVariable(index: number): void {
     this.packageEnvironmentVariables = this.packageEnvironmentVariables.filter((_, i) => i !== index);
   }
 
+  /** A secret whose value is stored on the server and was not replaced in the dialog. */
+  hasStoredSecret(env: PackageEnvironment): boolean {
+    return !!env.previous_name && !!env.has_value && (env.value === null || env.value === '');
+  }
+
+  onEnvironmentNameChange(env: PackageEnvironment): void {
+    // new variables are hidden automatically when their name looks like a key, password, token...
+    if (!env.previous_name && !this.secretToggledManually.has(env)) {
+      env.secret = looksSensitive(env.name);
+    }
+  }
+
+  toggleEnvironmentSecret(env: PackageEnvironment): void {
+    this.secretToggledManually.add(env);
+    if (env.secret && this.hasStoredSecret(env)) {
+      // the stored value is never revealed, making it visible requires a new value
+      if (!confirm(`Make '${env.name}' visible? Its stored value is cleared and you have to enter a new one.`)) {
+        return;
+      }
+      env.value = '';
+      env.has_value = false;
+    }
+    env.secret = !env.secret;
+  }
+
   async saveEnvironmentVariablesAsync(): Promise<void> {
-    const variables = this.packageEnvironmentVariables
-      .map(env => ({ name: env.name.trim(), value: env.value ?? '' }))
+    const variables: PackageEnvironment[] = this.packageEnvironmentVariables
+      .map(env => ({
+        name: env.name.trim(),
+        // an empty input on a stored secret keeps its value
+        value: this.hasStoredSecret(env) && env.secret ? null : (env.value ?? ''),
+        secret: !!env.secret,
+        previous_name: env.previous_name ?? null,
+      }))
       .filter(env => env.name);
 
     try {
@@ -633,7 +665,9 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
   async showEnvironmentVariables(): Promise<void> {
     try {
       this.packageEnvironmentVariablesLoading.set(true);
-      this.packageEnvironmentVariables = await this.packageService.getPackageEnvironmentAsync(this.packageName, this.packageVersion);
+      const variables = await this.packageService.getPackageEnvironmentAsync(this.packageName, this.packageVersion);
+      this.packageEnvironmentVariables = variables.map(env => ({ ...env, previous_name: env.name }));
+      this.secretToggledManually = new WeakSet();
       this.showEnvironmentDialog = true;
     } catch (error) {
       this.showError('Failed to load environment variables');

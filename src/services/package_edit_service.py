@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -44,8 +45,46 @@ def _dump_config(data: dict) -> str:
     return content
 
 
-def build_config_with_environment(package: PackageEntity, environment: list[Environment]) -> str:
-    names = [env.name.strip() for env in environment]
+@dataclass
+class EnvironmentUpdate:
+    name: str
+    # None keeps the stored value of a secret variable
+    value: str | None
+    secret: bool | None = None
+    previous_name: str | None = None
+
+
+def to_public_environment(env: Environment) -> dict:
+    """Environment variable as it may be shown to users: secret values never leave the server."""
+    return {
+        "name": env.name,
+        "value": None if env.is_secret else env.value,
+        "secret": env.is_secret,
+        "has_value": bool(env.value),
+    }
+
+
+def _resolve_environment(package: PackageEntity, updates: list[EnvironmentUpdate]) -> list[Environment]:
+    stored = {env.name: env for env in parse_config(package.config).environment}  # type: ignore
+    resolved: list[Environment] = []
+    for update in updates:
+        env = Environment(name=update.name.strip(), value=update.value or "", secret=update.secret)
+        if update.value is None:
+            current = stored.get((update.previous_name or update.name).strip())
+            if current is None or not current.is_secret:
+                raise HTTPException(status_code=400,
+                                    detail=f"Enter a value for environment variable '{env.name}'")
+            if not env.is_secret:
+                # otherwise anyone who can edit could reveal a secret by unmarking it
+                raise HTTPException(status_code=400,
+                                    detail=f"Enter a new value to make the secret '{env.name}' visible")
+            env.value = current.value
+        resolved.append(env)
+    return resolved
+
+
+def build_config_with_environment(package: PackageEntity, updates: list[EnvironmentUpdate]) -> str:
+    names = [update.name.strip() for update in updates]
     for name in names:
         if not _ENV_NAME_PATTERN.match(name):
             raise HTTPException(status_code=400, detail=f"Invalid environment variable name '{name}'")
@@ -54,8 +93,15 @@ def build_config_with_environment(package: PackageEntity, environment: list[Envi
         raise HTTPException(status_code=400,
                             detail=f"Duplicate environment variable(s): {', '.join(sorted(duplicates))}")
 
+    raw_environment = []
+    for env in _resolve_environment(package, updates):
+        raw: dict = {"name": env.name, "value": env.value}
+        if env.secret is not None:
+            raw["secret"] = env.secret
+        raw_environment.append(raw)
+
     data = _load_config_dict(package)
-    data["environment"] = [{"name": env.name.strip(), "value": env.value} for env in environment]
+    data["environment"] = raw_environment
     return _dump_config(data)
 
 

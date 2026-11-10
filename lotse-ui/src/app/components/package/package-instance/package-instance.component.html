@@ -472,6 +472,8 @@
         <div class="space-y-3 pt-1">
             <p class="text-xs text-gray-500 dark:text-gray-400">
                 Changes apply to instances started after saving. Running instances keep their environment.
+                Values marked with <i class="pi pi-lock text-amber-500" style="font-size:10px"></i> are secret:
+                they are passed to the package but never shown again.
             </p>
             <div class="rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
                 <div
@@ -490,13 +492,21 @@
                         <div class="grid grid-cols-12 gap-2 items-center">
                             <div class="col-span-5">
                                 <input type="text" pInputText [(ngModel)]="env.name" placeholder="NAME"
+                                    (ngModelChange)="onEnvironmentNameChange(env)"
                                     class="w-full font-mono text-xs" />
                             </div>
-                            <div class="col-span-6">
-                                <input type="text" pInputText [(ngModel)]="env.value" placeholder="Value"
-                                    class="w-full font-mono text-xs" />
+                            <div class="col-span-5">
+                                <input [type]="env.secret ? 'password' : 'text'" pInputText [(ngModel)]="env.value"
+                                    [placeholder]="hasStoredSecret(env) ? '•••••••• stored, type to replace' : 'Value'"
+                                    autocomplete="new-password" class="w-full font-mono text-xs" />
                             </div>
-                            <div class="col-span-1 flex justify-end">
+                            <div class="col-span-2 flex justify-end gap-1">
+                                <button (click)="toggleEnvironmentSecret(env)"
+                                    [title]="env.secret ? 'Secret: the value is hidden from everyone. Click to make it visible.' : 'Visible: click to hide the value (keys, passwords, tokens)'"
+                                    class="icon-action-btn"
+                                    [ngClass]="env.secret ? 'text-amber-500 dark:text-amber-400' : 'hover:text-amber-500'">
+                                    <i class="pi" [ngClass]="env.secret ? 'pi-lock' : 'pi-lock-open'" style="font-size:10px"></i>
+                                </button>
                                 <button (click)="removeEnvironmentVariable($index)" title="Remove"
                                     class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
                                     <i class="pi pi-times" style="font-size:10px"></i>

@@ -121,8 +121,15 @@
                 }
                 @for (env of environment; track $index) {
                 <div class="flex gap-2 items-center mb-2">
-                    <input pInputText [(ngModel)]="env.name" placeholder="Name" class="text-sm flex-1" />
-                    <input pInputText [(ngModel)]="env.value" placeholder="Value" class="text-sm flex-1" />
+                    <input pInputText [(ngModel)]="env.name" (ngModelChange)="onEnvNameChange(env)" placeholder="Name"
+                        class="text-sm flex-1" />
+                    <input pInputText [type]="env.secret ? 'password' : 'text'" [(ngModel)]="env.value" placeholder="Value"
+                        autocomplete="new-password" class="text-sm flex-1" />
+                    <button class="icon-action-btn shrink-0" (click)="toggleEnvSecret(env)"
+                        [ngClass]="env.secret ? 'text-amber-500 dark:text-amber-400' : 'text-gray-400 hover:text-amber-500'"
+                        [pTooltip]="env.secret ? 'Secret: the value is hidden in the UI after deployment' : 'Mark as secret (keys, passwords, tokens)'">
+                        <i class="pi text-xs" [ngClass]="env.secret ? 'pi-lock' : 'pi-lock-open'"></i>
+                    </button>
                     <button class="icon-action-btn text-red-400 shrink-0" (click)="removeEnv($index)" pTooltip="Remove">
                         <i class="pi pi-trash text-xs"></i>
                     </button>

@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 
 import yaml
@@ -26,10 +27,40 @@ def _parse_argument(raw: dict) -> Argument:
     )
 
 
+# Used when an environment variable has no explicit 'secret' flag.
+# Whole name parts (split at '_', '-', '.'), e.g. API_KEY, DB_PASS, AWS_SECRET_ACCESS_KEY
+_SENSITIVE_NAME_PARTS = {"KEY", "KEYS", "PASS", "PASSWD", "PRIVATE", "CREDENTIALS", "CREDENTIAL", "AUTH"}
+# Anywhere in the name, e.g. DBPASSWORD, GITHUBTOKEN, CLIENTSECRET
+_SENSITIVE_SUBSTRINGS = ("SECRET", "PASSWORD", "TOKEN", "APIKEY", "CONNECTIONSTRING", "CONNECTION_STRING")
+
+
+def looks_sensitive(name: str) -> bool:
+    upper = (name or "").upper()
+    if any(part in _SENSITIVE_NAME_PARTS for part in re.split(r"[_\-.]", upper)):
+        return True
+    return any(fragment in upper for fragment in _SENSITIVE_SUBSTRINGS)
+
+
 @dataclass
 class Environment:
     name: str
     value: str
+    # True hides the value from the API/UI. None means: decide by the variable name.
+    secret: bool | None = None
+
+    @property
+    def is_secret(self) -> bool:
+        return self.secret if self.secret is not None else looks_sensitive(self.name)
+
+
+def _parse_environment(raw: dict) -> Environment:
+    secret = raw.get('secret')
+    value = raw.get('value', '')
+    return Environment(
+        name=str(raw['name']),
+        value='' if value is None else str(value),
+        secret=None if secret is None else bool(secret),
+    )
 
 
 @dataclass
@@ -57,7 +88,7 @@ def parse_config(yaml_content: str) -> PackageConfig:
     data = yaml.safe_load(yaml_content)
 
     args = [_parse_argument(arg) for arg in data.get('args') or []]
-    env = [Environment(**env) for env in data.get('environment', [])]
+    env = [_parse_environment(env) for env in data.get('environment') or []]
     volumes = [Volume(**volume) for volume in data.get('volumes', [])]
     package_name = data.get('package_name', '')
     entrypoint = data.get('entrypoint', '')
