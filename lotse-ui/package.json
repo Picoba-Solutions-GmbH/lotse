@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --port 4201",
     "build": "ng build",
     "build-k8s": "ng build --base-href OPENAPI_PREFIX_PATH_PLACEHOLDER/ui/",
     "watch": "ng build --watch --configuration development",

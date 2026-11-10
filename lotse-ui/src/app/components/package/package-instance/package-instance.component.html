@@ -33,10 +33,63 @@
             }
             @if (permissions.edit) {
             <p-button [icon]="PrimeIcons.SERVER" (onClick)="showEnvironmentVariables()"
-                pTooltip="Environment Variables" tooltipPosition="left" size="small" severity="secondary" />
+                [loading]="packageEnvironmentVariablesLoading()" pTooltip="Environment Variables"
+                tooltipPosition="left" size="small" severity="secondary" />
+            <p-button [icon]="PrimeIcons.SLIDERS_H" (onClick)="openArgumentsEditor()" [loading]="isArgumentsLoading"
+                pTooltip="Arguments" tooltipPosition="left" size="small" severity="secondary" />
+            @if (canEditFiles) {
+            <p-button [icon]="PrimeIcons.FILE_EDIT" (onClick)="openFilesEditor()" pTooltip="Edit Files"
+                tooltipPosition="left" size="small" severity="secondary" />
+            }
             }
         </div>
     </div>
+
+    @if (modifications?.is_modified) {
+    <div
+        class="mb-6 flex flex-col sm:flex-row sm:items-start gap-3 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/15">
+        <i class="pi pi-exclamation-triangle text-amber-500 mt-0.5 shrink-0"></i>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                This deployment was modified after it was deployed
+                @if (modifications?.modified_at; as modifiedAt) {
+                <span class="font-normal text-amber-700/80 dark:text-amber-400/80">
+                    · last change {{ modifiedAt | utcToLocal: "dd MMM yy, HH:mm" }}</span>
+                }
+            </p>
+            <p class="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
+                It no longer matches the uploaded package. Changes apply to new instances only.
+            </p>
+            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                @if (modifications?.config_modified) {
+                <span
+                    class="inline-flex items-center gap-1 text-xs font-mono text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded">
+                    <i class="pi pi-cog" style="font-size:10px"></i> environment / arguments
+                </span>
+                }
+                @for (file of modifications?.modified_files ?? []; track file) {
+                @if (canEditFiles) {
+                <button (click)="openFilesEditor(file)"
+                    class="inline-flex items-center gap-1 text-xs font-mono text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/70 px-2 py-0.5 rounded transition-colors"
+                    [title]="'Open ' + file">
+                    <i class="pi pi-file" style="font-size:10px"></i> {{ file }}
+                </button>
+                } @else {
+                <span
+                    class="inline-flex items-center gap-1 text-xs font-mono text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded">
+                    <i class="pi pi-file" style="font-size:10px"></i> {{ file }}
+                </span>
+                }
+                }
+            </div>
+        </div>
+        @if (permissions.edit) {
+        <p-button label="Restore original" [icon]="PrimeIcons.UNDO" (onClick)="revertAllAsync()"
+            [loading]="isReverting" size="small" severity="warn" [outlined]="true"
+            title="Restore environment variables, arguments and files as deployed" />
+        }
+    </div>
+    }
 
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         <div
@@ -243,7 +296,7 @@
                         <div>
                             <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Started by</p>
                             <span class="text-xs text-gray-600 dark:text-gray-300">
-                                {{ selectedTask.started_by || '�' }}
+                                {{ selectedTask.started_by || '—' }}
                             </span>
                         </div>
                         <div>
@@ -414,44 +467,199 @@
         }
     </p-dialog>
 
-    <p-dialog [(visible)]="showEnvironmentDialog" [modal]="true" [style]="{width: '480px'}"
+    <p-dialog [(visible)]="showEnvironmentDialog" [modal]="true" [style]="{width: '640px'}"
         header="Environment Variables — {{ packageName }} v{{ packageVersion }}">
-        @if (packageEnvironmentVariables.length) {
-        <p-table [value]="packageEnvironmentVariables" styleClass="p-datatable-sm" [scrollable]="true"
-            scrollHeight="400px">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Name</th>
-                    <th>Value</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-env>
-                <tr>
-                    <td><span class="font-mono text-xs">{{ env.name }}</span></td>
-                    <td><span class="font-mono text-xs break-all">{{ env.value }}</span></td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td colspan="2" class="text-center text-gray-400 py-4 text-sm">No environment variables configured
-                    </td>
-                </tr>
-            </ng-template>
-        </p-table>
-        } @else if (packageEnvironmentVariablesLoading()) {
-        <div class="flex flex-col items-center py-10 text-center">
-            <i class="pi pi-spin pi-spinner text-3xl text-gray-400 mb-3"></i>
-            <p class="text-sm text-gray-500">Loading environment variables…</p>
+        <div class="space-y-3 pt-1">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Changes apply to instances started after saving. Running instances keep their environment.
+            </p>
+            <div class="rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div
+                    class="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <span
+                        class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variables</span>
+                    <button (click)="addEnvironmentVariable()"
+                        class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-semibold transition-colors">
+                        <i class="pi pi-plus" style="font-size:10px"></i> Add
+                    </button>
+                </div>
+                <div class="p-3 max-h-[400px] overflow-y-auto">
+                    @if (packageEnvironmentVariables.length) {
+                    <div class="space-y-2">
+                        @for (env of packageEnvironmentVariables; track $index) {
+                        <div class="grid grid-cols-12 gap-2 items-center">
+                            <div class="col-span-5">
+                                <input type="text" pInputText [(ngModel)]="env.name" placeholder="NAME"
+                                    class="w-full font-mono text-xs" />
+                            </div>
+                            <div class="col-span-6">
+                                <input type="text" pInputText [(ngModel)]="env.value" placeholder="Value"
+                                    class="w-full font-mono text-xs" />
+                            </div>
+                            <div class="col-span-1 flex justify-end">
+                                <button (click)="removeEnvironmentVariable($index)" title="Remove"
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <i class="pi pi-times" style="font-size:10px"></i>
+                                </button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    } @else {
+                    <p class="text-xs text-gray-400 dark:text-gray-500 italic py-1">No environment variables. Click Add
+                        to add one.</p>
+                    }
+                </div>
+            </div>
         </div>
-        } @else {
-        <div class="flex flex-col items-center py-10 text-center">
-            <i class="pi pi-info-circle text-3xl text-gray-400 mb-3"></i>
-            <p class="text-sm text-gray-500">No environment variables configured for this package</p>
-        </div>
-        }
         <ng-template pTemplate="footer">
-            <p-button label="Close" (onClick)="showEnvironmentDialog = false" severity="secondary" />
+            <p-button label="Cancel" (onClick)="showEnvironmentDialog = false" [text]="true" severity="secondary" />
+            <p-button label="Save" [icon]="PrimeIcons.SAVE" (onClick)="saveEnvironmentVariablesAsync()"
+                [loading]="isSavingEnvironment" />
         </ng-template>
+    </p-dialog>
+
+    <p-dialog [(visible)]="showArgumentsEditDialog" [modal]="true" [style]="{width: '760px'}"
+        header="Arguments — {{ packageName }} v{{ packageVersion }}">
+        <div class="space-y-3 pt-1">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Predefined arguments offered when starting an instance. Options are comma separated; leave empty for
+                a free text value.
+            </p>
+            <div class="rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div
+                    class="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700 grid grid-cols-12 gap-2 items-center">
+                    <span
+                        class="col-span-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</span>
+                    <span
+                        class="col-span-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Default</span>
+                    <span
+                        class="col-span-5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Options</span>
+                    <div class="col-span-1 flex justify-end">
+                        <button (click)="addArgumentDefinition()" title="Add argument"
+                            class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-semibold transition-colors">
+                            <i class="pi pi-plus" style="font-size:10px"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3 max-h-[400px] overflow-y-auto">
+                    @if (argumentsDraft.length) {
+                    <div class="space-y-2">
+                        @for (arg of argumentsDraft; track $index) {
+                        <div class="grid grid-cols-12 gap-2 items-center">
+                            <div class="col-span-3">
+                                <input type="text" pInputText [(ngModel)]="arg.name" placeholder="--name"
+                                    class="w-full font-mono text-xs" />
+                            </div>
+                            <div class="col-span-3">
+                                <input type="text" pInputText [(ngModel)]="arg.default" placeholder="Default"
+                                    class="w-full font-mono text-xs" />
+                            </div>
+                            <div class="col-span-5">
+                                <input type="text" pInputText [(ngModel)]="arg.options" placeholder="a, b, c"
+                                    class="w-full font-mono text-xs" />
+                            </div>
+                            <div class="col-span-1 flex justify-end">
+                                <button (click)="removeArgumentDefinition($index)" title="Remove"
+                                    class="icon-action-btn hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <i class="pi pi-times" style="font-size:10px"></i>
+                                </button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    } @else {
+                    <p class="text-xs text-gray-400 dark:text-gray-500 italic py-1">No predefined arguments. Click + to
+                        add one.</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <p-button label="Cancel" (onClick)="showArgumentsEditDialog = false" [text]="true" severity="secondary" />
+            <p-button label="Save" [icon]="PrimeIcons.SAVE" (onClick)="saveArgumentsAsync()"
+                [loading]="isSavingArguments" />
+        </ng-template>
+    </p-dialog>
+
+    <p-dialog [(visible)]="showFilesDialog" [modal]="true" [style]="{width: '90vw', height: '85vh'}"
+        [contentStyle]="{display: 'flex', flexDirection: 'column', flex: '1', minHeight: '0'}" [maximizable]="true"
+        (onHide)="onFilesDialogHide()" header="Files — {{ packageName }} v{{ packageVersion }}">
+        <div class="flex flex-col flex-1 min-h-0 gap-3" (keydown)="onFileEditorKeydown($event)">
+            <p class="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                Edits change the deployed files and apply to instances started after saving. Changing
+                <span class="font-mono">requirements.txt</span> reinstalls the dependencies on the next start.
+            </p>
+            <div
+                class="flex flex-1 min-h-0 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div
+                    class="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-gray-50 dark:bg-gray-900/40">
+                    @if (isFilesLoading) {
+                    <div class="flex items-center justify-center py-10">
+                        <i class="pi pi-spin pi-spinner text-xl text-gray-400"></i>
+                    </div>
+                    } @else {
+                    @for (file of packageFiles; track file.path) {
+                    <button (click)="selectFileAsync(file)" [disabled]="!file.editable"
+                        [title]="file.editable ? file.path : file.path + ' (too large to edit)'"
+                        class="w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs font-mono transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        [ngClass]="file.path === selectedFile?.path
+                            ? 'bg-emerald-50 dark:bg-emerald-900/25 text-emerald-700 dark:text-emerald-300'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'">
+                        <i class="pi pi-file shrink-0" style="font-size:11px"></i>
+                        <span class="truncate flex-1">{{ file.path }}</span>
+                        @if (file.modified) {
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Modified after deployment"></span>
+                        }
+                    </button>
+                    } @empty {
+                    <p class="px-3 py-4 text-xs text-gray-400 dark:text-gray-500 italic">No editable files</p>
+                    }
+                    }
+                </div>
+                <div class="flex flex-col flex-1 min-w-0">
+                    <div
+                        class="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-xs font-mono text-gray-600 dark:text-gray-300 truncate">
+                                {{ selectedFile?.path ?? 'Select a file' }}</span>
+                            @if (isFileDirty) {
+                            <span class="text-xs text-gray-400">· unsaved</span>
+                            }
+                            @if (selectedFile?.modified) {
+                            <span
+                                class="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-1.5 py-px rounded-full">Modified</span>
+                            }
+                            @if (selectedFile) {
+                            <span class="text-xs text-gray-400">{{ selectedFile.size | fileSize }}</span>
+                            }
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            @if (selectedFile?.modified) {
+                            <p-button label="Restore original" [icon]="PrimeIcons.UNDO"
+                                (onClick)="revertSelectedFileAsync()" [loading]="isRevertingFile" size="small"
+                                severity="secondary" [outlined]="true" title="Restore this file as it was deployed" />
+                            }
+                            <p-button label="Save" [icon]="PrimeIcons.SAVE" (onClick)="saveFileAsync()"
+                                [loading]="isSavingFile" [disabled]="!isFileDirty" size="small"
+                                title="Save (Ctrl+S)" />
+                        </div>
+                    </div>
+                    <div class="relative flex-1 min-h-0">
+                        @if (selectedFile) {
+                        <ngx-monaco-editor style="position:absolute; inset:0; height:100%; width:100%"
+                            [options]="fileEditorOptions" [(ngModel)]="fileContent">
+                        </ngx-monaco-editor>
+                        }
+                        @if (isFileContentLoading) {
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/5">
+                            <i class="pi pi-spin pi-spinner text-xl text-gray-400"></i>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
     </p-dialog>
 
     <p-dialog [(visible)]="showLogsExpandedDialog" [modal]="true" [style]="{width: '80vw', height: '80vh'}"

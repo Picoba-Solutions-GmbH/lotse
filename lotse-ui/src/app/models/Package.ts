@@ -14,6 +14,26 @@ export type PackageInfo = {
 export type PackageDetail = PackageInfo & {
     version: string;
     is_default: boolean;
+    is_modified?: boolean;
+}
+
+export type PackageModifications = {
+    is_modified: boolean;
+    config_modified: boolean;
+    modified_files: string[];
+    modified_at?: string | null;
+}
+
+export type PackageFile = {
+    path: string;
+    size: number;
+    editable: boolean;
+    modified: boolean;
+}
+
+export type PackageFileContent = {
+    path: string;
+    content: string;
 }
 
 export type PackageInstance = {
@@ -23,4 +43,7 @@ export type PackageInstance = {
     package_arguments?: PackageArgument[];
     is_default: boolean;
     permissions?: PackagePermissions | null;
+    runtime?: string | null;
+    has_files?: boolean;
+    modifications?: PackageModifications;
 }

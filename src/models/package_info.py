@@ -19,6 +19,14 @@ class PackageInfo(BaseModel):
 class PackageDetail(PackageInfo):
     version: str
     is_default: bool = False
+    is_modified: bool = False
+
+
+class PackageModifications(BaseModel):
+    is_modified: bool = False
+    config_modified: bool = False
+    modified_files: list[str] = []
+    modified_at: datetime | None = None
 
 
 class PackageInstance(BaseModel):
@@ -28,3 +36,6 @@ class PackageInstance(BaseModel):
     package_arguments: list[dict] = []
     is_default: bool = False
     permissions: PackagePermissions | None = None
+    runtime: str | None = None
+    has_files: bool = False
+    modifications: PackageModifications = PackageModifications()

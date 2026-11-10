@@ -170,3 +170,56 @@ class PackageRepository:
         )
         db_session.commit()
         return True
+
+    @staticmethod
+    def update_config(
+        db_session: Session,
+        package: PackageEntity,
+        config: str
+    ) -> PackageEntity:
+        if package.original_config is None:
+            package.original_config = package.config  # type: ignore
+        package.config = config  # type: ignore
+        package.modified_at = datetime.now()  # type: ignore
+        db_session.commit()
+        return package
+
+    @staticmethod
+    def revert_config(
+        db_session: Session,
+        package: PackageEntity
+    ) -> PackageEntity:
+        if package.original_config is not None:
+            package.config = package.original_config  # type: ignore
+            package.original_config = None  # type: ignore
+            package.modified_at = datetime.now() if package.is_modified else None  # type: ignore
+            db_session.commit()
+        return package
+
+    @staticmethod
+    def mark_file_modified(
+        db_session: Session,
+        package: PackageEntity,
+        relative_path: str
+    ) -> PackageEntity:
+        modified_files = list(package.modified_files or [])  # type: ignore
+        if relative_path not in modified_files:
+            modified_files.append(relative_path)
+            modified_files.sort()
+        # assign a new list, in-place changes of JSON columns are not tracked
+        package.modified_files = modified_files  # type: ignore
+        package.modified_at = datetime.now()  # type: ignore
+        db_session.commit()
+        return package
+
+    @staticmethod
+    def unmark_file_modified(
+        db_session: Session,
+        package: PackageEntity,
+        relative_path: str
+    ) -> PackageEntity:
+        modified_files = [f for f in (package.modified_files or []) if f != relative_path]  # type: ignore
+        package.modified_files = modified_files or None  # type: ignore
+        package.modified_at = datetime.now() if package.is_modified else None  # type: ignore
+        db_session.commit()
+        return package

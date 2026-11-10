@@ -20,3 +20,9 @@ class PathManager:
         sanitized_package_name = sanitize_name(package_name)
         package_path = Path(os.path.join(config.PACKAGES_ROOT, sanitized_package_name, version))
         return package_path
+
+    @staticmethod
+    def get_original_files_path(package_name: str, version: str) -> Path:
+        """Copies of package files as deployed, taken before a file is edited for the first time."""
+        sanitized_package_name = sanitize_name(package_name)
+        return Path(os.path.join(config.HOME_PATH, "package_originals", sanitized_package_name, version))

@@ -340,6 +340,9 @@ def _write_zip(zip_path: str, packages: list[PackageEntity], request: BackupRequ
             # the originally uploaded archive is backed up. Live packages and old deployments have
             # no archive, their extracted files are backed up instead.
             content = "archive" if has_archive else "files"
+            # files edited after the deployment are backed up next to the archive, extracting the
+            # archive and copying them over it restores the current state
+            modified_files = set(package.modified_files or [])  # type: ignore
 
             files_written = 0
             if package_dir.is_dir() and _is_inside(package_dir, config.PACKAGES_ROOT):
@@ -348,7 +351,7 @@ def _write_zip(zip_path: str, packages: list[PackageEntity], request: BackupRequ
                         full_path = Path(root) / name
                         relative = full_path.relative_to(package_dir).as_posix()
                         is_archive = relative == archive_name
-                        if content == "archive" and not is_archive:
+                        if content == "archive" and not is_archive and relative not in modified_files:
                             continue
                         if request.include_config and relative == "config.yaml":
                             # the deployed config.yaml from the database takes precedence
@@ -358,6 +361,8 @@ def _write_zip(zip_path: str, packages: list[PackageEntity], request: BackupRequ
 
             if request.include_config and package.config:
                 zf.writestr(f"{folder}/config.yaml", package.config)  # type: ignore
+                if package.config_modified:
+                    zf.writestr(f"{folder}/config.original.yaml", package.original_config)  # type: ignore
 
             manifest_entries.append({
                 "package_name": package.package_name,
@@ -373,6 +378,8 @@ def _write_zip(zip_path: str, packages: list[PackageEntity], request: BackupRequ
                 "content": content,
                 "files": files_written,
                 "config_included": bool(request.include_config and package.config),
+                "config_modified": package.config_modified,
+                "modified_files": sorted(modified_files),
                 "source_path": str(package_dir),
             })
 

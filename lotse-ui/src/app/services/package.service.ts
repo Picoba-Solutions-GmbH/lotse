@@ -2,7 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { PackageDetail, PackageInfo, PackageInstance } from '../models/Package';
+import { PackageDetail, PackageFile, PackageFileContent, PackageInfo, PackageInstance, PackageModifications } from '../models/Package';
+import { PackageArgument } from '../models/PackageArgument';
 import { PackageEnvironment } from '../models/PackageEnvironment';
 import { RepositoryConfig as PackageConfig } from '../models/RepositoryConfig';
 
@@ -42,5 +43,41 @@ export class PackageService {
 
   async getPackageEnvironmentAsync(packageName: string, version: string): Promise<PackageEnvironment[]> {
     return await firstValueFrom(this.http.get<PackageEnvironment[]>(`${environment.url}/packages/${packageName}/${version}/environment`));
+  }
+
+  async updatePackageEnvironmentAsync(packageName: string, version: string, variables: PackageEnvironment[]): Promise<PackageModifications> {
+    return await firstValueFrom(this.http.put<PackageModifications>(`${environment.url}/packages/${packageName}/${version}/environment`, variables));
+  }
+
+  async getPackageArgumentsAsync(packageName: string, version: string): Promise<PackageArgument[]> {
+    return await firstValueFrom(this.http.get<PackageArgument[]>(`${environment.url}/packages/${packageName}/${version}/arguments`));
+  }
+
+  async updatePackageArgumentsAsync(packageName: string, version: string, args: PackageArgument[]): Promise<PackageModifications> {
+    return await firstValueFrom(this.http.put<PackageModifications>(`${environment.url}/packages/${packageName}/${version}/arguments`, args));
+  }
+
+  async revertPackageConfigAsync(packageName: string, version: string): Promise<PackageModifications> {
+    return await firstValueFrom(this.http.post<PackageModifications>(`${environment.url}/packages/${packageName}/${version}/config/revert`, {}));
+  }
+
+  async getPackageFilesAsync(packageName: string, version: string): Promise<PackageFile[]> {
+    return await firstValueFrom(this.http.get<PackageFile[]>(`${environment.url}/packages/${packageName}/${version}/files`));
+  }
+
+  async getPackageFileContentAsync(packageName: string, version: string, path: string): Promise<PackageFileContent> {
+    return await firstValueFrom(this.http.get<PackageFileContent>(`${environment.url}/packages/${packageName}/${version}/files/content`, { params: { path } }));
+  }
+
+  async updatePackageFileContentAsync(packageName: string, version: string, file: PackageFileContent): Promise<PackageModifications> {
+    return await firstValueFrom(this.http.put<PackageModifications>(`${environment.url}/packages/${packageName}/${version}/files/content`, file));
+  }
+
+  async revertPackageFileAsync(packageName: string, version: string, path: string): Promise<PackageModifications> {
+    return await firstValueFrom(this.http.post<PackageModifications>(`${environment.url}/packages/${packageName}/${version}/files/revert`, { path }));
+  }
+
+  async revertPackageAsync(packageName: string, version: string): Promise<PackageModifications> {
+    return await firstValueFrom(this.http.post<PackageModifications>(`${environment.url}/packages/${packageName}/${version}/revert`, {}));
   }
 }

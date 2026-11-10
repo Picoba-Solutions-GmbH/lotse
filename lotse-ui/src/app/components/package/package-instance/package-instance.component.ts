@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { EditorComponent } from 'ngx-monaco-editor-v2';
 import { AccordionModule } from 'primeng/accordion';
 import { MessageService, PrimeIcons } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -19,13 +20,14 @@ import { Subscription } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { VisualStudioCodeComponent } from "../../../icons/svg-VisualStudioCode.component";
 import { TaskStatus } from '../../../misc/TaskStatus';
-import { PackageInstance } from '../../../models/Package';
+import { PackageFile, PackageInstance, PackageModifications } from '../../../models/Package';
 import { PackagePermissions } from '../../../models/PackageAccess';
 
 const NO_PERMISSIONS: PackagePermissions = { view: false, execute: false, edit: false, manage: false };
 import { PackageEnvironment } from '../../../models/PackageEnvironment';
 import { TaskInfo } from '../../../models/TaskInfo';
 import { DurationPipe } from "../../../pipes/duration.pipe";
+import { FileSizePipe } from "../../../pipes/file-size.pipe";
 import { TaskCountByStatePipe } from "../../../pipes/task-count-by-state.pipe";
 import { TaskStatusToSeverityPipe } from "../../../pipes/task-status.pipe";
 import { UtcToLocalPipe } from "../../../pipes/utcToLocal.pipe";
@@ -58,7 +60,9 @@ import { PodTerminalComponent } from '../../pod-terminal/pod-terminal.component'
     PodTerminalComponent,
     VisualStudioCodeComponent,
     UtcToLocalPipe,
-    AccordionModule
+    AccordionModule,
+    EditorComponent,
+    FileSizePipe
   ],
   templateUrl: './package-instance.component.html',
   styleUrl: './package-instance.component.scss'
@@ -99,6 +103,45 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
 
   showEnvironmentDialog = false;
   packageEnvironmentVariables: PackageEnvironment[] = [];
+  isSavingEnvironment = false;
+
+  showArgumentsEditDialog = false;
+  argumentsDraft: { name: string; default: string; options: string }[] = [];
+  isArgumentsLoading = false;
+  isSavingArguments = false;
+
+  showFilesDialog = false;
+  packageFiles: PackageFile[] = [];
+  isFilesLoading = false;
+  selectedFile: PackageFile | null = null;
+  fileContent = '';
+  private originalFileContent = '';
+  isFileContentLoading = false;
+  isSavingFile = false;
+  fileEditorOptions: Record<string, unknown> = {
+    language: 'plaintext',
+    theme: 'vs-dark',
+    automaticLayout: true,
+    fontSize: 13,
+    fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+  };
+
+  isReverting = false;
+  isRevertingFile = false;
+
+  get modifications(): PackageModifications | undefined {
+    return this.packageInstance.modifications;
+  }
+
+  get canEditFiles(): boolean {
+    return this.permissions.edit && !!this.packageInstance.has_files;
+  }
+
+  get isFileDirty(): boolean {
+    return this.selectedFile !== null && this.fileContent !== this.originalFileContent;
+  }
 
   @ViewChild(PodTerminalComponent) podTerminal: PodTerminalComponent | undefined;
 
@@ -365,6 +408,226 @@ export class PackageInstanceComponent implements OnInit, OnDestroy {
         this.podTerminal.handleFit();
       }
     }, 100);
+  }
+
+  private applyModifications(modifications: PackageModifications): void {
+    this.packageInstance = { ...this.packageInstance, modifications };
+  }
+
+  private showHttpError(error: unknown, fallback: string): void {
+    const detail = (error as { error?: { detail?: unknown } })?.error?.detail;
+    this.showError(typeof detail === 'string' ? detail : fallback);
+  }
+
+  // ---------------------------------------------------------------- environment variables
+
+  addEnvironmentVariable(): void {
+    this.packageEnvironmentVariables = [...this.packageEnvironmentVariables, { name: '', value: '' }];
+  }
+
+  removeEnvironmentVariable(index: number): void {
+    this.packageEnvironmentVariables = this.packageEnvironmentVariables.filter((_, i) => i !== index);
+  }
+
+  async saveEnvironmentVariablesAsync(): Promise<void> {
+    const variables = this.packageEnvironmentVariables
+      .map(env => ({ name: env.name.trim(), value: env.value ?? '' }))
+      .filter(env => env.name);
+
+    try {
+      this.isSavingEnvironment = true;
+      const modifications = await this.packageService.updatePackageEnvironmentAsync(this.packageName, this.packageVersion, variables);
+      this.applyModifications(modifications);
+      this.showEnvironmentDialog = false;
+      this.showSuccess('Environment variables saved. They apply to new instances.');
+    } catch (error) {
+      this.showHttpError(error, 'Failed to save environment variables');
+    } finally {
+      this.isSavingEnvironment = false;
+    }
+  }
+
+  // ---------------------------------------------------------------- arguments
+
+  async openArgumentsEditor(): Promise<void> {
+    try {
+      this.isArgumentsLoading = true;
+      const args = await this.packageService.getPackageArgumentsAsync(this.packageName, this.packageVersion);
+      this.argumentsDraft = args.map(arg => ({
+        name: arg.name,
+        default: arg.default ?? '',
+        options: (arg.options ?? []).join(', '),
+      }));
+      this.showArgumentsEditDialog = true;
+    } catch (error) {
+      this.showHttpError(error, 'Failed to load arguments');
+    } finally {
+      this.isArgumentsLoading = false;
+    }
+  }
+
+  addArgumentDefinition(): void {
+    this.argumentsDraft = [...this.argumentsDraft, { name: '', default: '', options: '' }];
+  }
+
+  removeArgumentDefinition(index: number): void {
+    this.argumentsDraft = this.argumentsDraft.filter((_, i) => i !== index);
+  }
+
+  async saveArgumentsAsync(): Promise<void> {
+    const args = this.argumentsDraft
+      .filter(arg => arg.name.trim())
+      .map(arg => {
+        const options = arg.options.split(',').map(o => o.trim()).filter(o => o);
+        return { name: arg.name.trim(), default: arg.default ?? '', options: options.length ? options : null };
+      });
+
+    try {
+      this.isSavingArguments = true;
+      const modifications = await this.packageService.updatePackageArgumentsAsync(this.packageName, this.packageVersion, args);
+      this.applyModifications(modifications);
+      this.packageInstance = { ...this.packageInstance, package_arguments: args };
+      this.showArgumentsEditDialog = false;
+      this.showSuccess('Arguments saved');
+    } catch (error) {
+      this.showHttpError(error, 'Failed to save arguments');
+    } finally {
+      this.isSavingArguments = false;
+    }
+  }
+
+  async revertAllAsync(): Promise<void> {
+    if (!confirm('Restore this deployment as it was deployed? Edited environment variables, arguments and files will be lost.')) {
+      return;
+    }
+
+    try {
+      this.isReverting = true;
+      await this.packageService.revertPackageAsync(this.packageName, this.packageVersion);
+      this.showSuccess('Deployment restored to its original state');
+    } catch (error) {
+      this.showHttpError(error, 'Failed to restore deployment');
+    } finally {
+      // reload in any case, a partial restore changes the state too
+      await this.loadPackageInstanceAsync();
+      this.isReverting = false;
+    }
+  }
+
+  // ---------------------------------------------------------------- files
+
+  async openFilesEditor(path?: string): Promise<void> {
+    this.selectedFile = null;
+    this.fileContent = '';
+    this.originalFileContent = '';
+    const isDark = document.documentElement.classList.contains('dark');
+    this.fileEditorOptions = { ...this.fileEditorOptions, theme: isDark ? 'vs-dark' : 'vs' };
+    this.showFilesDialog = true;
+
+    try {
+      this.isFilesLoading = true;
+      this.packageFiles = await this.packageService.getPackageFilesAsync(this.packageName, this.packageVersion);
+    } catch (error) {
+      this.showHttpError(error, 'Failed to load package files');
+      return;
+    } finally {
+      this.isFilesLoading = false;
+    }
+
+    const initial = this.packageFiles.find(f => f.path === path && f.editable)
+      ?? this.packageFiles.find(f => f.path === 'requirements.txt' && f.editable)
+      ?? this.packageFiles.find(f => f.editable);
+    if (initial) {
+      await this.selectFileAsync(initial);
+    }
+  }
+
+  async selectFileAsync(file: PackageFile): Promise<void> {
+    if (!file.editable || file.path === this.selectedFile?.path) return;
+    if (this.isFileDirty && !confirm(`Discard unsaved changes of ${this.selectedFile?.path}?`)) return;
+
+    try {
+      this.isFileContentLoading = true;
+      const result = await this.packageService.getPackageFileContentAsync(this.packageName, this.packageVersion, file.path);
+      this.selectedFile = file;
+      this.fileContent = result.content;
+      this.originalFileContent = result.content;
+      this.fileEditorOptions = { ...this.fileEditorOptions, language: this.languageOf(file.path) };
+    } catch (error) {
+      this.showHttpError(error, `Failed to load ${file.path}`);
+    } finally {
+      this.isFileContentLoading = false;
+    }
+  }
+
+  async saveFileAsync(): Promise<void> {
+    if (!this.selectedFile || !this.isFileDirty) return;
+
+    const file = this.selectedFile;
+    const content = this.fileContent;
+    try {
+      this.isSavingFile = true;
+      const modifications = await this.packageService.updatePackageFileContentAsync(
+        this.packageName, this.packageVersion, { path: file.path, content });
+      this.applyModifications(modifications);
+      if (this.selectedFile === file) {
+        this.originalFileContent = content;
+      }
+      file.modified = modifications.modified_files.includes(file.path);
+      this.showSuccess(file.path === 'requirements.txt'
+        ? 'requirements.txt saved. Dependencies are reinstalled on the next start.'
+        : `${file.path} saved. Changes apply to new instances.`);
+    } catch (error) {
+      this.showHttpError(error, `Failed to save ${file.path}`);
+    } finally {
+      this.isSavingFile = false;
+    }
+  }
+
+  async revertSelectedFileAsync(): Promise<void> {
+    const file = this.selectedFile;
+    if (!file?.modified) return;
+    if (!confirm(`Restore ${file.path} as it was deployed? Your changes to this file will be lost.`)) return;
+
+    try {
+      this.isRevertingFile = true;
+      const modifications = await this.packageService.revertPackageFileAsync(this.packageName, this.packageVersion, file.path);
+      this.applyModifications(modifications);
+      file.modified = false;
+      const result = await this.packageService.getPackageFileContentAsync(this.packageName, this.packageVersion, file.path);
+      if (this.selectedFile === file) {
+        this.fileContent = result.content;
+        this.originalFileContent = result.content;
+      }
+      this.showSuccess(`${file.path} restored`);
+    } catch (error) {
+      this.showHttpError(error, `Failed to restore ${file.path}`);
+    } finally {
+      this.isRevertingFile = false;
+    }
+  }
+
+  onFilesDialogHide(): void {
+    if (this.isFileDirty && confirm(`Save changes of ${this.selectedFile?.path} before closing?`)) {
+      this.saveFileAsync();
+    }
+  }
+
+  onFileEditorKeydown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      this.saveFileAsync();
+    }
+  }
+
+  private languageOf(path: string): string {
+    const extension = path.split('.').pop()?.toLowerCase() ?? '';
+    const languages: Record<string, string> = {
+      py: 'python', json: 'json', yaml: 'yaml', yml: 'yaml', md: 'markdown', sh: 'shell',
+      sql: 'sql', xml: 'xml', html: 'html', css: 'css', js: 'javascript', ini: 'ini', cfg: 'ini',
+      conf: 'ini', toml: 'ini', properties: 'ini',
+    };
+    return languages[extension] ?? 'plaintext';
   }
 
   async showEnvironmentVariables(): Promise<void> {

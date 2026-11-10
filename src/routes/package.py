@@ -22,12 +22,19 @@ from src.database.repositories.volume_repository import VolumeRepository
 from src.misc.package_status import PackageStatus
 from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
-from src.models.package_info import PackageDetail, PackageInfo, PackageInstance
+from src.models.package_info import (PackageDetail, PackageInfo,
+                                     PackageInstance, PackageModifications)
 from src.models.package_permissions import Permission
 from src.models.task_info import TaskInfo
-from src.models.yaml_config import Environment, parse_config
+from src.models.yaml_config import Argument, Environment, parse_config
 from src.routes import authentication
+from src.routes.dtos.package_edit_dto import (EnvironmentVariableDto,
+                                              PackageArgumentDto,
+                                              PackageFileContentDto,
+                                              PackageFileDto,
+                                              PackageFilePathDto)
 from src.services import package_access_service as access
+from src.services import package_edit_service as edit
 from src.services.task_manager_service import TaskManagerService
 from src.utils.path_manager import PathManager
 from src.utils.singleton_meta import get_service
@@ -110,6 +117,8 @@ async def deploy_package(
 
             if os.path.exists(venv_dir):
                 shutil.rmtree(venv_dir, ignore_errors=True)
+
+            edit.remove_originals(other_version.package_name, other_version.version)  # type: ignore
 
         PackageRepository.delete_other_package_versions(
             db_session, package_config.package_name, package_config.version)
@@ -212,6 +221,8 @@ async def delete_package(
         if os.path.exists(venv_dir):
             shutil.rmtree(venv_dir, ignore_errors=True)
 
+        edit.remove_originals(package_name, version)
+
     return {"message": "Package deleted successfully"}
 
 
@@ -279,7 +290,8 @@ async def get_package_by_stage(
             instances=tasks_count,
             creation_date=package.deployed_at,
             version=package.version,
-            is_default=package.active
+            is_default=package.active,
+            is_modified=package.is_modified
         )
         package_details.append(package_info)
 
@@ -329,6 +341,9 @@ async def get_package_by_version(
         package_arguments=package_arguments,
         is_default=package.active,
         permissions=permissions,
+        runtime=config_yaml_content.runtime.value if config_yaml_content.runtime else None,
+        has_files=PathManager.get_package_path(package_name, version).is_dir(),
+        modifications=_modifications_of(package),
     )
 
     return package_instance
@@ -369,3 +384,169 @@ async def set_default_package(
     PackageRepository.set_active_package(db, package_name, version)
 
     return {"message": "Package set as default successfully"}
+
+
+def _get_package_or_404(db: Session, package_name: str, version: str) -> PackageEntity:
+    package = PackageRepository.get_package(db, package_name, version)
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+    return package
+
+
+def _modifications_of(package: PackageEntity) -> PackageModifications:
+    return PackageModifications(
+        is_modified=package.is_modified,
+        config_modified=package.config_modified,
+        modified_files=list(package.modified_files or []),  # type: ignore
+        modified_at=package.modified_at,  # type: ignore
+    )
+
+
+@router.put("/{package_name}/{version}/environment")
+async def update_package_environment(
+    package_name: str,
+    version: str,
+    environment: list[EnvironmentVariableDto],
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> PackageModifications:
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+
+    config = edit.build_config_with_environment(
+        package, [Environment(name=env.name, value=env.value) for env in environment])
+    PackageRepository.update_config(db, package, config)
+    return _modifications_of(package)
+
+
+@router.get("/{package_name}/{version}/arguments")
+async def get_package_arguments(
+    package_name: str,
+    version: str,
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> list[PackageArgumentDto]:
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+    return [PackageArgumentDto(name=arg.name, default=arg.defaultvalue, options=arg.options)
+            for arg in parse_config(package.config).args]  # type: ignore
+
+
+@router.put("/{package_name}/{version}/arguments")
+async def update_package_arguments(
+    package_name: str,
+    version: str,
+    arguments: list[PackageArgumentDto],
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> PackageModifications:
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+
+    config = edit.build_config_with_arguments(
+        package, [Argument(name=arg.name, defaultvalue=arg.default, options=arg.options) for arg in arguments])
+    PackageRepository.update_config(db, package, config)
+    return _modifications_of(package)
+
+
+@router.post("/{package_name}/{version}/config/revert")
+async def revert_package_config(
+    package_name: str,
+    version: str,
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> PackageModifications:
+    """Restores the environment variables and arguments as they were deployed."""
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+    PackageRepository.revert_config(db, package)
+    return _modifications_of(package)
+
+
+@router.get("/{package_name}/{version}/files")
+async def list_package_files(
+    package_name: str,
+    version: str,
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> list[PackageFileDto]:
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+    return [PackageFileDto(**f) for f in edit.list_editable_files(package)]
+
+
+@router.get("/{package_name}/{version}/files/content")
+async def get_package_file_content(
+    package_name: str,
+    version: str,
+    path: str,
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> PackageFileContentDto:
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+    full_path, relative = edit.resolve_editable_file(package, path)
+    return PackageFileContentDto(path=relative, content=edit.read_file(full_path))
+
+
+@router.put("/{package_name}/{version}/files/content")
+async def update_package_file_content(
+    package_name: str,
+    version: str,
+    file: PackageFileContentDto,
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> PackageModifications:
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+    full_path, relative = edit.resolve_editable_file(package, file.path)
+    if edit.write_file(package, full_path, relative, file.content):
+        if edit.matches_original(package, full_path, relative):
+            # edited back to the deployed content, the file is no longer modified
+            edit.revert_file(package, relative)
+            PackageRepository.unmark_file_modified(db, package, relative)
+        else:
+            PackageRepository.mark_file_modified(db, package, relative)
+    return _modifications_of(package)
+
+
+@router.post("/{package_name}/{version}/files/revert")
+async def revert_package_file(
+    package_name: str,
+    version: str,
+    file: PackageFilePathDto,
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> PackageModifications:
+    """Restores a file as it was deployed."""
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+    relative = edit.revert_file(package, file.path)
+    PackageRepository.unmark_file_modified(db, package, relative)
+    return _modifications_of(package)
+
+
+@router.post("/{package_name}/{version}/revert")
+async def revert_package(
+    package_name: str,
+    version: str,
+    db: Session = Depends(get_db_session),
+    user: CurrentUser = Depends(authentication.require_user)
+) -> PackageModifications:
+    """Restores environment variables, arguments and all edited files as they were deployed."""
+    access.require(db, user, package_name, Permission.EDIT)
+    package = _get_package_or_404(db, package_name, version)
+    PackageRepository.revert_config(db, package)
+
+    failed: list[str] = []
+    for relative in list(package.modified_files or []):  # type: ignore
+        try:
+            edit.revert_file(package, relative)
+            PackageRepository.unmark_file_modified(db, package, relative)
+        except HTTPException:
+            failed.append(relative)
+
+    if failed:
+        raise HTTPException(status_code=409,
+                            detail=f"Could not restore: {', '.join(failed)}. No original version is available.")
+    return _modifications_of(package)
