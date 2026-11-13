@@ -70,7 +70,12 @@ def normalize_path(path: str | None) -> str:
 
 # ---------------------------------------------------------------- git commands
 
-def _environment(auth: GitAuth | None) -> dict[str, str]:
+def _origin(url: str) -> str:
+    scheme, _, rest = url.strip().partition("://")
+    return f"{scheme}://{rest.split('/', 1)[0]}"
+
+
+def _environment(auth: GitAuth | None, url: str | None = None) -> dict[str, str]:
     env = os.environ.copy()
     # Never ask anyone for credentials. Besides the terminal prompt this covers askpass helpers inherited from
     # the environment, e.g. VS Code's GIT_ASKPASS when Lotse runs from its terminal or debugger. An empty
@@ -92,7 +97,9 @@ def _environment(auth: GitAuth | None) -> dict[str, str]:
     if auth and auth.token:
         user = auth.username or _DEFAULT_USERNAME
         basic = base64.b64encode(f"{user}:{auth.token}".encode()).decode()
-        settings.append(("http.extraHeader", f"Authorization: Basic {basic}"))
+        # scoped to the server of the repository: submodules on other servers must not get the token
+        key = f"http.{_origin(url)}.extraHeader" if url else "http.extraHeader"
+        settings.append((key, f"Authorization: Basic {basic}"))
     if config.GIT_SSL_CAINFO:
         settings.append(("http.sslCAInfo", config.GIT_SSL_CAINFO))
 
@@ -103,10 +110,11 @@ def _environment(auth: GitAuth | None) -> dict[str, str]:
     return env
 
 
-def _run(args: list[str], auth: GitAuth | None, timeout: int, cwd: Path | None = None) -> str:
+def _run(args: list[str], auth: GitAuth | None, timeout: int, cwd: Path | None = None,
+         url: str | None = None) -> str:
     try:
         result = subprocess.run(
-            ["git", *args], cwd=cwd, env=_environment(auth), capture_output=True,
+            ["git", *args], cwd=cwd, env=_environment(auth, url), capture_output=True,
             text=True, encoding="utf-8", errors="replace", timeout=timeout, check=False,
         )
     except FileNotFoundError:
@@ -124,7 +132,7 @@ def _run(args: list[str], auth: GitAuth | None, timeout: int, cwd: Path | None =
 
 def list_tags(url: str, auth: GitAuth | None) -> dict[str, str]:
     """All tags of the remote repository with the commit they point to. Doesn't clone anything."""
-    output = _run(["ls-remote", "--tags", url], auth, _LIST_TIMEOUT_SECONDS)
+    output = _run(["ls-remote", "--tags", url], auth, _LIST_TIMEOUT_SECONDS, url=url)
     tags: dict[str, str] = {}
     peeled: dict[str, str] = {}
     for line in output.splitlines():
@@ -143,14 +151,30 @@ def list_tags(url: str, auth: GitAuth | None) -> dict[str, str]:
 
 
 def checkout(url: str, auth: GitAuth | None, tag: str, destination: Path, path: str = "") -> str:
-    """Shallow clone of `tag` into `destination`. Only `path` is checked out if given. Returns the commit."""
+    """Shallow clone of `tag` into `destination`, including its submodules (recursively).
+    Only `path` (and the submodules below it) is checked out if given. Returns the commit."""
     args = ["clone", "--quiet", "--depth", "1", f"--branch={tag}", "--single-branch", "--no-tags"]
     if path:
         args += ["--filter=blob:none", "--sparse"]
-    _run([*args, "--", url, str(destination)], auth, _CLONE_TIMEOUT_SECONDS)
+    _run([*args, "--", url, str(destination)], auth, _CLONE_TIMEOUT_SECONDS, url=url)
 
     if path:
         # normalize_path() makes sure that no segment starts with '-'
-        _run(["sparse-checkout", "set", path], auth, _CLONE_TIMEOUT_SECONDS, cwd=destination)
+        _run(["sparse-checkout", "set", path], auth, _CLONE_TIMEOUT_SECONDS, cwd=destination, url=url)
 
+    _update_submodules(url, auth, destination, path)
     return _run(["rev-parse", "HEAD"], None, _LIST_TIMEOUT_SECONDS, cwd=destination).strip()
+
+
+def _update_submodules(url: str, auth: GitAuth | None, destination: Path, path: str) -> None:
+    """Relative submodule URLs resolve against `url`. GIT_ALLOW_PROTOCOL applies to submodules as well."""
+    if not (destination / ".gitmodules").is_file():
+        return
+    pathspec = ["--", path] if path else []
+    args = ["submodule", "update", "--init", "--recursive", "--quiet"]
+    try:
+        _run([*args, "--depth", "1", *pathspec], auth, _CLONE_TIMEOUT_SECONDS, cwd=destination, url=url)
+    except GitError as e:
+        # servers that don't allow fetching a commit that isn't the tip of a branch need a full fetch
+        logger.info("Shallow submodule update failed, fetching full history: %s", e)
+        _run([*args, *pathspec], auth, _CLONE_TIMEOUT_SECONDS, cwd=destination, url=url)

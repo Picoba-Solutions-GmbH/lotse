@@ -226,6 +226,31 @@ def test_checkout_of_unknown_tag_fails(remote, tmp_path):
         git_client.checkout(remote, None, "v9.9.9", tmp_path / "checkout")
 
 
+def test_checkout_pulls_submodules(remote, tmp_path):
+    work = tmp_path / "parent"
+    (work / "apps" / "app").mkdir(parents=True)
+    (work / "apps" / "app" / "config.yaml").write_text("package_name: app\n")
+    _git("init", "-q", "-b", "main", cwd=work)
+    _git("-c", "protocol.file.allow=always", "submodule", "add", "-q", remote, "apps/app/lib", cwd=work)
+    _git("commit", "-q", "-am", "with submodule", cwd=work)
+    _git("tag", "v1.0.0", cwd=work)
+    bare = tmp_path / "parent.git"
+    _git("clone", "-q", "--bare", str(work), str(bare), cwd=tmp_path)
+
+    for path in ["", "apps/app"]:
+        destination = tmp_path / f"checkout-{len(path)}"
+        git_client.checkout(bare.as_uri(), None, "v1.0.0", destination, path)
+        assert (destination / "apps" / "app" / "lib" / "apps" / "hello" / "main.py").read_text() == "print('v2')\n"
+
+
+def test_token_is_only_sent_to_the_server_of_the_repository():
+    auth = git_client.GitAuth(username=None, token="supersecret")
+    env = git_client._environment(auth, "https://git.example.com:8443/org/repo.git")  # pylint: disable=protected-access
+    keys = [env[f"GIT_CONFIG_KEY_{i}"] for i in range(int(env["GIT_CONFIG_COUNT"]))]
+    assert "http.https://git.example.com:8443.extraHeader" in keys
+    assert "http.extraHeader" not in keys
+
+
 def test_list_tags_of_missing_repository_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "GIT_ALLOW_FILE_URLS", True)
     with pytest.raises(git_client.GitError):
