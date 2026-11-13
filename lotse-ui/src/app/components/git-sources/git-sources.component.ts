@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ConfirmationService, MessageService, PrimeIcons } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -61,6 +61,9 @@ const REFRESH_INTERVAL_MS = 15000;
     providers: [{ provide: MessageService, useClass: AuthAwareMessageService }, ConfirmationService],
 })
 export class GitSourcesComponent implements OnInit, OnDestroy {
+    /** shown as a tab of the Sources page: no page title */
+    @Input() embedded = false;
+
     PrimeIcons = PrimeIcons;
 
     sources: GitSource[] = [];
@@ -91,7 +94,6 @@ export class GitSourcesComponent implements OnInit, OnDestroy {
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
-        private router: Router,
     ) { }
 
     async ngOnInit(): Promise<void> {
@@ -100,7 +102,7 @@ export class GitSourcesComponent implements OnInit, OnDestroy {
 
         // "Connect Git repository" from a package page or the deploy dialog: /git-sources?package=<name>
         const queryParams = this.route.snapshot.queryParamMap;
-        if (queryParams.has('package')) {
+        if (queryParams.has('package') && queryParams.get('tab') !== 'images') {
             const packageName = queryParams.get('package') ?? '';
             const existing = this.sources.find(s => s.package_name === packageName);
             if (existing) {
@@ -108,7 +110,6 @@ export class GitSourcesComponent implements OnInit, OnDestroy {
             } else {
                 this.openCreateDialog(packageName);
             }
-            this.router.navigate([], { queryParams: {}, replaceUrl: true });
         }
     }
 

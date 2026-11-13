@@ -1,7 +1,9 @@
-<div class="flex flex-col w-full min-h-full">
-    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+<div class="flex flex-col w-full">
+    <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
+            @if (!embedded) {
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">Git Sources</h1>
+            }
             <p class="text-sm text-gray-500 dark:text-gray-400">
                 Connect a package to a Git repository. Pushing a tag like <code
                     class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">v1.2.0</code>

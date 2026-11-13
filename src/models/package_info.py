@@ -20,7 +20,8 @@ class PackageDetail(PackageInfo):
     version: str
     is_default: bool = False
     is_modified: bool = False
-    # Git tag and commit, for versions deployed by a Git source
+    # versions deployed by a source: "git" (tag + commit) or "image" (image tag + digest)
+    source_type: str | None = None
     source_ref: str | None = None
     source_commit: str | None = None
 

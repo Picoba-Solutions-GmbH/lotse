@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 from datetime import datetime
@@ -229,6 +230,43 @@ def test_list_tags_of_missing_repository_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "GIT_ALLOW_FILE_URLS", True)
     with pytest.raises(git_client.GitError):
         git_client.list_tags((tmp_path / "missing.git").as_uri(), None)
+
+
+def test_git_never_prompts_for_credentials(monkeypatch):
+    # what VS Code puts into its terminals
+    monkeypatch.setenv("GIT_ASKPASS", "c:/vscode/askpass.sh")
+    monkeypatch.setenv("VSCODE_GIT_ASKPASS_MAIN", "c:/vscode/askpass-main.js")
+    env = git_client._environment(None)  # pylint: disable=protected-access
+    assert env["GIT_ASKPASS"] == "" and env["SSH_ASKPASS"] == "" and env["GIT_TERMINAL_PROMPT"] == "0"
+    assert not any(name.startswith("VSCODE_GIT_") for name in env)
+
+
+def test_private_repository_without_token_fails_instead_of_prompting(tmp_path, monkeypatch):
+    """A server that demands credentials: git must fail fast, not wait for a prompt."""
+    import http.server  # pylint: disable=import-outside-toplevel
+    import threading  # pylint: disable=import-outside-toplevel
+
+    class AuthRequired(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="private"')
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), AuthRequired)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    # an askpass that would answer if git called it
+    askpass = tmp_path / ("askpass.bat" if os.name == "nt" else "askpass.sh")
+    askpass.write_text("@echo someone\n" if os.name == "nt" else "#!/bin/sh\necho someone\n")
+    askpass.chmod(0o755)
+    monkeypatch.setenv("GIT_ASKPASS", str(askpass))
+    try:
+        with pytest.raises(git_client.GitError, match="(?i)terminal prompts disabled|could not read Username"):
+            git_client.list_tags(f"http://127.0.0.1:{server.server_port}/private.git", None)
+    finally:
+        server.shutdown()
 
 
 def test_token_is_sent_as_header_and_not_leaked_in_errors(monkeypatch):

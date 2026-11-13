@@ -13,13 +13,17 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { PackageStatus } from '../../../misc/PackageStatus';
+import { MenuItem } from 'primeng/api';
+import { MenuModule } from 'primeng/menu';
 import { GitSource } from '../../../models/GitSource';
+import { ImageSource } from '../../../models/ImageSource';
 import { PackageDetail } from '../../../models/Package';
 import { PackageAccess, PackagePermissions } from '../../../models/PackageAccess';
 import { PackageCountByStatePipe } from "../../../pipes/package-count-by-state.pipe";
 import { PackageStatusToSeverityPipe } from "../../../pipes/package-status.pipe";
 import { FeatureFlagService } from '../../../services/feature-flag.service';
 import { GitSourceService } from '../../../services/git-source.service';
+import { ImageSourceService } from '../../../services/image-source.service';
 import { PackageAccessService } from '../../../services/package-access.service';
 import { PackageService } from '../../../services/package.service';
 import { PackageDeployComponent } from '../package-deploy/package-deploy.component';
@@ -39,6 +43,7 @@ import { PackageShareDialogComponent } from '../package-share-dialog/package-sha
     DropdownModule,
     DialogModule,
     ToastModule,
+    MenuModule,
     PackageStatusToSeverityPipe,
     PackageCountByStatePipe,
     PackageDeployComponent,
@@ -60,7 +65,12 @@ export class PackageManagementComponent implements OnInit {
   permissions: PackagePermissions = { view: false, execute: false, edit: false, manage: false };
   showShareDialog = false;
   gitSource: GitSource | null = null;
+  imageSource: ImageSource | null = null;
   gitSyncing = false;
+  readonly connectItems: MenuItem[] = [
+    { label: 'Git repository', icon: 'pi pi-sync', command: () => this.connectSource('git') },
+    { label: 'Container image', icon: 'pi pi-box', command: () => this.connectSource('images') },
+  ];
 
   @ViewChild(PackageDeployComponent) packageDeploy!: PackageDeployComponent;
 
@@ -72,7 +82,8 @@ export class PackageManagementComponent implements OnInit {
     private confirmationService: ConfirmationService,
     private featureFlagService: FeatureFlagService,
     private packageAccessService: PackageAccessService,
-    private gitSourceService: GitSourceService
+    private gitSourceService: GitSourceService,
+    private imageSourceService: ImageSourceService
   ) { }
 
   async ngOnInit(): Promise<void> {
@@ -82,15 +93,21 @@ export class PackageManagementComponent implements OnInit {
   }
 
   async loadGitSource(): Promise<void> {
-    try {
-      this.gitSource = await this.gitSourceService.getForPackageAsync(this.packageName);
-    } catch {
-      this.gitSource = null;
-    }
+    const [git, image] = await Promise.all([
+      this.gitSourceService.getForPackageAsync(this.packageName).catch(() => null),
+      this.imageSourceService.getForPackageAsync(this.packageName).catch(() => null),
+    ]);
+    this.gitSource = git;
+    this.imageSource = image;
+  }
+
+  /** the Git or image source of this package, if it has one */
+  get source(): GitSource | ImageSource | null {
+    return this.gitSource ?? this.imageSource;
   }
 
   get gitStatusSeverity(): 'success' | 'warn' | 'danger' | 'secondary' | 'info' {
-    switch (this.gitSource?.status) {
+    switch (this.source?.status) {
       case 'Synced': return 'success';
       case 'OutOfSync': return 'warn';
       case 'Error': return 'danger';
@@ -100,31 +117,46 @@ export class PackageManagementComponent implements OnInit {
   }
 
   get gitStatusLabel(): string {
-    switch (this.gitSource?.status) {
+    switch (this.source?.status) {
       case 'OutOfSync': return 'Out of sync';
       case 'NoTags': return 'No tags';
-      default: return this.gitSource?.status ?? '';
+      default: return this.source?.status ?? '';
     }
   }
 
   get gitRepositoryLabel(): string {
+    if (this.imageSource) {
+      return this.imageSource.repository;
+    }
     const url = this.gitSource?.repo_url ?? '';
     const name = url.replace(/\.git$/, '').split('/').filter(part => part).pop() ?? url;
     return this.gitSource?.path ? `${name}/${this.gitSource.path}` : name;
   }
 
-  connectGitRepository(): void {
-    this.router.navigate(['/git-sources'], { queryParams: { package: this.packageName } });
+  shortDigest(digest?: string | null): string {
+    return digest ? digest.replace(/^sha256:/, '').substring(0, 12) : '';
+  }
+
+  connectSource(tab: 'git' | 'images'): void {
+    this.router.navigate(['/sources'], { queryParams: { tab, package: this.packageName } });
   }
 
   async syncFromGit(): Promise<void> {
-    if (!this.gitSource) {
+    if (!this.source) {
       return;
     }
     this.gitSyncing = true;
     try {
-      const result = await this.gitSourceService.syncAsync(this.gitSource.id);
-      this.gitSource = result.source;
+      let result: { action: string; version: string; tag: string };
+      if (this.gitSource) {
+        const gitResult = await this.gitSourceService.syncAsync(this.gitSource.id);
+        this.gitSource = gitResult.source;
+        result = gitResult;
+      } else {
+        const imageResult = await this.imageSourceService.syncAsync(this.imageSource!.id);
+        this.imageSource = imageResult.source;
+        result = imageResult;
+      }
       const what = result.action === 'deployed' ? 'deployed' : 'set as default';
       this.messageService.add({ severity: 'success', summary: 'Synced', detail: `Version ${result.version} (${result.tag}) ${what}` });
       await this.loadPackages();

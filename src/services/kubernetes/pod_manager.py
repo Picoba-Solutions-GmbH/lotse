@@ -65,9 +65,25 @@ class PodManager:
     @staticmethod
     def create_pod(api: client.CoreV1Api, namespace: str, pod_name: str, python_version: str,
                    env_vars: list[Environment], logger: Logger, volumes: list[VolumeMap],
-                   image: str | None, runtime: RuntimeType | None, empty_instance: bool):
-        if env_vars is None:
-            env_vars = []
+                   image: str | None, runtime: RuntimeType | None, empty_instance: bool,
+                   args: list[str] | None = None, image_pull_secrets: list[str] | None = None):
+        pod_manifest = PodManager.build_pod_manifest(pod_name, python_version, env_vars, volumes, image, runtime,
+                                                     empty_instance, args, image_pull_secrets)
+        try:
+            with k8s_api_lock:
+                api.create_namespaced_pod(namespace=namespace, body=pod_manifest)
+            logger.info(f"Pod created successfully in namespace {namespace}")
+        except ApiException as e:
+            logger.error(f"Error creating pod: {e}")
+            raise
+
+    @staticmethod
+    def build_pod_manifest(pod_name: str, python_version: str, env_vars: list[Environment],
+                           volumes: list[VolumeMap], image: str | None, runtime: RuntimeType | None,
+                           empty_instance: bool, args: list[str] | None = None,
+                           image_pull_secrets: list[str] | None = None) -> dict:
+        is_container = runtime == RuntimeType.CONTAINER
+        env_vars = list(env_vars or [])
 
         env_vars.append(Environment("PYTHONUNBUFFERED", "1"))
         env_vars.append(Environment("PROXY_PREFIX", f"{config.OPENAPI_PREFIX_PATH}/proxy/{pod_name}/"))
@@ -81,14 +97,19 @@ class PodManager:
 
         env_var_list = [{"name": env_var.name, "value": env_var.value} for env_var in env_vars]
 
-        volume_mounts = [
-            {"name": "workdir", "mountPath": "/app"},
-            {"name": "venv", "mountPath": "/app/venv"}
-        ]
-        volumes_list = [
-            {"name": "workdir", "emptyDir": {}},
-            {"name": "venv", "emptyDir": {}}
-        ]
+        volume_mounts: list[dict] = []
+        volumes_list: list[dict] = []
+        if not is_container:
+            # package files and the venv are copied into these. A container image brings its own files,
+            # an empty /app would hide them (e.g. .NET images with WORKDIR /app).
+            volume_mounts += [
+                {"name": "workdir", "mountPath": "/app"},
+                {"name": "venv", "mountPath": "/app/venv"}
+            ]
+            volumes_list += [
+                {"name": "workdir", "emptyDir": {}},
+                {"name": "venv", "emptyDir": {}}
+            ]
 
         for volume in volumes:
             volume_mounts.append({
@@ -111,10 +132,20 @@ class PodManager:
             "imagePullPolicy": "IfNotPresent"
         }
 
-        if runtime != RuntimeType.CONTAINER or empty_instance:
+        if not is_container or empty_instance:
             container["command"] = ["sleep", "infinity"]
+        elif args:
+            # replaces the CMD of the image, its ENTRYPOINT stays
+            container["args"] = [str(arg) for arg in args]
 
-        pod_manifest = {
+        spec: dict = {
+            "containers": [container],
+            "volumes": volumes_list
+        }
+        if image_pull_secrets:
+            spec["imagePullSecrets"] = [{"name": name} for name in image_pull_secrets]
+
+        return {
             "apiVersion": "v1",
             "kind": "Pod",
             "metadata": {
@@ -123,19 +154,8 @@ class PodManager:
                     "app": "lotse-package",
                 }
             },
-            "spec": {
-                "containers": [container],
-                "volumes": volumes_list
-            }
+            "spec": spec
         }
-
-        try:
-            with k8s_api_lock:
-                api.create_namespaced_pod(namespace=namespace, body=pod_manifest)
-            logger.info(f"Pod created successfully in namespace {namespace}")
-        except ApiException as e:
-            logger.error(f"Error creating pod: {e}")
-            raise
 
     @staticmethod
     def delete_pod(api: client.CoreV1Api, namespace: str, pod_name: str,

@@ -20,7 +20,9 @@ class PackageEntity(Base):
     # relative paths of package files edited after deployment
     modified_files = Column(JSON, nullable=True)
     modified_at = Column(DateTime, nullable=True)
-    # set when the version was deployed by a Git source
+    # set when the version was deployed by a source: "git" (ref = tag, commit = commit)
+    # or "image" (ref = image tag, commit = image digest)
+    source_type = Column(String, nullable=True)
     source_id = Column(String, nullable=True)
     source_ref = Column(String, nullable=True)
     source_commit = Column(String, nullable=True)

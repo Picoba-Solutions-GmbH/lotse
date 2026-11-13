@@ -11,8 +11,9 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-import semver
-
+# re-exported: callers use git_client.parse_versions etc.
+from src.services.sync.versions import (  # noqa: F401  pylint: disable=unused-import
+    TagVersion, is_newer, parse_versions, version_of)
 from src.utils import config
 
 logger = logging.getLogger(__name__)
@@ -31,13 +32,6 @@ class GitError(Exception):
 class GitAuth:
     username: str | None = None
     token: str | None = None
-
-
-@dataclass(frozen=True)
-class TagVersion:
-    tag: str
-    version: str
-    commit: str
 
 
 # ---------------------------------------------------------------- validation
@@ -74,49 +68,19 @@ def normalize_path(path: str | None) -> str:
     return "/".join(parts)
 
 
-# ---------------------------------------------------------------- versions
-
-def version_of(tag: str | None, prefix: str) -> str | None:
-    """Version of a tag "<prefix><semver>", None if the tag doesn't follow that pattern."""
-    if not tag or not tag.startswith(prefix):
-        return None
-    candidate = tag[len(prefix):]
-    try:
-        semver.Version.parse(candidate, optional_minor_and_patch=True)
-    except ValueError:
-        return None
-    return candidate
-
-
-def _sort_key(version: str) -> semver.Version:
-    return semver.Version.parse(version, optional_minor_and_patch=True)
-
-
-def parse_versions(tags: dict[str, str], prefix: str) -> list[TagVersion]:
-    """Tags that are versions, newest first."""
-    versions = []
-    for tag, commit in tags.items():
-        version = version_of(tag, prefix)
-        if version is not None:
-            versions.append(TagVersion(tag=tag, version=version, commit=commit))
-    return sorted(versions, key=lambda v: _sort_key(v.version), reverse=True)
-
-
-def is_newer(version: str, than: str | None) -> bool:
-    if than is None:
-        return True
-    try:
-        return _sort_key(version) > _sort_key(than)
-    except ValueError:
-        return True
-
-
 # ---------------------------------------------------------------- git commands
 
 def _environment(auth: GitAuth | None) -> dict[str, str]:
     env = os.environ.copy()
+    # Never ask anyone for credentials. Besides the terminal prompt this covers askpass helpers inherited from
+    # the environment, e.g. VS Code's GIT_ASKPASS when Lotse runs from its terminal or debugger. An empty
+    # GIT_ASKPASS also overrides core.askPass of the user's git config.
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GCM_INTERACTIVE"] = "never"
+    env["GIT_ASKPASS"] = ""
+    env["SSH_ASKPASS"] = ""
+    for name in [n for n in env if n.startswith("VSCODE_GIT_")]:
+        del env[name]
     env["GIT_ALLOW_PROTOCOL"] = "https:http:file" if config.GIT_ALLOW_FILE_URLS else "https:http"
 
     settings: list[tuple[str, str]] = [

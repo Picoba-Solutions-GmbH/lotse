@@ -26,6 +26,7 @@ PackagePopulator = Callable[[Path, PackageConfig], None]
 @dataclass(frozen=True)
 class DeploymentSource:
     """Where a version came from, if it was not uploaded."""
+    type: str  # "git" or "image"
     source_id: str
     ref: str
     commit: str
@@ -91,6 +92,7 @@ def deploy_package(
         db, package_config.package_name, package_config.version,
         package_config.python_version,
         config_text, package_config.description, set_active,
+        source_type=source.type if source else None,
         source_id=source.source_id if source else None,
         source_ref=source.ref if source else None,
         source_commit=source.commit if source else None,

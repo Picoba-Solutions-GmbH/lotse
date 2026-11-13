@@ -1,0 +1,279 @@
+<div class="flex flex-col w-full">
+    <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div>
+            @if (!embedded) {
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">Image Sources</h1>
+            }
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                For .NET, Go and other compiled apps: CI pushes an image like
+                <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">myacr.azurecr.io/lotse/app:1.2.0</code>,
+                Lotse deploys version 1.2.0. Run settings (arguments, environment) are set in Lotse and carried over.
+            </p>
+        </div>
+        <div class="flex gap-2">
+            <p-button icon="pi pi-refresh" label="Reload" (onClick)="loadSources()" size="small" severity="secondary" />
+            <p-button icon="pi pi-plus" label="Connect Image" (onClick)="openCreateDialog()" size="small"
+                [disabled]="registries.length === 0"
+                [pTooltip]="registries.length === 0 ? 'An admin has to add a registry first' : ''" />
+        </div>
+    </div>
+
+    @if (!loading && registries.length === 0) {
+    <div
+        class="mb-4 flex gap-3 items-start rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
+        <i class="pi pi-info-circle mt-0.5 shrink-0 text-blue-500"></i>
+        <div>No container registry is set up yet. An admin can add one under <a routerLink="/registries"
+                class="underline font-medium">Registries</a>.</div>
+    </div>
+    }
+
+    <div
+        class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+        <p-table [value]="sources" [loading]="loading && sources.length === 0" styleClass="p-datatable-sm"
+            [paginator]="sources.length > 10" [rows]="10">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Package</th>
+                    <th>Image</th>
+                    <th>Status</th>
+                    <th>Latest tag</th>
+                    <th>Default version</th>
+                    <th>Last synced</th>
+                    <th>Last checked</th>
+                    <th class="text-right"></th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-source>
+                <tr>
+                    <td><a [routerLink]="['/packages', source.package_name]"
+                            class="font-semibold hover:text-blue-500">{{ source.package_name }}</a></td>
+                    <td class="max-w-80">
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <span class="text-sm font-mono truncate" [pTooltip]="source.image">{{ source.repository }}</span>
+                            <span class="text-xs text-gray-400"><i class="pi pi-box text-xs mr-1"></i>{{ source.registry_name
+                                }}@if (source.tag_prefix) { · tags <code>{{ source.tag_prefix }}*</code>}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-1.5">
+                            <p-tag [value]="statusLabel(source.status)" [severity]="statusSeverity(source.status)" />
+                            @if (source.auto_sync) {
+                            <i class="pi pi-bolt text-xs text-amber-500" pTooltip="Auto sync: new tags are deployed automatically"></i>
+                            }
+                        </div>
+                        @if (source.last_error) {
+                        <p class="text-xs text-red-500 mt-1 max-w-64 truncate cursor-help" [pTooltip]="source.last_error"
+                            tooltipPosition="bottom">{{ source.last_error }}</p>
+                        }
+                    </td>
+                    <td>
+                        @if (source.latest_tag) {
+                        <span class="font-mono text-sm">{{ source.latest_tag }}</span>
+                        <span class="text-xs text-gray-400 ml-1 font-mono" [pTooltip]="source.latest_digest">{{
+                            shortDigest(source.latest_digest) }}</span>
+                        } @else {<span class="text-gray-300 dark:text-gray-600">—</span>}
+                    </td>
+                    <td>
+                        @if (source.active_version) {<span class="font-mono text-sm">{{ source.active_version }}</span>}
+                        @else {<span class="text-gray-300 dark:text-gray-600">—</span>}
+                    </td>
+                    <td>
+                        @if (source.last_synced_tag) {
+                        <span class="font-mono text-sm">{{ source.last_synced_tag }}</span>
+                        @if (source.last_synced_at) {<p class="text-xs text-gray-400">{{ source.last_synced_at | date: "dd MMM yy, HH:mm" }}</p>}
+                        } @else {<span class="text-gray-300 dark:text-gray-600">—</span>}
+                    </td>
+                    <td><span class="text-xs text-gray-400">{{ source.last_checked_at ? (source.last_checked_at | date:
+                            "dd MMM yy, HH:mm:ss") : 'never' }}</span></td>
+                    <td class="text-right">
+                        <div class="flex justify-end gap-1">
+                            @if (source.can_edit) {
+                            <p-button icon="pi pi-refresh" [text]="true" size="small" pTooltip="Check for new tags now"
+                                tooltipPosition="left" [loading]="busy.has(source.id)" (onClick)="refresh(source)" />
+                            <p-button icon="pi pi-cloud-download" [text]="true" size="small"
+                                pTooltip="Sync: deploy the newest tag" tooltipPosition="left"
+                                [disabled]="busy.has(source.id) || !source.latest_tag" (onClick)="sync(source)" />
+                            }
+                            <p-button icon="pi pi-tags" [text]="true" size="small" pTooltip="Tags (deploy or roll back)"
+                                tooltipPosition="left" (onClick)="openTags(source)" />
+                            @if (source.can_edit) {
+                            <p-button icon="pi pi-link" [text]="true" size="small" pTooltip="Webhook" tooltipPosition="left"
+                                (onClick)="openWebhook(source)" />
+                            <p-button icon="pi pi-pencil" [text]="true" size="small" pTooltip="Edit" tooltipPosition="left"
+                                (onClick)="openEditDialog(source)" />
+                            <p-button icon="pi pi-trash" severity="danger" [text]="true" size="small"
+                                pTooltip="Disconnect" tooltipPosition="left" (onClick)="confirmDelete(source)" />
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="flex flex-col items-center py-12 text-center">
+                            @if (loading) {
+                            <i class="pi pi-spin pi-spinner text-2xl text-gray-400 mb-3"></i>
+                            } @else {
+                            <i class="pi pi-box text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No images connected</p>
+                            <p class="text-xs text-gray-400 mt-1">Connect an image, or let a registry register its images
+                                automatically.</p>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- Create / edit -->
+<p-dialog [(visible)]="showFormDialog" [header]="editing ? 'Edit Image Source' : 'Connect Image'" [modal]="true"
+    [style]="{ width: '600px' }" [closable]="!saving">
+    <div class="flex flex-col gap-4 pt-2">
+        <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Registry <span
+                        class="text-red-500">*</span></label>
+                <p-select [options]="registries" [(ngModel)]="form.registry_id" optionLabel="name" optionValue="id"
+                    placeholder="Select registry" styleClass="w-full" appendTo="body" [disabled]="saving"
+                    (onChange)="loadRepositories()" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Package</label>
+                <input pInputText [(ngModel)]="form.package_name" placeholder="(name of the image)"
+                    class="w-full text-sm" [disabled]="saving || !!editing" />
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Image <span
+                    class="text-red-500">*</span></label>
+            <p-autocomplete [(ngModel)]="form.repository" [suggestions]="repositorySuggestions"
+                (completeMethod)="searchRepositories($event)" (onSelect)="onRepositoryChosen()" (onBlur)="onRepositoryChosen()"
+                [dropdown]="repositories.length > 0" [placeholder]="selectedRegistry?.provider === 'dockerhub' ? 'e.g. nginx or myorg/app' : 'e.g. lotse/order-service'" styleClass="w-full"
+                inputStyleClass="w-full text-sm font-mono" appendTo="body" [disabled]="saving" />
+            <span class="text-xs text-gray-400">
+                @if (repositoriesLoading) { <i class="pi pi-spin pi-spinner text-xs"></i> Loading images… }
+                @else if (repositoriesError) { <span class="text-amber-500">{{ repositoriesError }}</span> Enter the path
+                by hand. }
+                @else if (repositories.length > 0) { {{ repositories.length }} image(s) found below
+                <code>{{ selectedRegistry?.discovery_path }}</code>. }
+                @else { Path of the image inside the registry. }
+            </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Tag prefix</label>
+                <input pInputText [(ngModel)]="form.tag_prefix" placeholder="(none)" class="w-full text-sm font-mono"
+                    [disabled]="saving" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="imgPoll">Check every</label>
+                <p-inputnumber [(ngModel)]="form.poll_interval_seconds" inputId="imgPoll" [min]="30" [max]="86400"
+                    [step]="30" suffix=" s" inputStyleClass="w-full text-sm" [disabled]="saving" />
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 -mt-2">Deploys tags like <code>{{ imagePreview }}</code> as version
+            <code>1.2.0</code>. Tags that aren't versions (<code>latest</code>, <code>sha-…</code>) are ignored.</p>
+
+        <div class="flex items-start gap-3">
+            <p-toggleswitch [(ngModel)]="form.auto_sync" inputId="imgAutoSync" [disabled]="saving" />
+            <label for="imgAutoSync" class="cursor-pointer">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Auto sync</span>
+                <span class="block text-xs text-gray-400">Deploy new tags automatically and make them the default.</span>
+            </label>
+        </div>
+        <div class="flex items-start gap-3">
+            <p-toggleswitch [(ngModel)]="form.prune_previous" inputId="imgPrune" [disabled]="saving" />
+            <label for="imgPrune" class="cursor-pointer">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Delete previous versions</span>
+                <span class="block text-xs text-gray-400">Keep only the newest version after each sync.</span>
+            </label>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="showFormDialog = false" [disabled]="saving" />
+        <p-button [label]="editing ? 'Save Changes' : 'Connect'" icon="pi pi-check" (onClick)="save()" [loading]="saving" />
+    </ng-template>
+</p-dialog>
+
+<!-- Tags -->
+<p-dialog [(visible)]="showTagsDialog" [header]="'Tags of ' + (tagsSource?.image ?? '')" [modal]="true"
+    [style]="{ width: '640px' }">
+    @if (tagsSource) {
+    <p class="text-xs text-gray-400 mb-3">Version tags, newest first. Deploying an older tag makes it the default
+        version (roll back).</p>
+    <p-table [value]="tags" [loading]="tagsLoading" styleClass="p-datatable-sm" [scrollable]="true" scrollHeight="400px">
+        <ng-template pTemplate="header">
+            <tr>
+                <th>Tag</th>
+                <th>Deployed digest</th>
+                <th>In Lotse</th>
+                <th class="text-right"></th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-tag>
+            <tr>
+                <td class="font-mono text-sm">{{ tag.tag }}</td>
+                <td class="font-mono text-xs text-gray-400" [pTooltip]="tag.commit">{{ shortDigest(tag.commit) }}</td>
+                <td>
+                    @if (tag.active) { <p-tag value="Default" severity="success" /> }
+                    @else if (tag.deployed) { <p-tag value="Deployed" severity="secondary" /> }
+                    @else { <span class="text-gray-300 dark:text-gray-600">—</span> }
+                </td>
+                <td class="text-right">
+                    @if (tagsSource.can_edit && !tag.active) {
+                    <p-button [label]="tag.deployed ? 'Make default' : 'Deploy'" size="small" [text]="true"
+                        [loading]="busy.has(tagsSource.id)" (onClick)="sync(tagsSource, tag.tag)" />
+                    }
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr><td colspan="4" class="text-center text-sm text-gray-400 py-6">@if (!tagsLoading) { No version tags
+                    yet. }</td></tr>
+        </ng-template>
+    </p-table>
+    }
+</p-dialog>
+
+<!-- Webhook -->
+<p-dialog [(visible)]="showWebhookDialog" header="Webhook" [modal]="true" [style]="{ width: '620px' }">
+    @if (webhookSource) {
+    <div class="flex flex-col gap-4 text-sm">
+        <p class="text-gray-500 dark:text-gray-400">Lotse checks the registry every {{ webhookSource.poll_interval_seconds
+            }} s. A webhook makes it check right after a push, if the registry can reach Lotse.</p>
+        <div class="flex flex-col gap-1.5">
+            <label class="text-xs text-gray-400 uppercase tracking-wide">URL</label>
+            <div class="flex gap-1">
+                <code class="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1.5 rounded break-all">{{
+                    webhookUrl(webhookSource) }}</code>
+                <p-button icon="pi pi-copy" [text]="true" size="small" (onClick)="copy(webhookUrl(webhookSource), 'URL')" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+            <label class="text-xs text-gray-400 uppercase tracking-wide">Token / secret</label>
+            <div class="flex gap-1">
+                <code class="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1.5 rounded break-all">{{
+                    webhookSource.webhook_token }}</code>
+                <p-button icon="pi pi-copy" [text]="true" size="small" (onClick)="copy(webhookSource.webhook_token, 'Token')" />
+            </div>
+        </div>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 px-4 py-3">
+            <ul class="list-disc pl-4 space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+                <li><b>Azure Container Registry:</b> Webhooks → Add, action "push", scope
+                    <code>{{ webhookSource.repository }}:*</code>, custom header <code>X-Lotse-Token: &lt;token&gt;</code>.</li>
+                <li><b>GitHub (ghcr.io):</b> repository or organization webhook, event "Packages", secret = token.</li>
+                <li><b>Docker Hub:</b> repository → Webhooks, URL = <code>&lt;URL&gt;?token=&lt;token&gt;</code>.</li>
+                <li><b>CI step after the push:</b> <code>curl -X POST -H "X-Lotse-Token: &lt;token&gt;" &lt;URL&gt;</code></li>
+            </ul>
+        </div>
+    </div>
+    }
+</p-dialog>
+
+<p-toast />
+<p-confirmDialog />

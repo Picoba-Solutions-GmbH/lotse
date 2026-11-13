@@ -1,0 +1,277 @@
+<ng-container *hasRole="[Role.ADMIN]">
+    <div class="flex flex-col w-full min-h-full">
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-1">Registries</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Container registries Lotse lists images of and pulls them from. Images below the discovery path
+                    can become packages automatically.
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <p-button icon="pi pi-refresh" label="Refresh" (onClick)="loadRegistries()" size="small" severity="secondary" />
+                <p-button icon="pi pi-plus" label="Add Registry" (onClick)="openCreateDialog()" size="small" />
+            </div>
+        </div>
+
+        <div
+            class="bg-[var(--p-content-background)] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+            <p-table [value]="registries" [loading]="loading" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Name</th>
+                        <th>Registry</th>
+                        <th>Pull access</th>
+                        <th>Discovery</th>
+                        <th>Images</th>
+                        <th class="text-right"></th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-registry>
+                    <tr>
+                        <td>
+                            <span class="font-semibold">{{ registry.name }}</span>
+                            <p class="text-xs text-gray-400">{{ providerLabel(registry.provider) }}</p>
+                        </td>
+                        <td>
+                            <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{{ registry.host }}</code>
+                            @if (registry.has_token) {
+                            <i class="pi pi-lock text-xs text-gray-400 ml-1" [pTooltip]="'Credentials of ' + (registry.username || 'token')"></i>
+                            }
+                        </td>
+                        <td>
+                            <span class="text-sm">{{ pullSecretLabel(registry) }}</span>
+                            @if (registry.effective_pull_secret) {
+                            <p class="text-xs text-gray-400 font-mono">{{ registry.effective_pull_secret }}</p>
+                            }
+                        </td>
+                        <td>
+                            @if (registry.discovery_path) {
+                            <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{{ registry.discovery_path }}/*</code>
+                            @if (registry.auto_register) {
+                            <p-tag value="auto-register" severity="info" styleClass="ml-1 text-xs" />
+                            }
+                            @if (registry.last_discovered_at) {
+                            <p class="text-xs text-gray-400 mt-0.5">checked {{ registry.last_discovered_at | date: "dd MMM, HH:mm" }}</p>
+                            }
+                            } @else {
+                            <span class="text-gray-300 dark:text-gray-600">—</span>
+                            }
+                            @if (registry.last_error) {
+                            <p class="text-xs text-amber-600 mt-1 max-w-72 truncate cursor-help" [pTooltip]="registry.last_error">{{
+                                registry.last_error }}</p>
+                            }
+                        </td>
+                        <td><span class="text-sm">{{ registry.image_source_count }}</span></td>
+                        <td class="text-right">
+                            <div class="flex justify-end gap-1">
+                                @if (registry.discovery_path) {
+                                <p-button icon="pi pi-images" [text]="true" size="small" pTooltip="Images in this registry"
+                                    tooltipPosition="left" (onClick)="openImages(registry)" />
+                                }
+                                <p-button icon="pi pi-pencil" [text]="true" size="small" pTooltip="Edit" tooltipPosition="left"
+                                    (onClick)="openEditDialog(registry)" />
+                                <p-button icon="pi pi-trash" severity="danger" [text]="true" size="small" pTooltip="Delete"
+                                    tooltipPosition="left" (onClick)="confirmDelete(registry)" />
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6">
+                            <div class="flex flex-col items-center py-12 text-center">
+                                <i class="pi pi-box text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No registries</p>
+                                <p class="text-xs text-gray-400 mt-1">Add the registry your CI pushes images to.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <!-- Create / edit -->
+    <p-dialog [(visible)]="showFormDialog" [header]="editing ? 'Edit Registry' : 'Add Registry'" [modal]="true"
+        [style]="{ width: '640px' }" [closable]="!saving">
+        <div class="flex flex-col gap-4 pt-2">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Name <span class="text-red-500">*</span></label>
+                    <input pInputText [(ngModel)]="form.name" placeholder="e.g. company-acr" class="w-full text-sm" [disabled]="saving" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Provider</label>
+                    <p-select [options]="providers" [(ngModel)]="form.provider" optionLabel="label" optionValue="value"
+                        styleClass="w-full" appendTo="body" [disabled]="saving" (onChange)="onProviderChange()" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Host <span class="text-red-500">*</span></label>
+                    <input pInputText [(ngModel)]="form.host" [placeholder]="provider.host" class="w-full text-sm font-mono" [disabled]="saving" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Discovery path</label>
+                    <input pInputText [(ngModel)]="form.discovery_path" [placeholder]="provider.pathHint"
+                        class="w-full text-sm font-mono" [disabled]="saving" />
+                </div>
+            </div>
+            <span class="text-xs text-gray-400 -mt-2">Images below the discovery path (e.g. <code>{{ form.host || provider.host
+                }}/{{ form.discovery_path || 'lotse' }}/order-service</code>) are offered as packages. Leave it empty to
+                add images one by one.</span>
+            @if (needsApiUrl || form.api_url) {
+            <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">GitLab URL</label>
+                <input pInputText [(ngModel)]="form.api_url" placeholder="https://gitlab.example.com" class="w-full text-sm font-mono"
+                    [disabled]="saving" />
+                <span class="text-xs text-gray-400">Self-hosted GitLab: used to list the images of a group.</span>
+            </div>
+            }
+
+            <hr class="border-gray-200 dark:border-gray-700" />
+            <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credentials</p>
+                <p class="text-xs text-gray-400 mb-3">{{ provider.tokenHint }} Stored as Kubernetes secret.</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <input pInputText [(ngModel)]="form.username" placeholder="Username" class="w-full text-sm" [disabled]="saving" />
+                    <div>
+                        <p-password [(ngModel)]="form.token" [feedback]="false" [toggleMask]="true" styleClass="w-full"
+                            inputStyleClass="w-full text-sm" [disabled]="saving || form.clear_token"
+                            [placeholder]="editing?.has_token ? '(unchanged)' : 'Token / password'" />
+                        @if (editing?.has_token) {
+                        <div class="flex items-center gap-2 mt-1">
+                            <p-checkbox [(ngModel)]="form.clear_token" [binary]="true" inputId="regClearToken" />
+                            <label for="regClearToken" class="text-xs cursor-pointer">Remove stored credentials</label>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">How package pods pull the images</p>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-start gap-2">
+                        <p-radioButton name="pullMode" value="none" [(ngModel)]="form.pull_secret_mode" inputId="pullNone" />
+                        <label for="pullNone" class="text-sm cursor-pointer">Cluster already has access
+                            <span class="block text-xs text-gray-400">e.g. AKS attached to the ACR, or credentials on the nodes</span></label>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <p-radioButton name="pullMode" value="lotse" [(ngModel)]="form.pull_secret_mode" inputId="pullLotse" />
+                        <label for="pullLotse" class="text-sm cursor-pointer">Use the credentials above as imagePullSecret
+                            <span class="block text-xs text-gray-400">Lotse creates and updates the pull secret</span></label>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <p-radioButton name="pullMode" value="existing" [(ngModel)]="form.pull_secret_mode" inputId="pullExisting" />
+                        <label for="pullExisting" class="text-sm cursor-pointer">Existing pull secret in the package namespace</label>
+                    </div>
+                    @if (form.pull_secret_mode === 'existing') {
+                    <input pInputText [(ngModel)]="form.pull_secret_name" placeholder="secret name" class="w-full text-sm font-mono ml-6"
+                        [disabled]="saving" />
+                    }
+                </div>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700" />
+            <div class="flex items-start gap-3">
+                <p-toggleswitch [(ngModel)]="form.auto_register" inputId="regAuto" [disabled]="saving || !form.discovery_path" />
+                <label for="regAuto" class="cursor-pointer">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Register new images automatically</span>
+                    <span class="block text-xs text-gray-400">Every new image below the discovery path becomes a package
+                        (named like the image), checked every</span>
+                </label>
+                <p-inputnumber [(ngModel)]="form.poll_interval_seconds" [min]="60" [max]="86400" [step]="60" suffix=" s"
+                    inputStyleClass="w-24 text-sm" [disabled]="saving || !form.auto_register" />
+            </div>
+            <div class="flex items-start gap-3">
+                <p-toggleswitch [(ngModel)]="form.default_auto_sync" inputId="regAutoSync" [disabled]="saving" />
+                <label for="regAutoSync" class="cursor-pointer">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Auto sync new packages</span>
+                    <span class="block text-xs text-gray-400">Packages registered from this registry deploy new tags
+                        automatically.</span>
+                </label>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Connection</p>
+                    <p-button icon="pi pi-play" label="Test" size="small" severity="secondary" [loading]="testing"
+                        (onClick)="test()" [disabled]="saving" />
+                </div>
+                @if (testResult) {
+                <div class="mt-2 text-sm flex items-start gap-2" [class.text-green-600]="testResult.success"
+                    [class.text-red-600]="!testResult.success">
+                    <i class="mt-0.5" [class]="testResult.success ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+                    <span class="whitespace-pre-wrap break-all">{{ testResult.message }}</span>
+                </div>
+                @if (testResult.repositories.length > 0) {
+                <div class="mt-2 flex flex-wrap gap-1">
+                    @for (repository of testResult.repositories; track repository) {
+                    <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{{ repository }}</code>
+                    }
+                </div>
+                }
+                } @else {
+                <p class="text-xs text-gray-400 mt-1">Logs in and lists the images below the discovery path.</p>
+                }
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="showFormDialog = false" [disabled]="saving" />
+            <p-button [label]="editing ? 'Save Changes' : 'Add'" icon="pi pi-check" (onClick)="save()" [loading]="saving" />
+        </ng-template>
+    </p-dialog>
+
+    <!-- Images -->
+    <p-dialog [(visible)]="showImagesDialog" [header]="'Images in ' + (imagesRegistry?.name ?? '')" [modal]="true"
+        [style]="{ width: '700px' }">
+        <div class="flex items-center justify-between mb-3">
+            <p class="text-xs text-gray-400">Below <code>{{ imagesRegistry?.host }}/{{ imagesRegistry?.discovery_path }}</code>.
+                Connecting an image makes it a package that deploys its version tags.</p>
+            <p-button label="Connect all new" icon="pi pi-plus" size="small" severity="secondary" [loading]="discovering"
+                (onClick)="registerAll()" />
+        </div>
+        <p-table [value]="images" [loading]="imagesLoading" styleClass="p-datatable-sm" [scrollable]="true" scrollHeight="420px">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Image</th>
+                    <th>Package</th>
+                    <th class="text-right"></th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-image>
+                <tr>
+                    <td class="font-mono text-sm">{{ image.repository }}</td>
+                    <td>
+                        @if (image.registered_as) {
+                        <p-tag [value]="image.registered_as" severity="success" />
+                        } @else if (image.name_taken) {
+                        <span class="text-xs text-amber-600" pTooltip="A package with this name is already connected to another source">
+                            {{ image.package_name }} (name taken)</span>
+                        } @else {
+                        <span class="text-sm text-gray-400">{{ image.package_name }}</span>
+                        }
+                    </td>
+                    <td class="text-right">
+                        @if (!image.registered_as) {
+                        @if (image.name_taken) {
+                        <p-button label="Connect as…" size="small" [text]="true" (onClick)="connectWithOtherName(image)" />
+                        } @else {
+                        <p-button label="Connect" size="small" [text]="true" [loading]="adding.has(image.repository)"
+                            (onClick)="addImage(image)" />
+                        }
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr><td colspan="3" class="text-center text-sm text-gray-400 py-6">@if (!imagesLoading) { No images found. }</td></tr>
+            </ng-template>
+        </p-table>
+    </p-dialog>
+
+    <p-toast />
+    <p-confirmDialog />
+</ng-container>

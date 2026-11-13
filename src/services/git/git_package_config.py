@@ -1,14 +1,14 @@
 """Turns the config.yaml of a Git checkout into the config of a deployed version."""
+import re
+
 import yaml
 
 from src.misc.runtime_type import RuntimeType
 from src.models.yaml_config import parse_config
+from src.services.sync.common import SyncConfigError
 
 CONFIG_FILE_NAMES = ("config.yaml", "config.yml")
-
-
-class SyncConfigError(Exception):
-    """The content of the repository can't be deployed. Retrying won't help until it changes."""
+_VERSION_PLACEHOLDER = re.compile(r"\{\{\s*version\s*\}\}")
 
 
 def prepare_config(config_text: str, package_name: str, version: str, previous_config: str | None) -> str:
@@ -36,6 +36,10 @@ def prepare_config(config_text: str, package_name: str, version: str, previous_c
 
     data["package_name"] = package_name
     data["version"] = version
+    image = data.get("image")
+    if isinstance(image, str):
+        # image: myacr.azurecr.io/lotse/app:{{version}} -> the image CI built for this tag
+        data["image"] = _VERSION_PLACEHOLDER.sub(version, image)
     if previous_config:
         inherit_environment(data, previous_config)
 

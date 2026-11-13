@@ -10,53 +10,40 @@ deploy the same source at the same time, even with several Lotse replicas.
 import logging
 import os
 import shutil
-import stat
 import threading
-import time
 import uuid
-import zlib
-from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
 
-from fastapi import HTTPException
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.authentication.schemas_authentication import SYSTEM_ADMIN
-from src.database.database_access import SessionLocal, engine
+from src.database.database_access import SessionLocal
 from src.database.models.git_source_entity import GitSourceEntity
 from src.database.repositories.git_source_repository import \
     GitSourceRepository
 from src.database.repositories.package_repository import PackageRepository
+from src.services import image_sync_service as image_sync
 from src.services import package_deploy_service as deployment
 from src.services.git import git_client, git_credentials
 from src.services.git.git_client import GitAuth, TagVersion
 from src.services.git.git_package_config import (CONFIG_FILE_NAMES,
-                                                 SyncConfigError,
                                                  prepare_config)
+from src.services.sync import common
+from src.services.sync.common import (SourceBusyError,  # noqa: F401  (re-exported)
+                                      SyncConfigError, SyncStatus,
+                                      describe_error)
+from src.services.sync.versions import baseline_tag  # noqa: F401  (re-exported)
 from src.utils import config
 
 logger = logging.getLogger(__name__)
 
-# first key of the two-key advisory lock, the second one is derived from the source id
-_LOCK_CLASS = 7_452
 _IGNORED_NAMES = {".git", "__pycache__"}
-_MAX_ERROR_LENGTH = 2000
 
-
-class SourceBusyError(Exception):
-    """Another check or sync of the same source is running."""
-
-
-class SyncStatus:
-    UNKNOWN = "Unknown"
-    NO_TAGS = "NoTags"
-    SYNCED = "Synced"
-    OUT_OF_SYNC = "OutOfSync"
-    ERROR = "Error"
+_source_lock = common.source_lock
+_is_permanent = common.is_permanent
+_remove_tree = common.remove_tree
 
 
 @dataclass
@@ -69,47 +56,6 @@ class SyncResult:
 
 
 # ---------------------------------------------------------------- helpers
-
-@contextmanager
-def _source_lock(source_id: str) -> Iterator[bool]:
-    key = zlib.crc32(source_id.encode()) & 0x7FFFFFFF
-    with engine.connect() as connection:
-        acquired = connection.execute(
-            text("SELECT pg_try_advisory_lock(:a, :b)"), {"a": _LOCK_CLASS, "b": key}).scalar()
-        # end the transaction right away, the lock belongs to the session. An open transaction would
-        # block schema migrations of other instances while a slow clone runs.
-        connection.commit()
-        try:
-            yield bool(acquired)
-        finally:
-            if acquired:
-                connection.execute(text("SELECT pg_advisory_unlock(:a, :b)"), {"a": _LOCK_CLASS, "b": key})
-                connection.commit()
-
-
-def describe_error(error: Exception) -> str:
-    message = str(error.detail) if isinstance(error, HTTPException) else str(error)
-    return (message or type(error).__name__)[:_MAX_ERROR_LENGTH]
-
-
-def _is_permanent(error: Exception) -> bool:
-    """Errors caused by the content of the repository. Retrying the same commit would fail again."""
-    return isinstance(error, (SyncConfigError, HTTPException))
-
-
-def _remove_tree(path: Path) -> None:
-    def make_writable_and_retry(function, failed_path, _):
-        # git marks its object files read-only, which makes deleting them fail on Windows
-        os.chmod(failed_path, stat.S_IWRITE)
-        function(failed_path)
-
-    if not path.exists():
-        return
-    try:
-        shutil.rmtree(path, onexc=make_writable_and_retry)
-    except OSError as e:
-        logger.warning("Could not remove %s: %s", path, e)
-
 
 def _ignore_for_copy(directory: str, names: list[str]) -> list[str]:
     # symlinks are skipped: they could point to files of the Lotse host that would end up in the pod
@@ -127,19 +73,8 @@ def list_versions(source: GitSourceEntity) -> list[TagVersion]:
 
 
 def compute_status(source: GitSourceEntity, active_version: str | None) -> str:
-    if source.last_checked_at is None:
-        return SyncStatus.UNKNOWN
-    if source.last_error:
-        return SyncStatus.ERROR
-    if not source.latest_tag:
-        return SyncStatus.NO_TAGS
-    latest_version = git_client.version_of(source.latest_tag, source.tag_prefix)  # type: ignore
-    return SyncStatus.SYNCED if latest_version == active_version else SyncStatus.OUT_OF_SYNC
-
-
-def baseline_tag(versions: list[TagVersion], deployed_versions: set[str]) -> TagVersion | None:
-    """Newest tag that is already deployed. Auto sync starts after it instead of failing on it."""
-    return next((v for v in versions if v.version in deployed_versions), None)
+    return common.compute_status(source.last_checked_at, source.last_error, source.latest_tag,  # type: ignore
+                                 source.tag_prefix, active_version)  # type: ignore
 
 
 # ---------------------------------------------------------------- check / sync
@@ -242,8 +177,12 @@ def _sync_locked(db: Session, source: GitSourceEntity, target: TagVersion) -> Sy
         _record_failure(db, source, e, commit=target.commit)
         raise
 
-    source.last_synced_tag = target.tag  # type: ignore
-    source.last_synced_commit = result.commit  # type: ignore
+    # the newest tag ever synced: deploying an older tag (roll back) must not make auto sync
+    # deploy the newer ones again
+    newest_synced = git_client.version_of(source.last_synced_tag, source.tag_prefix)  # type: ignore
+    if git_client.is_newer(target.version, newest_synced):
+        source.last_synced_tag = target.tag  # type: ignore
+        source.last_synced_commit = result.commit  # type: ignore
     source.last_synced_at = datetime.now()  # type: ignore
     source.last_error = None  # type: ignore
     source.last_failed_commit = None  # type: ignore
@@ -278,6 +217,8 @@ def _deploy_tag(db: Session, source: GitSourceEntity, target: TagVersion) -> Syn
         previous = PackageRepository.get_package(db, package_name)
         config_text = prepare_config(config_path.read_text(encoding="utf-8"), package_name, target.version,
                                      previous.config if previous else None)  # type: ignore
+        # runtime: container -> the image must exist, the version is pinned to its digest
+        config_text = image_sync.pin_image_digest(db, config_text)
 
         def copy_checkout(package_dir: Path, _) -> None:
             shutil.copytree(package_root, package_dir, dirs_exist_ok=True, ignore=_ignore_for_copy)
@@ -285,7 +226,8 @@ def _deploy_tag(db: Session, source: GitSourceEntity, target: TagVersion) -> Syn
         deployment.deploy_package(
             db, SYSTEM_ADMIN, config_text, copy_checkout,
             set_active=True, delete_previous_versions=bool(source.prune_previous),
-            source=deployment.DeploymentSource(source_id=source.id, ref=target.tag, commit=commit),  # type: ignore
+            source=deployment.DeploymentSource(type="git", source_id=source.id,  # type: ignore
+                                               ref=target.tag, commit=commit),
         )
         return SyncResult(action="deployed", tag=target.tag, version=target.version, commit=commit)
     finally:
@@ -307,27 +249,7 @@ def check_in_background(source_id: str) -> None:
 # ---------------------------------------------------------------- reconciler
 
 class GitSyncReconciler:
-    _lock = threading.Lock()
-    _started = False
-
-    @classmethod
-    def start(cls) -> None:
-        with cls._lock:
-            if cls._started:
-                return
-            cls._started = True
-        _remove_tree(Path(config.GIT_WORK_ROOT))  # leftovers of a crash
-        threading.Thread(target=cls._loop, daemon=True, name="git-sync").start()
-        logger.info("Git sync started, checking sources every %s s", config.GIT_SYNC_TICK_SECONDS)
-
-    @classmethod
-    def _loop(cls) -> None:
-        while True:
-            try:
-                cls.run_once()
-            except Exception:
-                logger.exception("Git sync iteration failed")
-            time.sleep(config.GIT_SYNC_TICK_SECONDS)
+    """Checks the Git sources that are due. Called by the SourceReconciler loop."""
 
     @staticmethod
     def run_once() -> None:

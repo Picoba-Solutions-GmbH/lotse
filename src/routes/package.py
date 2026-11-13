@@ -229,6 +229,7 @@ async def get_package_by_stage(
             version=package.version,
             is_default=package.active,
             is_modified=package.is_modified,
+            source_type=package.source_type,
             source_ref=package.source_ref,
             source_commit=package.source_commit
         )

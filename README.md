@@ -139,9 +139,37 @@ Instead of uploading a zip and a `config.yaml` for every version, connect a pack
   once in Lotse. Every synced version takes over empty values from the previous default version.
 - **Webhook (optional):** Lotse polls every 2 minutes by default. GitHub, Gitea and Azure DevOps webhooks trigger an
   immediate check (see the webhook dialog of a source).
-- Python and container packages are supported. Binary packages still have to be uploaded.
+- Python and container packages are supported. Compiled apps: see below.
 - Settings: `GIT_SYNC_ENABLED`, `GIT_SSL_CAINFO` (CA bundle for internal Git servers),
   `GIT_ALLOW_FILE_URLS` (local testing only).
+
+## 📦 Deploying container images (.NET, Go, …)
+
+Compiled apps are deployed as container images. CI builds and pushes the image, Lotse deploys it.
+
+1. An admin adds the registry under **Registries**: Azure Container Registry, GitHub (ghcr.io), GitLab, Docker Hub
+   or any other registry. Credentials are stored as a Kubernetes secret. Pods pull images either with the cluster's
+   own access, with a pull secret Lotse creates from the credentials, or with an existing pull secret.
+2. With a **discovery path** (e.g. `lotse`) and **register new images** on, every image below it becomes a package
+   automatically (`myacr.azurecr.io/lotse/order-service` → package `order-service`). Otherwise connect images one by
+   one under **Sources → Container images**.
+3. CI: `docker build -t myacr.azurecr.io/lotse/order-service:1.3.0 . && docker push …` → version `1.3.0` is
+   deployed, pinned to the image digest. Tags that aren't versions (`latest`, `sha-…`) are ignored.
+
+Arguments, environment variables (including secrets), volumes and the timeout are set in Lotse and carried over to
+every new image version. Run arguments are passed to the container as `args` (the image's `ENTRYPOINT` stays).
+
+**Alternative: deploy file in Git.** Keep the settings versioned in Git and let the Git tag pick the image:
+```yaml
+# config.yaml in a Git source
+package_name: order-service
+runtime: container
+image: myacr.azurecr.io/lotse/order-service:{{version}}
+```
+`git tag v1.3.0` deploys image tag `1.3.0`. If CI hasn't pushed the image yet, Lotse retries on the next check.
+
+Settings: `REGISTRY_CA_BUNDLE` (internal CA, defaults to `GIT_SSL_CAINFO`), `REGISTRY_INSECURE_HOSTS`
+(registries reached via plain http, comma separated).
 
 ## 🔐 Authentication
 

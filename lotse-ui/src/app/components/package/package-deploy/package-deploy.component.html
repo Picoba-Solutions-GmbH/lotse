@@ -67,13 +67,17 @@
                     versions</label>
             </div>
         </div>
-        <button type="button" (click)="deployFromGit()"
-            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700 cursor-pointer">
-            <i class="pi pi-sync text-sm"></i>
-            <span><b>Deploy from Git instead:</b> connect a repository once, then every pushed tag (e.g.
-                <code>v1.2.0</code>) is deployed without zip or config upload.</span>
-            <i class="pi pi-arrow-right ml-auto"></i>
-        </button>
+        <div class="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+            <p class="mb-1.5"><b>No more zips:</b> connect a source once, every new version tag is deployed.</p>
+            <div class="flex gap-2">
+                <button type="button" (click)="deployFromSource('git')"
+                    class="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer">
+                    <i class="pi pi-sync"></i> Git repository <span class="text-gray-400">(Python)</span></button>
+                <button type="button" (click)="deployFromSource('images')"
+                    class="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer">
+                    <i class="pi pi-box"></i> Container image <span class="text-gray-400">(.NET, Go, …)</span></button>
+            </div>
+        </div>
     </div>
     <ng-template pTemplate="footer">
         <p-button label="Cancel" (onClick)="showDeployDialog = false" [text]="true" severity="secondary"

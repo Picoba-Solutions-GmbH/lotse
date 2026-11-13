@@ -24,6 +24,7 @@ from src.services.kubernetes.pod_manager import PodManager
 from src.services.kubernetes.pod_port_manager import PodPortManager
 from src.services.kubernetes.runtimes import python_pod
 from src.services.package_service import PackageService
+from src.services.registry.pull_secrets import pull_secrets_for
 from src.utils import global_queue_handler
 from src.utils.name_generator import generate_name
 from src.utils.singleton_meta import SingletonMeta
@@ -89,12 +90,23 @@ class TaskManagerService(metaclass=SingletonMeta):
                         package_config
                     )
 
+            command = []
+            for arg in arguments:
+                if arg.name.startswith("--"):
+                    command.append(arg.name)
+                    command.append(str(arg.value))
+                else:
+                    command.append(arg.value)
+
             volume_maps = VolumeRepository.get_volume_maps(package_config.volumes)
             PodManager.create_pod(self.v1, self.namespace, task_id,
                                   package_info.package_entity.python_version,
                                   package_config.environment, task_logger, volume_maps,
                                   package_config.image, package_config.runtime,
-                                  empty_instance)
+                                  empty_instance,
+                                  # a container image gets the arguments as args, other runtimes on start
+                                  args=command if package_config.runtime == RuntimeType.CONTAINER else None,
+                                  image_pull_secrets=pull_secrets_for(package_config.image))
             asyncio.run(pod_api_wrapper.wait_for_pod_running(self.v1, self.namespace, task_id, task_logger))
 
             if package_config.runtime != RuntimeType.CONTAINER:
@@ -111,14 +123,6 @@ class TaskManagerService(metaclass=SingletonMeta):
                         package_name,
                         package_info
                     )
-
-            command = []
-            for arg in arguments:
-                if arg.name.startswith("--"):
-                    command.append(arg.name)
-                    command.append(str(arg.value))
-                else:
-                    command.append(arg.value)
 
             task_logger.info(f"Executing package: {package_name}")
             self.task_manager.update_task_status(

@@ -25,24 +25,25 @@
             <p-button label="Share" icon="pi pi-share-alt" (onClick)="showShareDialog = true" size="small"
                 severity="secondary" />
             }
-            @if (gitSource) {
+            @if (source) {
             <div class="flex items-center gap-2 pl-3 pr-1 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-[var(--p-content-background)]"
-                [pTooltip]="gitSource.last_error || gitSource.repo_url" tooltipPosition="bottom">
-                <i class="pi pi-sync text-xs text-gray-400"></i>
+                [pTooltip]="source.last_error || (gitSource ? gitSource.repo_url : imageSource?.image)" tooltipPosition="bottom">
+                <i class="text-xs text-gray-400" [class]="gitSource ? 'pi pi-sync' : 'pi pi-box'"></i>
                 <span class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ gitRepositoryLabel }}</span>
-                @if (gitSource.latest_tag) {
-                <span class="text-xs text-gray-400 font-mono">&#64;{{ gitSource.latest_tag }}</span>
+                @if (source.latest_tag) {
+                <span class="text-xs text-gray-400 font-mono">{{ gitSource ? '&#64;' : ':' }}{{ source.latest_tag }}</span>
                 }
                 <p-tag [value]="gitStatusLabel" [severity]="gitStatusSeverity" styleClass="text-xs" />
                 @if (permissions.edit) {
                 <p-button icon="pi pi-cloud-download" label="Sync" size="small" [text]="true" [loading]="gitSyncing"
-                    [disabled]="!gitSource.latest_tag" (onClick)="syncFromGit()"
+                    [disabled]="!source.latest_tag" (onClick)="syncFromGit()"
                     pTooltip="Deploy the newest tag" />
                 }
             </div>
             } @else if (permissions.edit) {
-            <p-button label="Connect Git" icon="pi pi-sync" (onClick)="connectGitRepository()" size="small"
-                severity="secondary" pTooltip="Deploy new versions by pushing Git tags" />
+            <p-button label="Connect" icon="pi pi-sync" (onClick)="connectMenu.toggle($event)" size="small"
+                severity="secondary" pTooltip="Deploy new versions from Git tags or container image tags" />
+            <p-menu #connectMenu [model]="connectItems" [popup]="true" appendTo="body" />
             }
             @if (permissions.edit) {
             <p-button label="Deploy New Version" [icon]="PrimeIcons.UPLOAD" (onClick)="showDeployPackageDialog()"
@@ -144,7 +145,12 @@
                             </div>
                             <span class="font-mono font-medium text-gray-900 dark:text-gray-100 text-sm">{{
                                 package.version }}</span>
-                            @if (package.source_ref) {
+                            @if (package.source_type === 'image') {
+                            <span [pTooltip]="'Deployed from image tag ' + package.source_ref + ', ' + package.source_commit"
+                                class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-px rounded-full font-mono">
+                                <i class="pi pi-box" style="font-size:9px"></i>{{ shortDigest(package.source_commit) }}
+                            </span>
+                            } @else if (package.source_ref) {
                             <span [pTooltip]="'Deployed from Git tag ' + package.source_ref + ', commit ' + package.source_commit"
                                 class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-px rounded-full font-mono">
                                 <i class="pi pi-sync" style="font-size:9px"></i>{{ package.source_commit?.substring(0, 7) }}

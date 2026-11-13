@@ -78,14 +78,19 @@ export class AppComponent implements OnInit {
       routerLink: 'live-coding'
     },
     {
-      label: 'Git Sources',
+      label: 'Sources',
       icon: PrimeIcons.SYNC,
-      routerLink: 'git-sources'
+      routerLink: 'sources'
     },
     {
       label: 'Cluster',
       icon: svglKubernetes,
       routerLink: 'cluster'
+    },
+    {
+      label: 'Registries',
+      icon: PrimeIcons.BOX,
+      routerLink: 'registries'
     },
     {
       label: 'Network Shares',
@@ -109,7 +114,7 @@ export class AppComponent implements OnInit {
     }
   ];
 
-  private readonly bottomRoutes = new Set(['cluster', 'network-shares', 'logs', 'users', 'backup']);
+  private readonly bottomRoutes = new Set(['cluster', 'registries', 'network-shares', 'logs', 'users', 'backup']);
   private loginDialogRef: DynamicDialogRef | null = null;
   username: string | null = null;
 

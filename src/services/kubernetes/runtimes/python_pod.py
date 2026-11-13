@@ -11,6 +11,7 @@ from src.services.kubernetes import pod_api_wrapper
 from src.services.kubernetes.pod_executor import PodExecutor
 from src.services.kubernetes.pod_file_operations import PodFileOperations
 from src.services.kubernetes.pod_manager import PodManager
+from src.services.registry.pull_secrets import pull_secrets_for
 from src.services.package_service import PackageInfo
 from src.utils.path_manager import PathManager
 
@@ -59,7 +60,8 @@ def prepare_environment(v1: client.CoreV1Api,
         setup_pod_name = f"{task_id}-setup"
         PodManager.create_pod(v1, namespace, setup_pod_name,
                               package_info.package_entity.python_version, list(package_config.environment),
-                              task_logger, [], package_config.image, RuntimeType.PYTHON, False)
+                              task_logger, [], package_config.image, RuntimeType.PYTHON, False,
+                              image_pull_secrets=pull_secrets_for(package_config.image))
         try:
             asyncio.run(pod_api_wrapper.wait_for_pod_running(v1, namespace, setup_pod_name, task_logger))
             PodFileOperations.copy_files_to_pod(namespace, setup_pod_name, str(package_info.package_dir), "/app")

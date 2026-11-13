@@ -66,6 +66,10 @@ GIT_SSL_CAINFO = os.getenv("GIT_SSL_CAINFO") or None
 # file:// repositories give access to the Lotse file system. Only meant for local testing.
 GIT_ALLOW_FILE_URLS = os.getenv("GIT_ALLOW_FILE_URLS", "false").lower() == "true"
 GIT_WORK_ROOT = os.path.join(HOME_PATH, "git-work")
+# Registries reached via plain http (comma separated hosts). localhost is always allowed.
+REGISTRY_INSECURE_HOSTS = {h.strip().lower() for h in os.getenv("REGISTRY_INSECURE_HOSTS", "").split(",") if h.strip()}
+# CA bundle for registries with certificates from an internal CA, defaults to GIT_SSL_CAINFO
+REGISTRY_CA_BUNDLE = os.getenv("REGISTRY_CA_BUNDLE") or GIT_SSL_CAINFO
 
 LDAP_SERVER = os.getenv('LDAP_SERVER')
 LDAP_ROOT_DN = os.getenv('LDAP_ROOT_DN')

@@ -1,11 +1,8 @@
 """Git sources: Lotse watches a repository and deploys new tags as package versions."""
-import hashlib
-import hmac
 import logging
 import secrets
 import uuid
 from datetime import datetime
-from typing import Callable, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
@@ -28,17 +25,15 @@ from src.routes.dtos.git_source_dto import (GitConnectionTestRequest,
                                             GitSourceUpdateRequest,
                                             GitSyncRequest, GitSyncResponse,
                                             GitTagResponse)
+from src.routes.sync_errors import call_sync
+from src.routes.webhook_auth import require_webhook_token
 from src.services import git_sync_service as git_sync
 from src.services import package_access_service as access
 from src.services.git import git_client, git_credentials
-from src.services.git.git_client import GitAuth, GitError, TagVersion
-from src.services.git.git_package_config import SyncConfigError
+from src.services.git.git_client import GitAuth, TagVersion
 
 router = APIRouter(prefix="/git-sources", tags=["git-sources"])
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
-
 
 # ---------------------------------------------------------------- helpers
 
@@ -90,27 +85,8 @@ def _validated_settings(settings: GitSourceSettings) -> tuple[str, str, str]:
     return url, path, (settings.tag_prefix or "").strip()
 
 
-async def _call_git(function: Callable[..., T], *args) -> T:
-    """Runs blocking git and sync calls in a worker thread and maps their errors to HTTP errors."""
-    try:
-        return await run_in_threadpool(function, *args)
-    except HTTPException:
-        raise
-    except git_sync.SourceBusyError:
-        raise HTTPException(status_code=409, detail="A check or sync of this source is already running")
-    except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except SyncConfigError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except GitError as e:
-        raise HTTPException(status_code=502, detail=f"Git: {e}")
-    except Exception as e:
-        logger.exception("Git operation failed")
-        raise HTTPException(status_code=500, detail=git_sync.describe_error(e))
-
-
 async def _list_versions(url: str, auth: GitAuth, prefix: str) -> list[TagVersion]:
-    tags = await _call_git(git_client.list_tags, url, auth)
+    tags = await call_sync(git_client.list_tags, url, auth)
     return git_client.parse_versions(tags, prefix)
 
 
@@ -267,7 +243,7 @@ async def update_git_source(
             # otherwise anyone who can edit could send the stored token to a server of their choice
             raise HTTPException(status_code=400,
                                 detail="Enter the token again (or remove it) when moving to a different server")
-        token = await _call_git(git_credentials.read_token, source.credential_secret)
+        token = await call_sync(git_credentials.read_token, source.credential_secret)
     versions = await _list_versions(url, GitAuth(username, token), prefix)
 
     if new_token:
@@ -314,7 +290,7 @@ async def list_tags(
 ):
     source = _get_or_404(db, source_id)
     access.require(db, user, source.package_name, Permission.VIEW)  # type: ignore
-    versions = await _call_git(git_sync.list_versions, source)
+    versions = await call_sync(git_sync.list_versions, source)
     packages = {str(p.version): p for p in PackageRepository.list_packages(db, source.package_name)}  # type: ignore
     return [
         GitTagResponse(tag=v.tag, version=v.version, commit=v.commit,
@@ -332,7 +308,7 @@ async def refresh_git_source(
 ):
     source = _get_or_404(db, source_id)
     access.require(db, user, source.package_name, Permission.EDIT)  # type: ignore
-    await _call_git(git_sync.check, source_id)
+    await call_sync(git_sync.check, source_id)
     db.expire_all()
     return _to_response(db, user, _get_or_404(db, source_id))
 
@@ -346,7 +322,7 @@ async def sync_git_source(
 ):
     source = _get_or_404(db, source_id)
     access.require(db, user, source.package_name, Permission.EDIT)  # type: ignore
-    result = await _call_git(git_sync.sync, source_id, request.tag)
+    result = await call_sync(git_sync.sync, source_id, request.tag)
     db.expire_all()
     return GitSyncResponse(action=result.action, tag=result.tag, version=result.version, commit=result.commit,
                            source=_to_response(db, user, _get_or_404(db, source_id)))
@@ -359,28 +335,8 @@ async def webhook(
     db: Session = Depends(get_db_session),
 ):
     """Triggers a check of the source. The payload is ignored, Lotse always asks the repository itself.
-
-    Authentication, one of:
-    - header `X-Lotse-Token: <token>` (Azure DevOps service hooks, Gitea, curl)
-    - GitHub/Gitea webhook secret = token (`X-Hub-Signature-256`)
-    - query parameter `?token=<token>`
-    """
+    Authentication: see `require_webhook_token`."""
     source = GitSourceRepository.get(db, source_id)
-    expected = str(source.webhook_token) if source else secrets.token_urlsafe(24)
-
-    token = request.headers.get("x-lotse-token") or request.query_params.get("token")
-    signature = request.headers.get("x-hub-signature-256")
-    if token:
-        valid = hmac.compare_digest(token.encode(), expected.encode())
-    elif signature:
-        body = await request.body()
-        digest = "sha256=" + hmac.new(expected.encode(), body, hashlib.sha256).hexdigest()
-        valid = hmac.compare_digest(signature.encode(), digest.encode())
-    else:
-        valid = False
-
-    if source is None or not valid:
-        raise HTTPException(status_code=401, detail="Invalid webhook token")
-
+    await require_webhook_token(request, str(source.webhook_token) if source else None)
     git_sync.check_in_background(source_id)
     return JSONResponse(status_code=202, content={"accepted": True})

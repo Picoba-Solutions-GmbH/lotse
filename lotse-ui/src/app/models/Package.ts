@@ -15,7 +15,8 @@ export type PackageDetail = PackageInfo & {
     version: string;
     is_default: boolean;
     is_modified?: boolean;
-    /** Git tag and commit, for versions deployed from a Git source */
+    /** versions deployed by a source: 'git' (tag + commit) or 'image' (image tag + digest) */
+    source_type?: 'git' | 'image' | null;
     source_ref?: string | null;
     source_commit?: string | null;
 }

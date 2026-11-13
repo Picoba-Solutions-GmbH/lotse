@@ -74,9 +74,9 @@ export class PackageDeployComponent {
         private router: Router,
     ) { }
 
-    deployFromGit(): void {
+    deployFromSource(tab: 'git' | 'images'): void {
         this.showDeployDialog = false;
-        this.router.navigate(['/git-sources'], { queryParams: { package: this.packageName ?? '' } });
+        this.router.navigate(['/sources'], { queryParams: { tab, package: this.packageName ?? '' } });
     }
 
     showDeployPackageDialog(): void {

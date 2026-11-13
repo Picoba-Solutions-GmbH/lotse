@@ -17,6 +17,7 @@ class PackageRepository:
         config: str,
         description: str | None = None,
         set_as_active: bool = False,
+        source_type: str | None = None,
         source_id: str | None = None,
         source_ref: str | None = None,
         source_commit: str | None = None
@@ -30,6 +31,7 @@ class PackageRepository:
             deployed_at=datetime.now(),
             active=set_as_active,
             config=config,
+            source_type=source_type,
             source_id=source_id,
             source_ref=source_ref,
             source_commit=source_commit
