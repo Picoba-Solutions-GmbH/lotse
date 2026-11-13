@@ -57,6 +57,16 @@ IS_DEBUG = os.getenv("VSCODE_DEBUG_MODE", "false").lower() == "true"
 ENABLE_AUTH = os.getenv("ENABLE_AUTH", "true").lower() == "true"
 LIVE_CODING_ENABLED = os.getenv("LIVE_CODING_ENABLED", "true").lower() == "true"
 
+# Git sync: Lotse polls registered Git repositories and deploys new tags as package versions.
+GIT_SYNC_ENABLED = os.getenv("GIT_SYNC_ENABLED", "true").lower() == "true"
+# How often the reconciler looks for sources that are due. Each source has its own poll interval.
+GIT_SYNC_TICK_SECONDS = int(os.getenv("GIT_SYNC_TICK_SECONDS", "30"))
+# CA bundle for Git servers with certificates from an internal CA
+GIT_SSL_CAINFO = os.getenv("GIT_SSL_CAINFO") or None
+# file:// repositories give access to the Lotse file system. Only meant for local testing.
+GIT_ALLOW_FILE_URLS = os.getenv("GIT_ALLOW_FILE_URLS", "false").lower() == "true"
+GIT_WORK_ROOT = os.path.join(HOME_PATH, "git-work")
+
 LDAP_SERVER = os.getenv('LDAP_SERVER')
 LDAP_ROOT_DN = os.getenv('LDAP_ROOT_DN')
 LDAP_DOMAIN = os.getenv('LDAP_DOMAIN')

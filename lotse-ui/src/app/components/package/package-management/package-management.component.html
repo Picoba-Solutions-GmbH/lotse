@@ -25,6 +25,25 @@
             <p-button label="Share" icon="pi pi-share-alt" (onClick)="showShareDialog = true" size="small"
                 severity="secondary" />
             }
+            @if (gitSource) {
+            <div class="flex items-center gap-2 pl-3 pr-1 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-[var(--p-content-background)]"
+                [pTooltip]="gitSource.last_error || gitSource.repo_url" tooltipPosition="bottom">
+                <i class="pi pi-sync text-xs text-gray-400"></i>
+                <span class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ gitRepositoryLabel }}</span>
+                @if (gitSource.latest_tag) {
+                <span class="text-xs text-gray-400 font-mono">&#64;{{ gitSource.latest_tag }}</span>
+                }
+                <p-tag [value]="gitStatusLabel" [severity]="gitStatusSeverity" styleClass="text-xs" />
+                @if (permissions.edit) {
+                <p-button icon="pi pi-cloud-download" label="Sync" size="small" [text]="true" [loading]="gitSyncing"
+                    [disabled]="!gitSource.latest_tag" (onClick)="syncFromGit()"
+                    pTooltip="Deploy the newest tag" />
+                }
+            </div>
+            } @else if (permissions.edit) {
+            <p-button label="Connect Git" icon="pi pi-sync" (onClick)="connectGitRepository()" size="small"
+                severity="secondary" pTooltip="Deploy new versions by pushing Git tags" />
+            }
             @if (permissions.edit) {
             <p-button label="Deploy New Version" [icon]="PrimeIcons.UPLOAD" (onClick)="showDeployPackageDialog()"
                 size="small" />
@@ -94,7 +113,7 @@
                     placeholder="Search versions..."
                     class="pl-8 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 w-52 transition-all" />
             </div>
-            <p-button [icon]="PrimeIcons.REFRESH" (onClick)="loadPackages()" [text]="true" size="small"
+            <p-button [icon]="PrimeIcons.REFRESH" (onClick)="loadPackages(); loadGitSource()" [text]="true" size="small"
                 severity="secondary" pTooltip="Refresh" />
         </div>
 
@@ -125,6 +144,12 @@
                             </div>
                             <span class="font-mono font-medium text-gray-900 dark:text-gray-100 text-sm">{{
                                 package.version }}</span>
+                            @if (package.source_ref) {
+                            <span [pTooltip]="'Deployed from Git tag ' + package.source_ref + ', commit ' + package.source_commit"
+                                class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-px rounded-full font-mono">
+                                <i class="pi pi-sync" style="font-size:9px"></i>{{ package.source_commit?.substring(0, 7) }}
+                            </span>
+                            }
                             @if (package.is_modified) {
                             <span pTooltip="Modified after deployment (environment, arguments or files)"
                                 class="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-1.5 py-px rounded-full">Modified</span>

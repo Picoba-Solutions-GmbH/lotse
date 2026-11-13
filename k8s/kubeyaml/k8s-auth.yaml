@@ -17,7 +17,8 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["list"]
+    # get/create/update/delete: access tokens of Git sources and credentials of network shares
+    verbs: ["get", "list", "create", "update", "delete"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
     verbs: ["get", "list", "watch"]

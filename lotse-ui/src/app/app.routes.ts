@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { BackupComponent } from './components/backup/backup.component';
 import { ClusterComponent } from './components/cluster/cluster.component';
+import { GitSourcesComponent } from './components/git-sources/git-sources.component';
 import { NamespaceResourcesComponent } from './components/cluster/namespace-resources/namespace-resources.component';
 import { LogsComponent } from './components/logs/logs.component';
 import { NetworkSharesComponent } from './components/network-shares/network-shares.component';
@@ -37,6 +38,10 @@ export const routes: Routes = [
     {
         path: 'live-coding',
         component: PackageLiveCodeComponent,
+    },
+    {
+        path: 'git-sources',
+        component: GitSourcesComponent,
     },
     {
         path: 'cluster',

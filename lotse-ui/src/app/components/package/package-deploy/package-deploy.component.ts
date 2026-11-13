@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MessageService, PrimeIcons } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -70,7 +71,13 @@ export class PackageDeployComponent {
     constructor(
         private packageService: PackageService,
         private messageService: MessageService,
+        private router: Router,
     ) { }
+
+    deployFromGit(): void {
+        this.showDeployDialog = false;
+        this.router.navigate(['/git-sources'], { queryParams: { package: this.packageName ?? '' } });
+    }
 
     showDeployPackageDialog(): void {
         this.showDeployDialog = true;

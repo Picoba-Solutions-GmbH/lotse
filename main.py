@@ -13,12 +13,13 @@ from fastapi.staticfiles import StaticFiles
 import src.utils.service_registry as service_registry
 from src.database import seed_users
 from src.database.database_access import get_db_session, init_db
-from src.routes import (authentication, backup, cluster, execute, feature_flag, logs,
-                        network_share, package, package_access, package_live,
-                        pod_terminal, proxy, status, task, users, volume,
-                        websocket)
+from src.routes import (authentication, backup, cluster, execute, feature_flag,
+                        git_source, logs, network_share, package,
+                        package_access, package_live, pod_terminal, proxy,
+                        status, task, users, volume, websocket)
 from src.routes.proxy import handle_proxy_404_middleware
 from src.services.activemq_service import ActiveMQService
+from src.services.git_sync_service import GitSyncReconciler
 from src.services.task_manager_service import TaskManagerService
 from src.utils import config
 from src.utils.log_store import setup_log_handler
@@ -49,6 +50,9 @@ async def lifespan(_: FastAPI):
     if config.ACTIVEMQ_ACTIVE:
         logger.info("Starting ActiveMQ listener...")
         threading.Thread(target=get_service_instance(ActiveMQService).start_listener, daemon=True).start()
+
+    if config.GIT_SYNC_ENABLED:
+        GitSyncReconciler.start()
     yield
 
 
@@ -71,6 +75,7 @@ app.include_router(authentication.router)
 app.include_router(backup.router)
 app.include_router(cluster.router)
 app.include_router(feature_flag.router)
+app.include_router(git_source.router)
 app.include_router(execute.router)
 app.include_router(logs.router)
 app.include_router(package.router)

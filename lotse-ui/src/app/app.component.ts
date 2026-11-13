@@ -78,6 +78,11 @@ export class AppComponent implements OnInit {
       routerLink: 'live-coding'
     },
     {
+      label: 'Git Sources',
+      icon: PrimeIcons.SYNC,
+      routerLink: 'git-sources'
+    },
+    {
       label: 'Cluster',
       icon: svglKubernetes,
       routerLink: 'cluster'

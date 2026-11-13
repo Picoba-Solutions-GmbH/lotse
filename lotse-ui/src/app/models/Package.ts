@@ -15,6 +15,9 @@ export type PackageDetail = PackageInfo & {
     version: string;
     is_default: boolean;
     is_modified?: boolean;
+    /** Git tag and commit, for versions deployed from a Git source */
+    source_ref?: string | null;
+    source_commit?: string | null;
 }
 
 export type PackageModifications = {

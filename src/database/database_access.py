@@ -35,9 +35,9 @@ def get_db_session() -> Generator[Session]:
 
 def import_models():
     # pylint: disable=import-outside-toplevel,unused-import
-    from src.database.models import (package_access_entity,  # noqa: F401
-                                     package_entity, task_entity, user_entity,
-                                     volume_entity)
+    from src.database.models import (git_source_entity,  # noqa: F401
+                                     package_access_entity, package_entity,
+                                     task_entity, user_entity, volume_entity)
 
 
 def init_db(retries=5, delay=2):

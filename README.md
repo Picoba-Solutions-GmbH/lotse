@@ -117,6 +117,32 @@ Every applied migration is recorded in the `migration_history` table (revision, 
 `alembic_version` holds the current revision. Databases created before migrations were introduced are detected
 on startup and marked as being on the initial migration (`0001_initial`).
 
+## 🔄 Deploying from Git
+
+Instead of uploading a zip and a `config.yaml` for every version, connect a package to a Git repository
+(**Git Sources** in the UI). Lotse checks the repository regularly and deploys new tags.
+
+1. Put the package into a repository (or a folder of a monorepo), exactly as you would zip it:
+   ```
+   my-package/
+     config.yaml        # same format as for uploads; the version is taken from the tag
+     main.py
+     requirements.txt
+   ```
+2. In Lotse, open **Git Sources → Connect Repository**. Enter the HTTPS URL, the folder, the tag prefix (default `v`)
+   and, for private repositories, a read-only personal access token (stored as a Kubernetes secret).
+3. `git tag v1.3.0 && git push --tags` → version `1.3.0` is deployed and becomes the default (with auto sync on).
+
+- **Rollback:** set an older version as default, or deploy an older tag from the tag list. Auto sync only reacts to
+  *new* tags, so it never undoes a rollback.
+- **Secrets stay out of Git:** declare the variable without a value (`- {name: DB_PASSWORD, secret: true}`) and set it
+  once in Lotse. Every synced version takes over empty values from the previous default version.
+- **Webhook (optional):** Lotse polls every 2 minutes by default. GitHub, Gitea and Azure DevOps webhooks trigger an
+  immediate check (see the webhook dialog of a source).
+- Python and container packages are supported. Binary packages still have to be uploaded.
+- Settings: `GIT_SYNC_ENABLED`, `GIT_SSL_CAINFO` (CA bundle for internal Git servers),
+  `GIT_ALLOW_FILE_URLS` (local testing only).
+
 ## 🔐 Authentication
 
 For demo purposes the authentication is diabled. You can enable it by setting the environment variable `ENABLE_AUTH` to `true`.

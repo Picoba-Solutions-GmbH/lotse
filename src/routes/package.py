@@ -1,9 +1,9 @@
 import os
 import shutil
 from datetime import datetime
+from pathlib import Path
 
 import patoolib
-import semver
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pipe import groupby
@@ -18,15 +18,13 @@ from src.database.repositories.package_share_repository import \
 from src.database.repositories.task_repository import (
     TaskRepository, map_task_entity_to_task_info)
 from src.database.repositories.user_repository import UserRepository
-from src.database.repositories.volume_repository import VolumeRepository
 from src.misc.package_status import PackageStatus
-from src.misc.runtime_type import RuntimeType
 from src.misc.task_status import TaskStatus
 from src.models.package_info import (PackageDetail, PackageInfo,
                                      PackageInstance, PackageModifications)
 from src.models.package_permissions import Permission
 from src.models.task_info import TaskInfo
-from src.models.yaml_config import Argument, parse_config
+from src.models.yaml_config import Argument, PackageConfig, parse_config
 from src.routes import authentication
 from src.routes.dtos.package_edit_dto import (EnvironmentVariableDto,
                                               EnvironmentVariableViewDto,
@@ -35,6 +33,7 @@ from src.routes.dtos.package_edit_dto import (EnvironmentVariableDto,
                                               PackageFileDto,
                                               PackageFilePathDto)
 from src.services import package_access_service as access
+from src.services import package_deploy_service as deployment
 from src.services import package_edit_service as edit
 from src.services.task_manager_service import TaskManagerService
 from src.utils.path_manager import PathManager
@@ -54,75 +53,17 @@ async def deploy_package(
 ):
     config_yaml_bytes = await config_yaml.read()
     config_yaml_content = config_yaml_bytes.decode('utf-8')
-    package_config = parse_config(config_yaml_content)
 
-    match package_config.runtime:
-        case RuntimeType.PYTHON:
-            try:
-                semver.parse(package_config.python_version)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid Python version format. Use semver (e.g., 3.8.10)")
-
-    existing_package = PackageRepository.get_package(
-        db_session, package_config.package_name, package_config.version)
-    if existing_package:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Package {package_config.package_name} version {package_config.version} "
-                f"already exists"
-            )
-        )
-
-    non_existing_volumes = VolumeRepository.get_non_existing_volumes(
-        package_config.volumes)
-    non_existing_volumes_count = len(non_existing_volumes)
-    if non_existing_volumes_count > 0:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Volume(s) {', '.join([v for v in non_existing_volumes])} "
-                f"{"does" if non_existing_volumes_count == 1 else "do"} not exist in the system. "
-            )
-        )
-
-    access.claim_or_check_deploy(db_session, user, package_config.package_name)
-
-    if package_config.runtime != RuntimeType.CONTAINER:
-        package_dir = PathManager.get_package_path(package_config.package_name,
-                                                   package_config.version)
-        os.makedirs(package_dir, exist_ok=True)
+    def extract_upload(package_dir: Path, package_config: PackageConfig) -> None:
         file_path = os.path.join(package_dir, f"{package_config.package_name}.7z")
-
         with open(file_path, "wb") as f:
             shutil.copyfileobj(package_file.file, f)
 
         patoolib.extract_archive(file_path, outdir=str(package_dir))
 
-    set_active = set_as_default or delete_previous_versions
-    metadata = PackageRepository.create_package(
-        db_session, package_config.package_name, package_config.version,
-        package_config.python_version,
-        config_yaml_content, package_config.description, set_active
-    )
-
-    if delete_previous_versions:
-        other_versions = PackageRepository.list_other_package_version(
-            db_session, package_config.package_name, package_config.version)
-        for other_version in other_versions:
-            package_dir = PathManager.get_package_path(
-                other_version.package_name, other_version.version)
-            venv_dir = PathManager.get_venv_path(other_version.package_name, other_version.version)
-            if os.path.exists(package_dir):
-                shutil.rmtree(package_dir, ignore_errors=True)
-
-            if os.path.exists(venv_dir):
-                shutil.rmtree(venv_dir, ignore_errors=True)
-
-            edit.remove_originals(other_version.package_name, other_version.version)  # type: ignore
-
-        PackageRepository.delete_other_package_versions(
-            db_session, package_config.package_name, package_config.version)
+    metadata = deployment.deploy_package(
+        db_session, user, config_yaml_content, extract_upload,
+        set_active=set_as_default, delete_previous_versions=delete_previous_versions)
 
     response_data = {
         "package_name": metadata.package_name,
@@ -287,7 +228,9 @@ async def get_package_by_stage(
             creation_date=package.deployed_at,
             version=package.version,
             is_default=package.active,
-            is_modified=package.is_modified
+            is_modified=package.is_modified,
+            source_ref=package.source_ref,
+            source_commit=package.source_commit
         )
         package_details.append(package_info)
 

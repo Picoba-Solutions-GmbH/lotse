@@ -20,6 +20,9 @@ class PackageDetail(PackageInfo):
     version: str
     is_default: bool = False
     is_modified: bool = False
+    # Git tag and commit, for versions deployed by a Git source
+    source_ref: str | None = None
+    source_commit: str | None = None
 
 
 class PackageModifications(BaseModel):

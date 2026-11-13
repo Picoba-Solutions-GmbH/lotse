@@ -16,7 +16,10 @@ class PackageRepository:
         python_version: str,
         config: str,
         description: str | None = None,
-        set_as_active: bool = False
+        set_as_active: bool = False,
+        source_id: str | None = None,
+        source_ref: str | None = None,
+        source_commit: str | None = None
     ) -> PackageEntity:
         metadata = PackageEntity(
             deployment_id=str(uuid.uuid4()),
@@ -26,7 +29,10 @@ class PackageRepository:
             description=description,
             deployed_at=datetime.now(),
             active=set_as_active,
-            config=config
+            config=config,
+            source_id=source_id,
+            source_ref=source_ref,
+            source_commit=source_commit
         )
         db_session.add(metadata)
 
